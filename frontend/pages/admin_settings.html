@@ -8,8 +8,9 @@
 <!-- Navegação em Abas -->
 <nav class="tab-nav">
     <button class="tab-link active" data-tab="tab-perfil">Meu Perfil</button>
-    <button class="tab-link admin-only" data-tab="tab-geral">Geral</button>
-    <button class="tab-link admin-only master-only" data-tab="tab-hotspot">Portal Hotspot</button>
+    <button class="tab-link admin-only" data-tab="tab-empresa">Empresa</button>
+    <button class="tab-link admin-only" data-tab="tab-hotspot">Portal Hotspot</button>
+    <button class="tab-link admin-only" data-tab="tab-aparencia">Aparência</button>
     <!-- [ATUALIZADO V13.5.2] Removido master-only daqui para o JS controlar (permite DPO) -->
     <button class="tab-link admin-only" data-tab="tab-permissoes">Funções e Permissões</button>
     <button class="tab-link admin-only master-only" data-tab="tab-logs">Logs de Atividade</button>
@@ -51,12 +52,12 @@
     </div>
 
     <!-- Aba 2: Geral (Fase 2.3) -->
-    <div id="tab-geral" class="tab-content admin-only master-only">
+    <div id="tab-empresa" class="tab-content admin-only master-only">
         <div class="content-section">
             <div class="section-header">
                 <h4>Configurações Gerais da Empresa</h4>
             </div>
-            <form id="generalSettingsForm" enctype="multipart/form-data">
+            <form id="companySettingsForm" enctype="multipart/form-data">
                 <div class="input-group">
                     <!-- [CORRIGIDO] Adicionado for="companyName" -->
                     <label for="companyName">Nome da Empresa</label>
@@ -72,7 +73,23 @@
                         <img id="currentLogoPreview" src="#" alt="Logo Atual" style="display: none; max-height: 50px; background-color: #fff; border-radius: 4px; padding: 5px; margin-top: 10px;">
                     </div>
                 </div>
+                
+                <p id="companySettingsError" class="form-message error"></p>
+                <p id="companySettingsSuccess" class="form-message success"></p>
+                <div class="form-actions">
+                    <button type="submit" class="btn-primary">Guardar Configurações da Empresa</button>
+                </div>
+            </form>
+        </div>
+    </div>
 
+    <!-- Aba Aparência -->
+    <div id="tab-aparencia" class="tab-content admin-only">
+        <div class="content-section">
+            <div class="section-header">
+                <h4>Configurações de Aparência</h4>
+            </div>
+            <form id="appearanceSettingsForm">
                 <div class="input-group">
                     <!-- [CORRIGIDO] Adicionado for="primaryColor" -->
                     <label for="primaryColor">Cor Primária</label>
@@ -87,9 +104,33 @@
                 </div>
 
                 <div class="input-group appearance-setting">
+                    <label for="sidebarColor">Cor do Menu Lateral</label>
+                    <input type="color" id="sidebarColor" value="#2d3748" class="color-picker">
+                    <p class="input-hint">Define a cor de fundo do menu lateral e do cabeçalho.</p>
+                </div>
+
+                <div class="input-group appearance-setting">
                     <label for="fontColor">Cor da Fonte</label>
                     <input type="color" id="fontColor" value="#edf2f7" class="color-picker">
                     <p class="input-hint">Define a cor do texto principal do painel.</p>
+                </div>
+
+                <div class="input-group appearance-setting">
+                    <label for="modalBackgroundColor">Cor de Fundo do Modal</label>
+                    <input type="color" id="modalBackgroundColor" value="#2d3748" class="color-picker">
+                    <p class="input-hint">Define a cor de fundo dos modais.</p>
+                </div>
+
+                <div class="input-group appearance-setting">
+                    <label for="modalFontColor">Cor da Fonte do Modal</label>
+                    <input type="color" id="modalFontColor" value="#edf2f7" class="color-picker">
+                    <p class="input-hint">Define a cor do texto dos modais.</p>
+                </div>
+
+                <div class="input-group appearance-setting">
+                    <label for="modalBorderColor">Cor da Borda do Modal</label>
+                    <input type="color" id="modalBorderColor" value="#4a5568" class="color-picker">
+                    <p class="input-hint">Define a cor da borda dos modais.</p>
                 </div>
 
                 <div class="input-group appearance-setting">
@@ -111,10 +152,10 @@
                     <p class="input-hint">Define o tamanho da fonte base do painel (em pixels).</p>
                 </div>
                 
-                <p id="generalSettingsError" class="form-message error"></p>
-                <p id="generalSettingsSuccess" class="form-message success"></p>
+                <p id="appearanceSettingsError" class="form-message error"></p>
+                <p id="appearanceSettingsSuccess" class="form-message success"></p>
                 <div class="form-actions">
-                    <button type="submit" class="btn-primary">Guardar Configurações Gerais</button>
+                    <button type="submit" class="btn-primary">Guardar Alterações de Aparência</button>
                 </div>
             </form>
         </div>

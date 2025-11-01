@@ -14,7 +14,7 @@ const getGeneralSettings = async (req, res) => {
     console.log("getGeneralSettings: Buscando configurações...");
     try {
         const settings = await pool.query(
-            'SELECT company_name, logo_url, primary_color, background_color, font_color, font_family, font_size, background_image_url FROM system_settings WHERE id = 1'
+            'SELECT company_name, logo_url, primary_color, background_color, font_color, font_family, font_size, background_image_url, modal_background_color, modal_font_color, modal_border_color, sidebar_color FROM system_settings WHERE id = 1'
         );
 
         if (settings.rows.length === 0) {
@@ -38,8 +38,8 @@ const getGeneralSettings = async (req, res) => {
 const updateGeneralSettings = async (req, res) => {
     console.log("updateGeneralSettings: Iniciando atualização...");
     // Dados do formulário (multipart/form-data)
-    const { company_name, primary_color, background_color, font_color, font_family, font_size } = req.body;
-    console.log("updateGeneralSettings: Dados recebidos (body):", { company_name, primary_color, background_color, font_color, font_family, font_size });
+    const { company_name, primary_color, background_color, font_color, font_family, font_size, modal_background_color, modal_font_color, modal_border_color, sidebar_color } = req.body;
+    console.log("updateGeneralSettings: Dados recebidos (body):", { company_name, primary_color, background_color, font_color, font_family, font_size, modal_background_color, modal_font_color, modal_border_color, sidebar_color });
     // Dados do ficheiro (do logoUploadMiddleware)
     const newLogoFile = req.file;
     console.log("updateGeneralSettings: Ficheiro recebido (req.file):", newLogoFile ? newLogoFile.filename : "Nenhum");
@@ -71,6 +71,10 @@ const updateGeneralSettings = async (req, res) => {
                 fields.push(`background_color = $${queryIndex++}`);
                 params.push(background_color);
             }
+            if (sidebar_color) {
+                fields.push(`sidebar_color = $${queryIndex++}`);
+                params.push(sidebar_color);
+            }
             if (font_color) {
                 fields.push(`font_color = $${queryIndex++}`);
                 params.push(font_color);
@@ -82,6 +86,22 @@ const updateGeneralSettings = async (req, res) => {
             if (font_size) {
                 fields.push(`font_size = $${queryIndex++}`);
                 params.push(font_size);
+            }
+        }
+
+        // Apenas atualiza campos de aparência do modal se o usuário tiver permissão
+        if (req.user.permissions['settings.modal_colors'] === true) {
+            if (modal_background_color) {
+                fields.push(`modal_background_color = $${queryIndex++}`);
+                params.push(modal_background_color);
+            }
+            if (modal_font_color) {
+                fields.push(`modal_font_color = $${queryIndex++}`);
+                params.push(modal_font_color);
+            }
+            if (modal_border_color) {
+                fields.push(`modal_border_color = $${queryIndex++}`);
+                params.push(modal_border_color);
             }
         }
 

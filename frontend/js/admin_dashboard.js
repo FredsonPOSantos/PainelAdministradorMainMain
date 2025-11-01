@@ -158,6 +158,10 @@ window.applyVisualSettings = (settings) => {
         console.log(`applyVisualSettings: Alterando --background-dark para '${settings.background_color}'`);
         document.documentElement.style.setProperty('--background-dark', settings.background_color);
     }
+    if (settings.sidebar_color) {
+        console.log(`applyVisualSettings: Alterando --background-medium para '${settings.sidebar_color}'`);
+        document.documentElement.style.setProperty('--background-medium', settings.sidebar_color);
+    }
     if (settings.font_color) {
         console.log(`applyVisualSettings: Alterando --text-primary para '${settings.font_color}'`);
         document.documentElement.style.setProperty('--text-primary', settings.font_color);
@@ -169,6 +173,16 @@ window.applyVisualSettings = (settings) => {
     if (settings.font_size) {
         console.log(`applyVisualSettings: Alterando --font-size para '${settings.font_size}px'`);
         document.documentElement.style.setProperty('--font-size', `${settings.font_size}px`);
+    }
+
+    if (settings.modal_background_color) {
+        document.documentElement.style.setProperty('--modal-background-color', settings.modal_background_color);
+    }
+    if (settings.modal_font_color) {
+        document.documentElement.style.setProperty('--modal-font-color', settings.modal_font_color);
+    }
+    if (settings.modal_border_color) {
+        document.documentElement.style.setProperty('--modal-border-color', settings.modal_border_color);
     }
 };
 
@@ -394,8 +408,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             'admin_templates': 'templates.read',
             'admin_banners': 'banners.read',
             'admin_routers': 'routers.read',
-            'admin_users': 'users.read',
-            'admin_settings': 'settings.read' // Permissão genérica para a página de configurações
+            'admin_users': 'users.read'
         };
 
         allNavItemsAndTitles.forEach(el => {
@@ -406,6 +419,16 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             const page = el.getAttribute('data-page');
             const requiredPermission = menuPermissionMap[page];
+
+            if (page === 'admin_settings') {
+                const hasSettingsPermission = Object.keys(permissions).some(p => p.startsWith('settings.'));
+                if (hasSettingsPermission) {
+                    el.style.removeProperty('display');
+                } else {
+                    el.style.display = 'none';
+                }
+                return;
+            }
 
             // Se não há uma permissão mapeada, o item é considerado público (como o Dashboard)
             if (!requiredPermission || permissions[requiredPermission]) {

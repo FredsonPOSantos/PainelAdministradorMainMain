@@ -17,7 +17,8 @@ if (window.initSettingsPage) {
         const tabLinks = document.querySelectorAll('.tab-nav .tab-link');
         const tabContents = document.querySelectorAll('.tab-content-container .tab-content');
         const changeOwnPasswordForm = document.getElementById('changeOwnPasswordForm');
-        const generalSettingsForm = document.getElementById('generalSettingsForm');
+        const companySettingsForm = document.getElementById('companySettingsForm');
+        const appearanceSettingsForm = document.getElementById('appearanceSettingsForm');
         const hotspotSettingsForm = document.getElementById('hotspotSettingsForm');
         const backgroundSettingsForm = document.getElementById('backgroundSettingsForm');
         
@@ -43,12 +44,12 @@ if (window.initSettingsPage) {
 
         // --- Lógica Formulários (estável, omitida para brevidade) ---
         if (changeOwnPasswordForm) { /* ... listener ... */ }
-        if (generalSettingsForm) {
-            generalSettingsForm.addEventListener('submit', async (e) => {
+        if (companySettingsForm) {
+            companySettingsForm.addEventListener('submit', async (e) => {
                 e.preventDefault();
-                const successMsg = document.getElementById('generalSettingsSuccess');
-                const errorMsg = document.getElementById('generalSettingsError');
-                const submitButton = generalSettingsForm.querySelector('button[type="submit"]');
+                const successMsg = document.getElementById('companySettingsSuccess');
+                const errorMsg = document.getElementById('companySettingsError');
+                const submitButton = companySettingsForm.querySelector('button[type="submit"]');
 
                 successMsg.textContent = '';
                 errorMsg.textContent = '';
@@ -57,11 +58,6 @@ if (window.initSettingsPage) {
 
                 const formData = new FormData();
                 formData.append('company_name', document.getElementById('companyName').value);
-                formData.append('primary_color', document.getElementById('primaryColor').value);
-                formData.append('background_color', document.getElementById('backgroundColor').value);
-                formData.append('font_color', document.getElementById('fontColor').value);
-                formData.append('font_family', document.getElementById('fontFamily').value);
-                formData.append('font_size', document.getElementById('fontSize').value);
                 
                 const logoFile = document.getElementById('logoUpload').files[0];
                 if (logoFile) {
@@ -69,36 +65,71 @@ if (window.initSettingsPage) {
                 }
 
                 try {
-                    console.log('SUBMIT HANDLER: Formulário submetido.');
-                    // A API de settings gerais agora é um POST que lida com multipart/form-data
                     const response = await apiRequest('/api/settings/general', 'POST', formData);
-                    console.log('SUBMIT HANDLER: Resposta da API recebida:', response);
 
                     if (response && response.settings) {
-                        console.log('SUBMIT HANDLER: A resposta da API é válida. Novas configurações:', response.settings);
-                        // Atualiza o objeto de configurações global
                         window.systemSettings = response.settings;
                         
-                        // Reaplica as configurações visuais em tempo real
                         if (window.applyVisualSettings) {
-                            console.log('SUBMIT HANDLER: Chamando window.applyVisualSettings...');
                             window.applyVisualSettings(response.settings);
-                            console.log('SUBMIT HANDLER: window.applyVisualSettings foi chamado.');
-                        } else {
-                            console.error('SUBMIT HANDLER: Erro crítico - window.applyVisualSettings não está definida!');
                         }
                         
                         successMsg.textContent = response.message || 'Configurações guardadas com sucesso!';
                     } else {
-                        console.error('SUBMIT HANDLER: A resposta da API é inválida ou não contém a propriedade \'settings\'.');
-                        throw new Error('A API não retornou as novas configurações ou a resposta não continha a propriedade \'settings\'.');
+                        throw new Error('A API não retornou as novas configurações.');
                     }
 
                 } catch (error) {
                     errorMsg.textContent = `Erro ao guardar configurações: ${error.message}`;
                 } finally {
                     submitButton.disabled = false;
-                    submitButton.textContent = 'Guardar Configurações Gerais';
+                    submitButton.textContent = 'Guardar Configurações da Empresa';
+                }
+            });
+        }
+        if (appearanceSettingsForm) {
+            appearanceSettingsForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const successMsg = document.getElementById('appearanceSettingsSuccess');
+                const errorMsg = document.getElementById('appearanceSettingsError');
+                const submitButton = appearanceSettingsForm.querySelector('button[type="submit"]');
+
+                successMsg.textContent = '';
+                errorMsg.textContent = '';
+                submitButton.disabled = true;
+                submitButton.textContent = 'A guardar...';
+
+                const formData = new FormData();
+                formData.append('primary_color', document.getElementById('primaryColor').value);
+                formData.append('background_color', document.getElementById('backgroundColor').value);
+                formData.append('sidebar_color', document.getElementById('sidebarColor').value);
+                formData.append('font_color', document.getElementById('fontColor').value);
+                formData.append('font_family', document.getElementById('fontFamily').value);
+                formData.append('font_size', document.getElementById('fontSize').value);
+                formData.append('modal_background_color', document.getElementById('modalBackgroundColor').value);
+                formData.append('modal_font_color', document.getElementById('modalFontColor').value);
+                formData.append('modal_border_color', document.getElementById('modalBorderColor').value);
+
+                try {
+                    const response = await apiRequest('/api/settings/general', 'POST', formData);
+
+                    if (response && response.settings) {
+                        window.systemSettings = response.settings;
+                        
+                        if (window.applyVisualSettings) {
+                            window.applyVisualSettings(response.settings);
+                        }
+                        
+                        successMsg.textContent = response.message || 'Configurações guardadas com sucesso!';
+                    } else {
+                        throw new Error('A API não retornou as novas configurações.');
+                    }
+
+                } catch (error) {
+                    errorMsg.textContent = `Erro ao guardar configurações: ${error.message}`;
+                } finally {
+                    submitButton.disabled = false;
+                    submitButton.textContent = 'Guardar Alterações de Aparência';
                 }
             });
         }
@@ -146,9 +177,13 @@ if (window.initSettingsPage) {
                     document.getElementById('companyName').value = settings.company_name || '';
                     document.getElementById('primaryColor').value = settings.primary_color || '#4299e1';
                     document.getElementById('backgroundColor').value = settings.background_color || '#1a202c';
+                    document.getElementById('sidebarColor').value = settings.sidebar_color || '#2d3748';
                     document.getElementById('fontColor').value = settings.font_color || '#edf2f7';
                     document.getElementById('fontFamily').value = settings.font_family || '\'Inter\', sans-serif';
                     document.getElementById('fontSize').value = settings.font_size || '16';
+                    document.getElementById('modalBackgroundColor').value = settings.modal_background_color || '#2d3748';
+                    document.getElementById('modalFontColor').value = settings.modal_font_color || '#edf2f7';
+                    document.getElementById('modalBorderColor').value = settings.modal_border_color || '#4a5568';
                     const logoPreview = document.getElementById('currentLogoPreview');
                     if (settings.logo_url) {
                         logoPreview.src = `http://${window.location.hostname}:3000${settings.logo_url}`;
@@ -359,14 +394,18 @@ if (window.initSettingsPage) {
                 let show = true;
                 if (link.classList.contains('master-only') && !isMaster) { show = false; }
                 if (tabId === 'tab-permissoes' && !isMaster && role !== 'DPO') { show = false; }
-                if (tabId === 'tab-geral' && !isMaster && !permissions['settings.general.read']) { show = false; }
+                if (tabId === 'tab-empresa' && !isMaster && !permissions['settings.general.read']) { show = false; }
+                if (tabId === 'tab-aparencia' && !isMaster && !permissions['settings.general.read']) { show = false; }
                 
                 link.style.display = show ? '' : 'none';
                 document.getElementById(tabId).style.display = show ? '' : 'none';
             });
 
             // Carrega dados das abas visíveis
-            if (document.getElementById('tab-geral').style.display !== 'none') {
+            if (document.getElementById('tab-empresa').style.display !== 'none') {
+                loadGeneralSettings();
+            }
+            if (document.getElementById('tab-aparencia').style.display !== 'none') {
                 loadGeneralSettings();
             }
             if (document.getElementById('tab-permissoes').style.display !== 'none') {
