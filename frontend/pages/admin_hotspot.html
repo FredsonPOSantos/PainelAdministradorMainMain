@@ -1,0 +1,85 @@
+<!-- Ficheiro: pages/admin_hotspot.html -->
+<div class="page-header">
+    <h3>Relatório de Utilizadores do Hotspot</h3>
+</div>
+
+<!-- Secção de Filtros -->
+<div class="content-section filter-container">
+    <div class="section-header">
+        <h4>Filtros de Pesquisa</h4>
+    </div>
+    <form id="hotspotFilterForm">
+        <div class="filter-grid">
+            <!-- Filtros de Data -->
+            <div class="input-group">
+                <label for="startDate">Data de Registo (Início)</label>
+                <input type="date" id="startDate">
+            </div>
+            <div class="input-group">
+                <label for="endDate">Data de Registo (Fim)</label>
+                <input type="date" id="endDate">
+            </div>
+            <div class="input-group">
+                <label for="lastLoginStart">Último Login (Início)</label>
+                <input type="date" id="lastLoginStart">
+            </div>
+            <div class="input-group">
+                <label for="lastLoginEnd">Último Login (Fim)</label>
+                <input type="date" id="lastLoginEnd">
+            </div>
+            <!-- Filtros de Seleção -->
+            <div class="input-group">
+                <label for="routerFilter">Roteador</label>
+                <select id="routerFilter">
+                    <option value="">Todos</option>
+                    <!-- Preenchido via JS -->
+                </select>
+            </div>
+            <div class="input-group">
+                <label for="groupFilter">Grupo de Roteadores</label>
+                <select id="groupFilter">
+                    <option value="">Todos</option>
+                    <!-- Preenchido via JS -->
+                </select>
+            </div>
+            <div class="input-group">
+                <label for="campaignFilter">Campanha</label>
+                <select id="campaignFilter">
+                    <option value="">Todas</option>
+                     <!-- Preenchido via JS -->
+                </select>
+            </div>
+        </div>
+        <div class="filter-actions">
+            <button type="submit" class="btn-primary">Pesquisar</button>
+            <button type="button" id="clearFiltersBtn" class="btn-secondary">Limpar Filtros</button>
+        </div>
+    </form>
+</div>
+
+<!-- Secção de Resultados -->
+<div class="content-section">
+     <div class="section-header">
+        <h4>Resultados</h4>
+        <div class="export-buttons">
+            <button id="exportCsvBtn" class="btn-secondary">Exportar para CSV</button>
+            <button id="exportXlsxBtn" class="btn-secondary">Exportar para Excel</button>
+        </div>
+    </div>
+    <div class="table-container">
+        <table id="hotspotResultsTable">
+            <thead>
+                <!-- Cabeçalhos da tabela serão inseridos aqui via JavaScript -->
+            </thead>
+            <tbody>
+                <tr>
+                    <td colspan="10" style="text-align:center;">Nenhuma pesquisa realizada.</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    <div class="results-summary">
+        <strong>Total de Utilizadores Encontrados:</strong>
+        <span id="totalUsersCount">0</span>
+    </div>
+</div>

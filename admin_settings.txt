@@ -1,0 +1,219 @@
+// Ficheiro: frontend/js/admin_settings.js
+// [VERSÃO 13.5 - Base Estável + Fase 3.1 Reintroduzida e Corrigida Definitivamente]
+// (Definitivo - Problema de Sintaxe Resolvido)
+
+if (window.initSettingsPage) {
+    console.warn("Tentativa de carregar admin_settings.js múltiplas vezes (V13.5).");
+} else {
+    // Flag para evitar múltiplas inicializações
+    let isInitializingSettings = false;
+
+    window.initSettingsPage = () => {
+        if (isInitializingSettings) { console.warn("initSettingsPage (V13.5) chamado novamente. Ignorando."); return; }
+        isInitializingSettings = true;
+        console.log("A inicializar a página de Configurações (V13.5 - Definitivo)...");
+
+        // --- Elementos Comuns ---
+        const tabNav = document.querySelector('.tab-nav');
+        const tabLinks = document.querySelectorAll('.tab-nav .tab-link');
+        const tabContentContainer = document.querySelector('.tab-content-container');
+        const tabContents = document.querySelectorAll('.tab-content-container .tab-content');
+
+        // --- Elementos das Abas ---
+        const changeOwnPasswordForm = document.getElementById('changeOwnPasswordForm');
+        const changeOwnPasswordError = document.getElementById('changeOwnPasswordError');
+        const changeOwnPasswordSuccess = document.getElementById('changeOwnPasswordSuccess');
+        const generalSettingsForm = document.getElementById('generalSettingsForm');
+        const companyNameInput = document.getElementById('companyName');
+        const logoUploadInput = document.getElementById('logoUpload');
+        const currentLogoPreview = document.getElementById('currentLogoPreview');
+        const primaryColorInput = document.getElementById('primaryColor');
+        const generalSettingsError = document.getElementById('generalSettingsError');
+        const generalSettingsSuccess = document.getElementById('generalSettingsSuccess');
+        const hotspotSettingsForm = document.getElementById('hotspotSettingsForm');
+        const sessionTimeoutInput = document.getElementById('sessionTimeoutMinutes');
+        const domainWhitelistTextarea = document.getElementById('domainWhitelist');
+        const hotspotSettingsError = document.getElementById('hotspotSettingsError');
+        const hotspotSettingsSuccess = document.getElementById('hotspotSettingsSuccess');
+        // Fase 3.1 Elements
+        const permissionsTableBody = document.getElementById('permissionsTableBody');
+        const permissionsError = document.getElementById('permissionsError');
+
+        // --- Função de Troca de Abas ---
+        const switchTab = (targetTabId) => {
+             console.log(`switchTab (V13.5): Ativando aba ${targetTabId}`);
+             if (!targetTabId) { console.error("switchTab (V13.5): ID inválido."); return; }
+             if (tabContents) tabContents.forEach(content => content.classList.remove('active'));
+             if (tabLinks) tabLinks.forEach(link => link.classList.remove('active'));
+             const targetContent = document.getElementById(targetTabId);
+             const targetLink = tabNav ? tabNav.querySelector(`.tab-link[data-tab="${targetTabId}"]`) : null;
+             if (targetContent && targetContent.style.display !== 'none') { targetContent.classList.add('active'); }
+             else if (!targetContent) { console.error(`switchTab (V13.5): Conteúdo ${targetTabId} não encontrado.`); }
+             else { console.warn(`switchTab (V13.5): Conteúdo ${targetTabId} está escondido.`);}
+             if (targetLink && targetLink.style.display !== 'none') { targetLink.classList.add('active'); }
+             else if (!targetLink) { console.error(`switchTab (V13.5): Link ${targetTabId} não encontrado.`); }
+              else { console.warn(`switchTab (V13.5): Link ${targetTabId} está escondido.`);}
+        };
+
+        // --- Lógicas das Abas ---
+
+        // Aba Meu Perfil (Lógica Estável)
+        if (changeOwnPasswordForm) {
+            changeOwnPasswordForm.addEventListener('submit', async (e) => {
+                e.preventDefault(); console.log("Form 'Perfil' submit (V13.5).");
+                if(changeOwnPasswordError) changeOwnPasswordError.textContent=''; if(changeOwnPasswordSuccess) changeOwnPasswordSuccess.textContent='';
+                const cPI=document.getElementById('currentPassword'),nPI=document.getElementById('newVoluntaryPassword'),cNPI=document.getElementById('confirmNewVoluntaryPassword'),btn=changeOwnPasswordForm.querySelector('button[type="submit"]');
+                if(!cPI||!nPI||!cNPI){if(changeOwnPasswordError)changeOwnPasswordError.textContent='Erro interno.';return;}
+                const cP=cPI.value,nP=nPI.value,cNP=cNPI.value;
+                if(nP!==cNP){if(changeOwnPasswordError)changeOwnPasswordError.textContent='Senhas não coincidem.';return;}
+                if(nP.length<6){if(changeOwnPasswordError)changeOwnPasswordError.textContent='Senha < 6 chars.';return;}
+                if(btn){btn.disabled=true;btn.textContent='A alterar...';}
+                try{const r=await apiRequest('/api/admin/profile/change-own-password','POST',{currentPassword:cP,newPassword:nP}); if(changeOwnPasswordSuccess)changeOwnPasswordSuccess.textContent=r.message||'Senha alterada!'; changeOwnPasswordForm.reset();}
+                catch(err){if(changeOwnPasswordError)changeOwnPasswordError.textContent=`Erro: ${err.message||'Falha.'}`;}
+                finally{if(btn){btn.disabled=false;btn.textContent='Alterar Senha';}}
+            });
+        } else { console.warn("Form 'changeOwnPasswordForm' (V13.5) não encontrado."); }
+
+        // Carrega Config Geral (Lógica Estável)
+        const loadGeneralSettings = async () => { /* ... */ console.log("loadGeneralSettings (V13.5)..."); if(!window.currentUserProfile||window.currentUserProfile.role!=='master'){if(generalSettingsForm)generalSettingsForm.style.display='none';return false;} if(generalSettingsForm)generalSettingsForm.style.removeProperty('display'); try{const s=await apiRequest('/api/settings/general'); console.log("loadGeneralSettings (V13.5) OK:",s); if(companyNameInput)companyNameInput.value=s?.company_name||''; if(primaryColorInput)primaryColorInput.value=s?.primary_color||'#3182CE'; if(currentLogoPreview){if(s?.logo_url){const a=`http://${window.location.hostname}:3000`,p=s.logo_url.startsWith('/')?s.logo_url:'/'+s.logo_url;currentLogoPreview.src=`${a}${p}?t=${Date.now()}`;currentLogoPreview.style.display='block';}else{currentLogoPreview.style.display='none';currentLogoPreview.src='#';}} return true;}catch(err){console.error("Erro loadGeneralSettings (V13.5):",err);if(generalSettingsError)generalSettingsError.textContent=`Erro: ${err.message}`;return false;} };
+        // Listener Geral (Lógica Estável)
+        if (generalSettingsForm) { generalSettingsForm.addEventListener('submit', async (e) => { /* ... */ e.preventDefault(); console.log("Form 'Geral' submit (V13.5)."); if(generalSettingsError)generalSettingsError.textContent='';if(generalSettingsSuccess)generalSettingsSuccess.textContent=''; const fD=new FormData(); if(companyNameInput)fD.append('companyName',companyNameInput.value); if(primaryColorInput)fD.append('primaryColor',primaryColorInput.value); if(logoUploadInput&&logoUploadInput.files[0]){fD.append('companyLogo',logoUploadInput.files[0]);} const btn=generalSettingsForm.querySelector('button[type="submit"]'); if(btn){btn.disabled=true;btn.textContent='A guardar...';} try{const r=await apiRequest('/api/settings/general','POST',fD); if(generalSettingsSuccess)generalSettingsSuccess.textContent=r.message||"Salvo!"; await loadGeneralSettings(); if(window.systemSettings&&r.settings){Object.assign(window.systemSettings,r.settings); if(typeof applyVisualSettings==='function'){applyVisualSettings(window.systemSettings);}}}catch(err){if(generalSettingsError)generalSettingsError.textContent=`Erro: ${err.message||'Falha.'}`;}finally{if(btn){btn.disabled=false;btn.textContent='Guardar Configurações Gerais';} if(logoUploadInput)logoUploadInput.value='';} }); }
+        else { console.warn("Form 'generalSettingsForm' (V13.5) não encontrado."); }
+
+        // Carrega Config Hotspot (Lógica Estável)
+        const loadHotspotSettings = async () => { /* ... */ console.log("loadHotspotSettings (V13.5)..."); if(!window.currentUserProfile||window.currentUserProfile.role!=='master'){if(hotspotSettingsForm)hotspotSettingsForm.style.display='none';return false;} if(hotspotSettingsForm)hotspotSettingsForm.style.removeProperty('display'); try{const s=await apiRequest('/api/settings/hotspot'); console.log("loadHotspotSettings (V13.5) OK:",s); if(sessionTimeoutInput)sessionTimeoutInput.value=s?.session_timeout_minutes||''; if(domainWhitelistTextarea){domainWhitelistTextarea.value=(s?.domain_whitelist||[]).join('\n');} return true;}catch(err){console.error("Erro loadHotspotSettings (V13.5):",err);if(hotspotSettingsError)hotspotSettingsError.textContent=`Erro: ${err.message}`;return false;} };
+        // Listener Hotspot (Lógica Estável)
+        if (hotspotSettingsForm) { hotspotSettingsForm.addEventListener('submit', async (e) => { /* ... */ e.preventDefault(); console.log("Form 'Hotspot' submit (V13.5)."); if(hotspotSettingsError)hotspotSettingsError.textContent='';if(hotspotSettingsSuccess)hotspotSettingsSuccess.textContent=''; const dWA=domainWhitelistTextarea?domainWhitelistTextarea.value.split('\n').map(d=>d.trim()).filter(d=>d&&d.length>0):[]; let tV=sessionTimeoutInput?parseInt(sessionTimeoutInput.value,10):null; if(tV!==null&&(isNaN(tV)||tV<=0)){if(hotspotSettingsError)hotspotSettingsError.textContent='Timeout inválido.';return;} const sD={sessionTimeoutMinutes:tV,domainWhitelist:dWA}; const btn=hotspotSettingsForm.querySelector('button[type="submit"]'); if(btn){btn.disabled=true;btn.textContent='A guardar...';} try{const r=await apiRequest('/api/settings/hotspot','POST',sD); if(hotspotSettingsSuccess)hotspotSettingsSuccess.textContent=r.message||"Salvo!"; await loadHotspotSettings();}catch(err){if(hotspotSettingsError)hotspotSettingsError.textContent=`Erro: ${err.message||'Falha.'}`;}finally{if(btn){btn.disabled=false;btn.textContent='Guardar Configurações do Hotspot';}} }); }
+        else { console.warn("Form 'hotspotSettingsForm' (V13.5) não encontrado."); }
+
+        // [CORRIGIDO V13.5] Fase 3.1: Lógica da Aba "Funções e Permissões"
+        const loadPermissionsMatrix = async () => {
+            console.log("loadPermissionsMatrix (V13.5)...");
+            if (!permissionsTableBody) { console.error("permissionsTableBody (V13.5) not found!"); return false; }
+            if (permissionsError) permissionsError.textContent = '';
+            permissionsTableBody.innerHTML = '<tr><td colspan="5" style="text-align: center;">A carregar...</td></tr>';
+            const role = window.currentUserProfile?.role;
+            if (role !== 'master' && role !== 'DPO') {
+                console.log("loadPermissionsMatrix (V13.5): Access denied.");
+                permissionsTableBody.innerHTML = '<tr><td colspan="5" style="text-align: center;">Acesso negado.</td></tr>';
+                const permMatrixEl = document.querySelector('.permissions-matrix'); // Tenta encontrar elemento pai
+                if (permMatrixEl) permMatrixEl.style.display = 'none'; // Esconde se não tem acesso
+                return false;
+            }
+            try {
+                // MOCK DATA (Mantido) - SUBSTITUIR POR API '/api/permissions/matrix'
+                const permissionsData = { roles: ['master', 'gestao', 'estetica', 'DPO'], permissions: [ { feature: 'Dashboard', actions: { master: 'Ver', gestao: 'Ver', estetica: 'Ver', DPO: 'Ver' } }, { feature: 'Hotspot (Relatórios)', actions: { master: 'Ver/Exportar', gestao: 'Ver/Exportar', estetica: 'Ver/Exportar', DPO: 'Nenhum' } }, { feature: 'Campanhas', actions: { master: 'CRUD', gestao: 'CRUD', estetica: 'CRU (sem Delete)', DPO: 'Nenhum' } }, { feature: 'Templates', actions: { master: 'CRUD', gestao: 'CRUD', estetica: 'CRU (sem Delete Padrão)', DPO: 'Nenhum' } }, { feature: 'Banners', actions: { master: 'CRUD', gestao: 'CRUD', estetica: 'CRU (sem Delete Padrão)', DPO: 'Nenhum' } }, { feature: 'Roteadores', actions: { master: 'CRUD', gestao: 'CRUD', estetica: 'Nenhum', DPO: 'Nenhum' } }, { feature: 'Utilizadores (Admin)', actions: { master: 'CRUD', gestao: 'R (limitado) + Reset Senha', estetica: 'Nenhum', DPO: 'R (completo)' } }, { feature: 'Configurações: Meu Perfil', actions: { master: 'Alterar Senha', gestao: 'Alterar Senha', estetica: 'Alterar Senha', DPO: 'Alterar Senha' } }, { feature: 'Configurações: Geral', actions: { master: 'R/W', gestao: 'Nenhum', estetica: 'Nenhum', DPO: 'R' } }, { feature: 'Configurações: Portal Hotspot', actions: { master: 'R/W', gestao: 'Nenhum', estetica: 'Nenhum', DPO: 'R' } }, { feature: 'Configurações: Permissões', actions: { master: 'R/W (Editar Futuro)', gestao: 'Nenhum', estetica: 'Nenhum', DPO: 'R' } }, { feature: 'Logs de Atividade', actions: { master: 'R', gestao: 'Nenhum', estetica: 'Nenhum', DPO: 'R/Exportar' } }, { feature: 'Gestão LGPD', actions: { master: 'R/W', gestao: 'Nenhum', estetica: 'Nenhum', DPO: 'R/W' } }, { feature: 'Suporte (Tickets)', actions: { master: 'CRUD', gestao: 'CRUD', estetica: 'Criar/Ver Próprios', DPO: 'Nenhum' } }, { feature: 'Sorteios (Execução)', actions: { master: 'Executar', gestao: 'Nenhum', estetica: 'Executar', DPO: 'Nenhum' } }, { feature: 'Sorteios (Auditoria)', actions: { master: 'Ver/Exportar', gestao: 'Nenhum', estetica: 'Nenhum', DPO: 'Ver/Exportar' } }, ] };
+
+                permissionsTableBody.innerHTML = '';
+                const theadRow = document.querySelector('#permissionsTable thead tr');
+                let roleCount = 0;
+                if(theadRow) {
+                     theadRow.innerHTML = '<th>Funcionalidade</th>'; // Limpa e adiciona a primeira coluna
+                     permissionsData.roles.forEach(roleKey => { // Adiciona as colunas de role
+                          theadRow.innerHTML += `<th>${roleKey.charAt(0).toUpperCase() + roleKey.slice(1)}</th>`;
+                          roleCount++;
+                     });
+                } else { roleCount = 4; console.error("Thead permissions table not found!"); }
+                const totalColumns = roleCount + 1; // Coluna Funcionalidade + N roles
+
+                permissionsData.permissions.forEach(perm => {
+                    const row = document.createElement('tr');
+                    // Adiciona a célula da funcionalidade
+                    row.innerHTML += `<td style="text-align: left; white-space: normal;"><strong>${perm.feature}</strong></td>`;
+                    // Adiciona as células para cada role
+                    permissionsData.roles.forEach(roleKey => {
+                        const pText = perm.actions[roleKey] || 'N/A'; // Obtém a permissão ou 'N/A'
+                        let cls = 'perm-none'; // Classe padrão
+
+                        // [CORRIGIDO V13.5] Bloco if/else if com {} verificado
+                        if (pText.includes('CRUD') || pText.includes('R/W') || pText.includes('Exportar') || pText.includes('Executar')) {
+                            cls = 'perm-full';
+                        } else if (pText.includes('R') || pText.includes('Ver') || pText.includes('Alterar')) {
+                            cls = 'perm-read';
+                        } else if (pText !== 'Nenhum' && pText !== 'N/A') {
+                            cls = 'perm-partial';
+                        }
+                        // else permanece 'perm-none'
+
+                        const cell = document.createElement('td');
+                        cell.className = cls; // Aplica a classe para estilização
+                        cell.textContent = pText; // Define o texto da célula
+                        cell.title = pText; // Adiciona tooltip com o texto completo
+                        row.appendChild(cell); // Adiciona a célula à linha
+                    });
+                    permissionsTableBody.appendChild(row); // Adiciona a linha completa à tabela
+                });
+                return true; // Sucesso
+
+            } catch (error) {
+                console.error("Erro loadPermissionsMatrix (V13.5):", error);
+                if (permissionsError) permissionsError.textContent = `Erro: ${error.message}`;
+                 // Calcula colspan dinamicamente para a mensagem de erro
+                const colspan = (document.querySelectorAll('#permissionsTable thead th')?.length || totalColumns); // Usa totalColumns como fallback
+                permissionsTableBody.innerHTML = `<tr><td colspan="${colspan}" style="text-align: center; color: var(--error-text);">Falha ao carregar permissões.</td></tr>`;
+                return false; // Falha
+            }
+        };
+
+
+        // --- Função Central de Inicialização ---
+        const initializeSettingsPage = async (retryCount = 0, maxRetries = 10, delay = 300) => {
+             console.log(`initializeSettingsPage (V13.5 - Tentativa ${retryCount + 1}/${maxRetries}): Verificando perfil...`);
+
+             if (window.currentUserProfile && window.currentUserProfile.role) {
+                 const role = window.currentUserProfile.role;
+                 console.log(`initializeSettingsPage (V13.5): Perfil OK! Role: ${role}`);
+                 const isMaster = (role === 'master');
+
+                 // Mostra/Esconde abas e conteúdos (removeProperty)
+                 console.log("initializeSettingsPage (V13.5): Aplicando visibilidade...");
+                 let firstVisibleTabId = null;
+                 if (tabLinks && tabContents) {
+                      tabLinks.forEach(link => { const tabId=link.getAttribute('data-tab'); const content=document.getElementById(tabId); let show=true; if(link.classList.contains('admin-only')&&!['master','gestao','DPO'].includes(role)){show=false;} if(link.classList.contains('master-only')&&!isMaster){show=false;} if(show){link.style.removeProperty('display'); if(content)content.style.removeProperty('display'); if(!firstVisibleTabId)firstVisibleTabId=tabId;} else {link.style.display='none'; if(content)content.style.display='none';} });
+                 } else { console.error("Tabs não encontradas (V13.5)!"); isInitializingSettings = false; return; }
+                 console.log(`initializeSettingsPage (V13.5): Visibilidade OK. Primeira visível: ${firstVisibleTabId}`);
+
+                 // Carrega dados das configurações visíveis
+                 console.log("initializeSettingsPage (V13.5): Carregando dados...");
+                 let loadPromises = [];
+                 if (isMaster && generalSettingsForm && document.querySelector('.tab-link[data-tab="tab-geral"]')?.style.display !== 'none') { loadPromises.push(loadGeneralSettings()); }
+                 if (isMaster && hotspotSettingsForm && document.querySelector('.tab-link[data-tab="tab-hotspot"]')?.style.display !== 'none') { loadPromises.push(loadHotspotSettings()); }
+                 const permTabVisible = document.querySelector('.tab-link[data-tab="tab-permissoes"]')?.style.display !== 'none';
+                 if ((isMaster || role === 'DPO') && permissionsTableBody && permTabVisible) { loadPromises.push(loadPermissionsMatrix()); }
+
+                 if (loadPromises.length > 0) { try { await Promise.all(loadPromises); } catch(loadError) { console.error("Erro load Promises (V13.5):", loadError); } }
+                 else { console.log("Nenhum dado a carregar (V13.5).");}
+                 console.log("initializeSettingsPage (V13.5): Carregamento dados OK.");
+
+                 // Define aba ativa inicial
+                 const initialTabId = firstVisibleTabId || 'tab-perfil';
+                 console.log(`initializeSettingsPage (V13.5): Definindo aba inicial: ${initialTabId}`);
+                 const initialTabLink = document.querySelector(`.tab-link[data-tab="${initialTabId}"]`);
+                 if (initialTabLink && initialTabLink.style.display !== 'none') { switchTab(initialTabId); }
+                 else { console.warn(`Aba inicial ${initialTabId} inviśivel (V13.5). Fallback 'tab-perfil'.`); switchTab('tab-perfil'); }
+
+                 console.log("initializeSettingsPage (V13.5): Inicialização CONCLUÍDA.");
+                 isInitializingSettings = false; // Concluído
+                 return;
+
+             } else if (retryCount < maxRetries) {
+                 console.warn(`initializeSettingsPage (V13.5 - Tentativa ${retryCount + 1}): Perfil não disponível. Esperando ${delay}ms...`);
+                 setTimeout(() => initializeSettingsPage(retryCount + 1, maxRetries, delay), delay);
+             } else {
+                 console.error(`ERRO CRÍTICO (V13.5): Perfil não carregado.`);
+                 if(tabContentContainer) tabContentContainer.innerHTML = '<p class="form-message error">Falha permissões.</p>';
+                 if(tabNav) tabNav.style.display = 'none';
+                 isInitializingSettings = false; // Concluído com erro
+             }
+        };
+
+        // --- Adiciona listeners de clique às abas ---
+        if (tabLinks.length > 0) { tabLinks.forEach(link => { link.removeEventListener('click', handleTabClick); link.addEventListener('click', handleTabClick); }); }
+        function handleTabClick(e) { e.preventDefault(); const targetTabId = e.currentTarget.getAttribute('data-tab'); if(targetTabId) switchTab(targetTabId); else console.error("Click aba sem 'data-tab' (V13.5)."); }
+
+        // --- Chama a inicialização ---
+        initializeSettingsPage(); // Inicia a primeira tentativa
+
+    }; // Fim de window.initSettingsPage
+}
+

@@ -1,0 +1,87 @@
+<div class="page-header">
+    <h3>Gestão de Templates</h3>
+    <button id="addTemplateBtn" class="btn-primary">Adicionar Template</button>
+</div>
+
+<div class="table-container">
+    <table id="templatesTable">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Nome</th>
+                <th>Modelo</th>
+                <th>Tipo de Login</th>
+                <th>Ações</th>
+            </tr>
+        </thead>
+        <tbody>
+            <!-- As linhas da tabela serão inseridas aqui via JavaScript -->
+        </tbody>
+    </table>
+</div>
+
+<!-- Modal para Adicionar/Editar Template -->
+<div id="templateModal" class="modal-overlay hidden">
+    <div class="modal-content">
+        <button class="modal-close-btn">&times;</button>
+        <h3 id="modalTitle">Adicionar Novo Template</h3>
+        <form id="templateForm">
+            <input type="hidden" id="templateId">
+            <div class="input-group">
+                <label for="templateName">Nome do Template</label>
+                <input type="text" id="templateName" required>
+            </div>
+            <div class="input-group">
+                <label for="templateBaseModel">Modelo Base</label>
+                <select id="templateBaseModel" required>
+                    <option value="V1">V1 (Padrão)</option>
+                    <option value="V2">V2 (Com Vídeo)</option>
+                </select>
+            </div>
+            <div class="input-group">
+                <label for="templateLoginType">Tipo de Login</label>
+                <select id="templateLoginType" required>
+                    <option value="simplificado">Simplificado (Email)</option>
+                    <option value="cadastro_completo">Cadastro Completo</option>
+                    <option value="padrao">Padrão (Email e Senha)</option>
+                    <option value="validacao_sms">Validação por SMS</option>
+                </select>
+            </div>
+            <div class="input-group">
+                <label for="templatePrimaryColor">Cor Primária</label>
+                <input type="color" id="templatePrimaryColor" value="#3182ce">
+            </div>
+            <div class="input-group">
+                <label for="templateFontColor">Cor da Fonte</label>
+                <input type="color" id="templateFontColor" value="#2d3748">
+            </div>
+             <div class="input-group">
+                <label for="templateFontSize">Tamanho da Fonte (ex: 16px)</label>
+                <input type="text" id="templateFontSize" placeholder="16px">
+            </div>
+            <div class="input-group">
+                <label for="templateLogoUrl">URL do Logótipo</label>
+                <input type="text" id="templateLogoUrl" placeholder="https://exemplo.com/logo.png">
+            </div>
+            <div class="input-group">
+                <label for="templateBgUrl">URL da Imagem de Fundo</label>
+                <input type="text" id="templateBgUrl" placeholder="https://exemplo.com/fundo.jpg">
+            </div>
+            <div class="input-group" id="videoUrlGroup" style="display: none;">
+                <label for="templateVideoUrl">URL do Vídeo Promocional (para V2)</label>
+                <input type="text" id="templateVideoUrl" placeholder="https://exemplo.com/video.mp4">
+            </div>
+             <div class="input-group">
+                <label for="templateBanner">Banner Pré-Login</label>
+                <select id="templateBanner">
+                    <option value="">Nenhum</option>
+                    <!-- Opções de banners serão carregadas aqui -->
+                </select>
+            </div>
+            <div class="modal-actions">
+                <button type="button" id="cancelBtn" class="btn-secondary">Cancelar</button>
+                <button type="submit" class="btn-primary">Guardar</button>
+            </div>
+        </form>
+    </div>
+</div>

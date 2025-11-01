@@ -1,0 +1,80 @@
+
+/* Ficheiro: frontend/css/notifications.css */
+
+#notification-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 1050;
+    width: 350px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.notification {
+    background-color: #fff;
+    color: #333;
+    padding: 15px 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    opacity: 0;
+    transform: translateX(100%);
+    transition: all 0.5s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+    border-left: 5px solid;
+}
+
+.notification.show {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+.notification-icon {
+    font-size: 24px;
+    font-weight: bold;
+}
+
+.notification p {
+    margin: 0;
+    font-size: 14px;
+    line-height: 1.4;
+}
+
+.notification-close {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    font-size: 20px;
+    color: #999;
+    cursor: pointer;
+    transition: color 0.2s;
+}
+
+.notification-close:hover {
+    color: #333;
+}
+
+/* Tipos de Notificação */
+.notification-success {
+    border-color: #28a745;
+}
+.notification-success .notification-icon {
+    color: #28a745;
+}
+
+.notification-error {
+    border-color: #dc3545;
+}
+.notification-error .notification-icon {
+    color: #dc3545;
+}
+
+.notification-info {
+    border-color: #17a2b8;
+}
+.notification-info .notification-icon {
+    color: #17a2b8;
+}

@@ -1,0 +1,123 @@
+// Ficheiro: frontend/js/admin_dashboard.js
+// [VERSÃO 13 - Base V5 Estável + applyMenuPermissions com removeProperty + CSS Limpo + Load Settings]
+// (Definitivo - Problema de Sintaxe Resolvido)
+
+// --- Variáveis Globais ---
+let isProfileLoaded = false;
+window.currentUserProfile = null;
+let loadPageExternal;
+window.systemSettings = null; // Para guardar configs gerais (nome, logo, cor)
+
+// --- Funções Globais ---
+const showForcePasswordChangeModal = () => {
+    const changePasswordModal = document.getElementById('forceChangePasswordModal');
+    if (changePasswordModal) {
+        changePasswordModal.classList.remove('hidden');
+        document.querySelector('.sidebar')?.classList.add('hidden');
+        document.querySelector('.main-content')?.classList.add('hidden');
+    } else {
+        console.error("FATAL: Modal 'forceChangePasswordModal' não encontrado!");
+    }
+};
+
+const apiRequest = async (endpoint, method = 'GET', body = null) => {
+    const API_ADMIN_URL = `http://${window.location.hostname}:3000`;
+    const token = localStorage.getItem('adminToken');
+    const options = {
+        method,
+        headers: {
+            'Authorization': `Bearer ${token}`,
+            'Cache-Control': 'no-cache' // Tenta evitar cache da API
+        }
+    };
+    let url = `${API_ADMIN_URL}${endpoint}`;
+    if (method === 'GET') { url += (url.includes('?') ? '&' : '?') + `_=${Date.now()}`; } // Cache busting GET
+    if (body instanceof FormData) { options.body = body; }
+    else if (body) { options.headers['Content-Type'] = 'application/json'; options.body = JSON.stringify(body); }
+
+    try {
+        const response = await fetch(url, options);
+        if (!response.ok) {
+            let errorData = {}; try { errorData = await response.json(); } catch (e) { errorData.message = response.statusText || `Erro HTTP ${response.status}`; }
+            if (response.status === 401) { console.warn("Token inválido/expirado. Deslogando..."); localStorage.removeItem('adminToken'); window.currentUserProfile = null; isProfileLoaded = false; window.systemSettings = null; window.location.href = 'admin_login.html'; throw new Error('Não autorizado.'); }
+            else if (errorData.code === 'PASSWORD_CHANGE_REQUIRED') { console.warn("API bloqueada: Troca senha obrigatória."); showForcePasswordChangeModal(); throw new Error(errorData.message || "Troca senha obrigatória."); }
+            else { throw new Error(errorData.message || `Erro ${response.status}`); }
+        }
+        if (response.status === 204) return null;
+        const contentType = response.headers.get("content-type");
+        if (contentType && contentType.includes("application/json")) return await response.json();
+        else return await response.text() || null;
+    } catch (error) { console.error(`Erro apiRequest ${method} ${endpoint}:`, error); throw error; }
+};
+
+const applyVisualSettings = (settings) => { /* ... (Lógica V13 mantida) ... */ if(!settings){console.warn("applyVisualSettings: No settings.");return;} console.log("applyVisualSettings: Applying...",settings); const sT=document.querySelector('.sidebar-header h2'); if(sT&&settings.company_name){sT.textContent=settings.company_name;}else if(!sT){console.warn("sidebar h2 not found.");} const sL=document.getElementById('sidebarLogo'); if(sL){if(settings.logo_url){const a=`http://${window.location.hostname}:3000`,p=settings.logo_url.startsWith('/')?settings.logo_url:'/'+settings.logo_url;sL.src=`${a}${p}?t=${Date.now()}`;sL.style.display='block';sL.alt=settings.company_name||"Logótipo";if(sT)sT.style.display='none';}else{sL.style.display='none';sL.src='#';if(sT)sT.style.removeProperty('display');}}else{console.warn("#sidebarLogo not found.");if(sT)sT.style.removeProperty('display');} if(settings.primary_color){document.documentElement.style.setProperty('--primary-color',settings.primary_color); try{let dC=settings.primary_color; if(settings.primary_color.startsWith('#')&&settings.primary_color.length===7){let r=parseInt(settings.primary_color.substring(1,3),16),g=parseInt(settings.primary_color.substring(3,5),16),b=parseInt(settings.primary_color.substring(5,7),16); r=Math.max(0,r-30).toString(16).padStart(2,'0');g=Math.max(0,g-30).toString(16).padStart(2,'0');b=Math.max(0,b-30).toString(16).padStart(2,'0');dC=`#${r}${g}${b}`;} document.documentElement.style.setProperty('--primary-color-dark',dC);}catch(cE){console.error("Color calc error:",cE);document.documentElement.style.setProperty('--primary-color-dark',settings.primary_color);}}else{console.warn("Primary color not set.");document.documentElement.style.removeProperty('--primary-color');document.documentElement.style.removeProperty('--primary-color-dark');} };
+
+// --- INICIALIZAÇÃO PRINCIPAL (DOMContentLoaded) ---
+document.addEventListener('DOMContentLoaded', async () => {
+    console.log("DOM Carregado (V13 - Definitivo). Iniciando...");
+    const token = localStorage.getItem('adminToken');
+    if (!token) { console.log("No token. Redirecting."); window.location.href = 'admin_login.html'; return; }
+
+    // --- DOM Elements ---
+    const userNameElement = document.getElementById('userName');
+    const logoutButton = document.getElementById('logoutButton');
+    const mainContentArea = document.querySelector('.content-area');
+    const navLinks = document.querySelectorAll('.sidebar-nav .nav-item');
+    const allNavItems = document.querySelectorAll('.sidebar-nav .nav-item, .sidebar-nav .nav-title');
+    const pageTitleElement = document.getElementById('pageTitle');
+    const changePasswordModal = document.getElementById('forceChangePasswordModal');
+    const changePasswordForm = document.getElementById('forceChangePasswordForm');
+    const changePasswordError = document.getElementById('forceChangePasswordError');
+    const changePasswordSuccess = document.getElementById('forceChangePasswordSuccess');
+
+    const pageInitializers = { 'admin_home': window.initHomePage, 'admin_hotspot': window.initHotspotPage, 'admin_users': window.initUsersPage, 'admin_templates': window.initTemplatesPage, 'admin_banners': window.initBannersPage, 'admin_campaigns': window.initCampaignsPage, 'admin_routers': window.initRoutersPage, 'admin_settings': window.initSettingsPage };
+
+    // --- PAGE NAVIGATION ---
+    const loadPage = async (pageName, linkElement) => { /* ... (Lógica V13 mantida) ... */ if(!isProfileLoaded){console.warn(`loadPage(${pageName}) before profile.`);} if(isProfileLoaded&&window.currentUserProfile?.must_change_password){console.warn(`Nav ${pageName} blocked: Pwd.`);showForcePasswordChangeModal();return;} console.log(`loadPage: Loading ${pageName}...`); navLinks.forEach(l=>l.classList.remove('active')); let cT=pageName; if(linkElement){linkElement.classList.add('active'); const txt=(linkElement.textContent||'').trim().replace(/[\u{1F300}-\u{1F5FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu,'').trim(); cT=txt||pageName;}else{const cL=document.querySelector(`.sidebar-nav .nav-item[data-page="${pageName}"]`); if(cL){cL.classList.add('active'); const txt=(cL.textContent||'').trim().replace(/[\u{1F300}-\u{1F5FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu,'').trim(); cT=txt||pageName;}} if(pageTitleElement)pageTitleElement.textContent=cT; try{console.log(`Fetch: pages/${pageName}.html`); const r=await fetch(`pages/${pageName}.html?_=${Date.now()}`); console.log(`Fetch status ${pageName}: ${r.status}`); if(!r.ok)throw new Error(`Page ${pageName}.html not found (${r.status})`); if(mainContentArea){mainContentArea.innerHTML=await r.text(); console.log(`HTML ${pageName} injected.`);}else{console.error("'.content-area' not found.");return;} const iF=pageInitializers[pageName]; if(typeof iF==='function'){console.log(`Exec init ${pageName}...`);setTimeout(iF,0);}else{console.warn(`Init func ${pageName} not found.`);}}catch(err){console.error(`Error loadPage ${pageName}:`,err);if(mainContentArea)mainContentArea.innerHTML=`<h2>Error ${pageName}.</h2><p>${err.message}.</p>`;} };
+    loadPageExternal = loadPage;
+
+    // --- USER PROFILE & AUTH ---
+    const fetchUserProfile = async () => { /* ... (Lógica V13 mantida) ... */ isProfileLoaded=false;window.currentUserProfile=null; try{console.log("fetchUserProfile...");const d=await apiRequest('/api/admin/profile'); if(!d||!d.profile||!d.profile.role)throw new Error("Invalid profile."); console.log("Profile received:",d.profile);window.currentUserProfile=d.profile;isProfileLoaded=true; if(userNameElement)userNameElement.textContent=d.profile.email; if(d.profile.must_change_password){console.log("Pwd change required.");showForcePasswordChangeModal();return false;} console.log("Profile OK.");return true;}catch(err){console.error("CRITICAL Profile fetch failed:",err.message);isProfileLoaded=false;window.currentUserProfile=null;window.systemSettings=null; if(mainContentArea)mainContentArea.innerHTML='<h2>Erro perfil.</h2>';document.querySelector('.sidebar')?.classList.add('hidden');document.querySelector('.main-content')?.classList.add('hidden'); if(!err.message||(!err.message.includes('Não autorizado')&&!err.message.includes('obrigatória'))){setTimeout(()=>{localStorage.removeItem('adminToken');window.location.href='admin_login.html';},4000);} return false;} };
+
+    // --- APPLY MENU PERMISSIONS ---
+    const applyMenuPermissions = (role) => { /* ... (Lógica V13 mantida) ... */ console.log(`applyMenuPermissions for role: ${role}`); if(!role){console.error("Invalid role!");return;} const iA=['master','gestao','DPO'].includes(role); const iM=(role==='master'); console.log(`isAdmin=${iA}, isMaster=${iM}`); allNavItems.forEach(el=>{let show=true;let reason="Padrão";const pN=el.getAttribute('data-page')||el.textContent.trim(); if(el.classList.contains('admin-only')){if(!iA){show=false;reason="admin-only/!admin";}else{reason="admin-only/admin";}}else if(el.classList.contains('master-only')){if(!iM){show=false;reason="master-only/!master";}else{reason="master-only/master";}} if(show){el.style.removeProperty('display');}else{el.style.display='none';} /* console.log(`Perms Item "${pN}": Visible? ${show} (${reason}) -> display=${el.style.display}`); */ }); console.log("Menu permissions applied."); };
+
+    // --- Logout ---
+    if (logoutButton) logoutButton.addEventListener('click', () => { console.log("Logout."); localStorage.removeItem('adminToken'); window.currentUserProfile = null; isProfileLoaded = false; window.systemSettings = null; window.location.href = 'admin_login.html'; });
+    else console.warn("Logout button not found.");
+
+    // --- Navegação ---
+    navLinks.forEach(link => link.addEventListener('click', (e) => { e.preventDefault(); const page = link.getAttribute('data-page'); if(page) loadPage(page, link); else console.warn("Click item without 'data-page'."); }));
+
+    // --- Modal Troca Senha ---
+    if (changePasswordForm) { changePasswordForm.addEventListener('submit', async (e) => { /* ... (Lógica V13 mantida) ... */ e.preventDefault(); console.log("Force pwd change submit."); if(changePasswordError)changePasswordError.textContent='';if(changePasswordSuccess)changePasswordSuccess.textContent=''; const btn=changePasswordForm.querySelector('button[type="submit"]'); if(btn){btn.disabled=true;btn.textContent='A processar...';} const cI=document.getElementById('currentTemporaryPassword'); const nI=document.getElementById('newPassword'); if(!cI||!nI){if(changePasswordError)changePasswordError.textContent="Erro interno."; if(btn){btn.disabled=false;btn.textContent='Alterar';} return;} const curr=cI.value;const nv=nI.value; if(nv.length<6){if(changePasswordError)changePasswordError.textContent='Senha < 6 chars.'; if(btn){btn.disabled=false;btn.textContent='Alterar';} return;} try{const res=await apiRequest('/api/admin/profile/change-own-password','POST',{currentPassword:curr,newPassword:nv}); if(changePasswordSuccess)changePasswordSuccess.textContent=(res.message||"Senha alterada!")+" Deslogando..."; setTimeout(()=>{localStorage.removeItem('adminToken');window.currentUserProfile=null;isProfileLoaded=false;window.systemSettings=null;window.location.href='admin_login.html';},4000);}catch(err){if(changePasswordError)changePasswordError.textContent=`Erro: ${err.message||'Falha.'}`; if(btn){btn.disabled=false;btn.textContent='Alterar';}} }); }
+    else console.warn("Form 'forceChangePasswordForm' not found.");
+
+    // --- INICIALIZAÇÃO ---
+    console.log("Dashboard: Iniciando sequência...");
+    const profileOK = await fetchUserProfile(); // 1. Espera perfil
+    console.log(`Dashboard: Perfil carregado? ${profileOK}`);
+    if (!profileOK) { console.log("Dashboard: Inicialização INTERROMPIDA."); return; } // Para se falhar
+
+    // 2. Carrega e aplica settings (só master)
+    if (window.currentUserProfile.role === 'master') {
+        try {
+            console.log("Dashboard: Buscando config gerais...");
+            const settings = await apiRequest('/api/settings/general');
+            if (settings) { window.systemSettings = settings; applyVisualSettings(settings); console.log("Dashboard: Config visuais aplicadas."); }
+            else { console.warn("Dashboard: Config gerais não retornadas."); window.systemSettings = {}; }
+        } catch (settingsError) { console.error("Dashboard: Erro config gerais:", settingsError); window.systemSettings = {}; }
+    } else { console.log("Dashboard: Não é master, pulando config gerais."); window.systemSettings = {}; }
+
+    // 3. Aplica permissões ao menu
+    applyMenuPermissions(window.currentUserProfile.role);
+
+    // 4. Carrega página inicial
+    console.log("Dashboard: Carregando página inicial 'admin_home'...");
+    const homeLink = document.querySelector('.sidebar-nav .nav-item[data-page="admin_home"]');
+    if (homeLink) { loadPage('admin_home', homeLink); }
+    else { console.error("Link 'admin_home' não encontrado!"); loadPage('admin_home', null); }
+
+    console.log("Dashboard: Inicialização concluída.");
+});
+

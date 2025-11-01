@@ -1,0 +1,63 @@
+<!-- Ficheiro: pages/admin_home.html -->
+<div class="stats-grid">
+    
+    <!-- [MODIFICADO] Cartão Total de Roteadores Removido -->
+    
+    <!-- [MODIFICADO] Cartão Total de Grupos Removido -->
+
+    <!-- Cartão Campanhas Ativas (Mantido) -->
+    <div class="stat-card">
+        <div class="stat-card-icon" style="background-color: #38a169;">
+            <span>🎯</span>
+        </div>
+        <div class="stat-card-info">
+            <span class="stat-card-title">Campanhas Ativas</span>
+            <span class="stat-card-value" id="activeCampaigns">...</span>
+        </div>
+    </div>
+
+    <!-- Cartão Banners Disponíveis (Mantido) -->
+    <div class="stat-card">
+        <div class="stat-card-icon" style="background-color: #c53030;">
+            <span>📢</span>
+        </div>
+        <div class="stat-card-info">
+            <span class="stat-card-title">Banners Disponíveis</span>
+            <span class="stat-card-value" id="totalBanners">...</span>
+        </div>
+    </div>
+
+    <!-- [NOVO] Cartão Templates Disponíveis -->
+    <div class="stat-card">
+        <div class="stat-card-icon" style="background-color: #d69e2e;"> <!-- Cor nova -->
+            <span>🎨</span>
+        </div>
+        <div class="stat-card-info">
+            <span class="stat-card-title">Templates Disponíveis</span>
+            <span class="stat-card-value" id="totalTemplates">...</span>
+        </div>
+    </div>
+
+    <!-- [NOVO] Cartão Total de Utilizadores (Hotspot) -->
+    <div class="stat-card">
+        <div class="stat-card-icon" style="background-color: #3182ce;"> <!-- Cor reutilizada -->
+            <span>👥</span>
+        </div>
+        <div class="stat-card-info">
+            <span class="stat-card-title">Usuários Cadastrados</span>
+            <span class="stat-card-value" id="totalUsers">...</span>
+        </div>
+    </div>
+</div>
+
+<div class="content-section">
+    <div class="section-header">
+        <h2>Atalhos Rápidos</h2>
+    </div>
+    <div class="quick-links">
+        <button class="quick-link-btn" data-page="admin_templates">Gerir Templates</button>
+        <button class="quick-link-btn" data-page="admin_campaigns">Ver Campanhas</button>
+        <!-- [REMOVIDO] Atalho de Roteadores removido, pois 'estetica' não tem acesso -->
+        <button class="quick-link-btn" data-page="admin_hotspot">Ver Relatório Hotspot</button>
+    </div>
+</div>

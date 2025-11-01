@@ -1,0 +1,95 @@
+<div class="page-header">
+    <h3>Gestão de Banners</h3>
+    <button id="addBannerBtn" class="btn-primary">Adicionar Banner</button>
+</div>
+
+<div class="table-container">
+    <table id="bannersTable">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Nome</th>
+                <th>Tipo</th>
+                <th>Estado</th>
+                <th>Ações</th>
+            </tr>
+        </thead>
+        <tbody>
+            <!-- As linhas da tabela serão inseridas aqui via JavaScript -->
+        </tbody>
+    </table>
+</div>
+
+<!-- Modal para Adicionar/Editar Banner (versão melhorada) -->
+<div id="bannerModal" class="modal-overlay hidden">
+    <div class="modal-content">
+        <button class="modal-close-btn">&times;</button>
+        <h3 id="modalTitle">Adicionar Novo Banner</h3>
+        <form id="bannerForm">
+            <input type="hidden" id="bannerId">
+            
+            <div class="input-group">
+                <label for="bannerName">Nome do Banner</label>
+                <input type="text" id="bannerName" required>
+            </div>
+            
+            <div class="input-group">
+                <label for="bannerType">Tipo de Banner</label>
+                <select id="bannerType" required>
+                    <option value="pre-login">Pré-Login</option>
+                    <option value="post-login">Pós-Login</option>
+                </select>
+            </div>
+
+            <!-- Seleção de Fonte da Imagem -->
+            <div class="input-group">
+                <label>Fonte da Imagem</label>
+                <div class="radio-group">
+                    <input type="radio" id="sourceUpload" name="imageSource" value="upload" checked>
+                    <label for="sourceUpload">Fazer Upload</label>
+                    <input type="radio" id="sourceUrl" name="imageSource" value="url">
+                    <label for="sourceUrl">Usar URL Externa</label>
+                </div>
+            </div>
+
+            <!-- Campo de Upload (visível por defeito) -->
+            <div class="input-group" id="uploadGroup">
+                 <label for="bannerImageFile">Ficheiro da Imagem (JPG, PNG, GIF)</label>
+                 <input type="file" id="bannerImageFile" accept="image/jpeg,image/png,image/gif">
+            </div>
+
+            <!-- Campo de URL (oculto por defeito) -->
+            <div class="input-group hidden" id="urlGroup">
+                <label for="bannerImageUrl">URL da Imagem</label>
+                <input type="text" id="bannerImageUrl" placeholder="https://exemplo.com/imagem.png">
+            </div>
+            
+            <!-- Pré-visualização da Imagem -->
+            <div class="image-preview-container">
+                <img id="bannerImagePreview" src="" alt="Pré-visualização do Banner" class="hidden">
+                <span id="previewPlaceholder">Pré-visualização</span>
+            </div>
+            
+            <div class="input-group">
+                <label for="bannerTargetUrl">URL de Destino (para onde o clique leva)</label>
+                <input type="text" id="bannerTargetUrl" placeholder="https://sua-empresa.com">
+            </div>
+
+            <div class="input-group">
+                <label for="bannerDisplayTime">Tempo de Exibição (segundos)</label>
+                <input type="number" id="bannerDisplayTime" value="5" min="1">
+            </div>
+
+            <div class="input-group checkbox-group">
+                <input type="checkbox" id="bannerIsActive" checked>
+                <label for="bannerIsActive">Banner Ativo</label>
+            </div>
+            
+            <div class="modal-actions">
+                <button type="button" id="cancelBtn" class="btn-secondary">Cancelar</button>
+                <button type="submit" class="btn-primary">Guardar</button>
+            </div>
+        </form>
+    </div>
+</div>
+

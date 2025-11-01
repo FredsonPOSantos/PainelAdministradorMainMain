@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Rota Hotspot Admin</title>
+    <!-- [CORRETO] Apontado para o CSS do Dashboard (tema escuro) -->
+    <link rel="stylesheet" href="css/admin_style.css"> 
+    <link rel="stylesheet" href="css/notifications.css"> 
+    <link rel="stylesheet" href="css/confirmation_modal.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Biblioteca para exportação para Excel -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+    <!-- Estilos inline (mantidos da sua versão anterior) -->
+    <style>
+        .sidebar-nav .nav-title {
+            padding: 10px 24px 5px; /* Ajustado padding */
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: #a0aec0;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-top: 15px; /* Aumentado espaço */
+        }
+        .sidebar-nav .nav-title:first-of-type {
+             margin-top: 0;
+         }
+        /* Garante que itens escondidos pelo JS não ocupem espaço */
+        [style*="display: none"] { display: none !important; }
+    </style>
+</head>
+
+<!-- 
+    [CORREÇÃO V13.2] 
+    Adiciona a classe 'dashboard-body' para ativar o layout flexbox (display: flex) 
+    definido no admin_style.css (V13.3), corrigindo o layout quebrado.
+-->
+<body class="dashboard-body"> 
+
+    <aside class="sidebar">
+        <!-- A Navegação Principal permanece na barra lateral -->
+        <nav class="sidebar-nav">
+            <!-- Título da Secção: Principal -->
+            <div class="nav-title">Principal</div>
+            <a href="#" class="nav-item active" data-page="admin_home">
+                <span>🏠</span> Dashboard
+            </a>
+            <a href="#" class="nav-item" data-page="admin_hotspot">
+                <span>📶</span> Relatório Hotspot
+            </a>
+            
+            <!-- Título da Secção: Marketing -->
+            <div class="nav-title">Marketing</div>
+            <a href="#" class="nav-item admin-only" data-page="admin_campaigns">
+                <span>🎯</span> Campanhas
+            </a>
+            <a href="#" class="nav-item admin-only" data-page="admin_templates">
+                <span>🎨</span> Templates
+            </a>
+            <a href="#" class="nav-item admin-only" data-page="admin_banners">
+                <span>📢</span> Banners
+            </a>
+
+            <!-- Título da Secção: Gestão -->
+            <div class="nav-title">Gestão</div>
+            <a href="#" class="nav-item admin-only" data-page="admin_routers">
+                <span>📡</span> Roteadores
+            </a>
+            <a href="#" class="nav-item admin-only" data-page="admin_users">
+                <span>👥</span> Utilizadores
+            </a>
+            <a href="#" class="nav-item admin-only" data-page="admin_settings">
+                <span>⚙️</span> Configurações
+            </a>
+        </nav>
+    </aside>
+
+    <!-- Conteúdo Principal -->
+    <main class="main-content">
+        <!-- [NOVO] Cabeçalho redesenhado -->
+        <header class="main-header">
+            <div class="header-left">
+                <img src="" alt="Logótipo" id="headerLogo" style="display: none; height: 40px;">
+                <h1 id="pageTitle">Dashboard</h1>
+            </div>
+            <div class="header-right">
+                <div class="user-info">
+                    <span class="welcome-message">Bem-vindo, <span id="userFirstName">A carregar...</span></span>
+                    <div class="user-details">
+                        <span id="userName"></span> 
+                        (<span id="userRole"></span>)
+                    </div>
+                </div>
+                <button id="logoutButton" class="logout-btn-icon" title="Sair">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                        <polyline points="16 17 21 12 16 7"></polyline>
+                        <line x1="21" y1="12" x2="9" y2="12"></line>
+                    </svg>
+                </button>
+            </div>
+        </header>
+
+        <!-- Área onde o conteúdo das páginas (home, users, etc.) será carregado -->
+        <section class="content-area">
+            <!-- Conteúdo carregado dinamicamente aqui -->
+        </section>
+    </main>
+
+    <!-- Modal Global: Forçar Troca de Senha -->
+    <div id="forceChangePasswordModal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <h3>Troca de Senha Obrigatória</h3>
+            <p style="margin: 10px 0; color: var(--text-secondary); font-size: 0.9rem;">
+                A sua senha foi redefinida por um administrador. Por favor, crie uma nova senha segura para continuar.
+            </p>
+            <form id="forceChangePasswordForm" style="margin-top: 20px;">
+                <div class="input-group">
+                    <label for="currentTemporaryPassword">Senha Temporária (Atual)</label>
+                    <input type="password" id="currentTemporaryPassword" required>
+                </div>
+                <div class="input-group">
+                    <label for="newPassword">Nova Senha (mín. 6 caracteres)</label>
+                    <input type="password" id="newPassword" required minlength="6">
+                </div>
+                <p id="forceChangePasswordError" class="form-message error"></p>
+                <p id="forceChangePasswordSuccess" class="form-message success"></p>
+                <div class="modal-actions" style="margin-top: 20px;">
+                    <button type="submit" class="btn-primary">Alterar Senha e Desbloquear</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Scripts das páginas individuais (carregados pelo dashboard.js) -->
+    <script src="js/admin_home.js"></script>
+    <script src="js/admin_hotspot.js"></script>
+    <script src="js/admin_users.js"></script>
+    <script>
+        // Garante que o script da página específica seja chamado após o carregamento do conteúdo
+        if (window.initUsersPage) {
+            window.initUsersPage();
+        }
+    </script>
+    <script src="js/admin_templates.js"></script>
+    <script src="js/admin_banners.js"></script>
+    <script src="js/admin_campaigns.js"></script>
+    <script src="js/admin_routers.js"></script>
+    <script src="js/admin_settings.js"></script>
+
+    <!-- Script "Maestro" - Carregado por último -->
+    <div id="notification-container"></div>
+        <script src="js/notifications.js"></script>
+        <script src="js/confirmation_modal.js"></script>
+
+    <script src="js/admin_dashboard.js"></script> 
+</body>
+</html>
+

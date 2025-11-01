@@ -1,0 +1,224 @@
+<!-- Ficheiro: pages/admin_settings.html -->
+<!-- [VERSÃO 13.5.3 - GESTÃO BATCH + CORREÇÃO DE LABELS] -->
+
+<div class="page-header">
+    <h3>Configurações do Sistema</h3>
+</div>
+
+<!-- Navegação em Abas -->
+<nav class="tab-nav">
+    <button class="tab-link active" data-tab="tab-perfil">Meu Perfil</button>
+    <button class="tab-link admin-only" data-tab="tab-geral">Geral</button>
+    <button class="tab-link admin-only master-only" data-tab="tab-hotspot">Portal Hotspot</button>
+    <!-- [ATUALIZADO V13.5.2] Removido master-only daqui para o JS controlar (permite DPO) -->
+    <button class="tab-link admin-only" data-tab="tab-permissoes">Funções e Permissões</button>
+    <button class="tab-link admin-only master-only" data-tab="tab-logs">Logs de Atividade</button>
+    <button class="tab-link admin-only master-only" data-tab="tab-lgpd">Gestão LGPD</button>
+</nav>
+
+<!-- Conteúdo das Abas -->
+<div class="tab-content-container">
+
+    <!-- Aba 1: Meu Perfil (Fase 2.2 - Concluída) -->
+    <div id="tab-perfil" class="tab-content active">
+        <div class="content-section">
+            <div class="section-header">
+                <h4>Alterar Minha Senha (Voluntariamente)</h4>
+            </div>
+            <form id="changeOwnPasswordForm">
+                <div class="input-group">
+                    <!-- [CORRIGIDO] Adicionado 'for' -->
+                    <label for="currentPassword">Senha Atual</label>
+                    <input type="password" id="currentPassword" required>
+                </div>
+                <div class="input-group">
+                    <!-- [CORRIGIDO] Adicionado 'for' -->
+                    <label for="newVoluntaryPassword">Nova Senha (mín. 6 caracteres)</label>
+                    <input type="password" id="newVoluntaryPassword" required minlength="6">
+                </div>
+                <div class="input-group">
+                    <!-- [CORRIGIDO] Adicionado 'for' -->
+                    <label for="confirmNewVoluntaryPassword">Confirmar Nova Senha</label>
+                    <input type="password" id="confirmNewVoluntaryPassword" required minlength="6">
+                </div>
+                <p id="changeOwnPasswordError" class="form-message error"></p>
+                <p id="changeOwnPasswordSuccess" class="form-message success"></p>
+                <div class="form-actions">
+                    <button type="submit" class="btn-primary">Alterar Senha</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Aba 2: Geral (Fase 2.3) -->
+    <div id="tab-geral" class="tab-content admin-only master-only">
+        <div class="content-section">
+            <div class="section-header">
+                <h4>Configurações Gerais da Empresa</h4>
+            </div>
+            <form id="generalSettingsForm" enctype="multipart/form-data">
+                <div class="input-group">
+                    <!-- [CORRIGIDO] Adicionado for="companyName" -->
+                    <label for="companyName">Nome da Empresa</label>
+                    <input type="text" id="companyName" placeholder="O nome que aparece no painel">
+                </div>
+                
+                <div class="input-group">
+                    <!-- [CORRIGIDO] Adicionado for="logoUpload" -->
+                    <label for="logoUpload">Logótipo (.png, .jpg, .svg)</label>
+                    <input type="file" id="logoUpload" accept="image/png, image/jpeg, image/svg+xml">
+                    <div class="logo-preview-container">
+                        <p>Pré-visualização do Logo Atual:</p>
+                        <img id="currentLogoPreview" src="#" alt="Logo Atual" style="display: none; max-height: 50px; background-color: #fff; border-radius: 4px; padding: 5px; margin-top: 10px;">
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <!-- [CORRIGIDO] Adicionado for="primaryColor" -->
+                    <label for="primaryColor">Cor Primária</label>
+                    <input type="color" id="primaryColor" value="#4299e1" class="color-picker">
+                    <p class="input-hint">Define a cor dos botões e destaques do painel.</p>
+                </div>
+
+                <div class="input-group appearance-setting">
+                    <label for="backgroundColor">Cor do Plano de Fundo</label>
+                    <input type="color" id="backgroundColor" value="#1a202c" class="color-picker">
+                    <p class="input-hint">Define a cor de fundo principal do painel.</p>
+                </div>
+
+                <div class="input-group appearance-setting">
+                    <label for="fontColor">Cor da Fonte</label>
+                    <input type="color" id="fontColor" value="#edf2f7" class="color-picker">
+                    <p class="input-hint">Define a cor do texto principal do painel.</p>
+                </div>
+
+                <div class="input-group appearance-setting">
+                    <label for="fontFamily">Família da Fonte</label>
+                    <select id="fontFamily">
+                        <option value="'Inter', sans-serif" style="font-family: 'Inter', sans-serif;">Inter (Padrão)</option>
+                        <option value="'Arial', sans-serif" style="font-family: 'Arial', sans-serif;">Arial</option>
+                        <option value="'Verdana', sans-serif" style="font-family: 'Verdana', sans-serif;">Verdana</option>
+                        <option value="'Georgia', serif" style="font-family: 'Georgia', serif;">Georgia</option>
+                        <option value="'Times New Roman', serif" style="font-family: 'Times New Roman', serif;">Times New Roman</option>
+                        <option value="'Courier New', monospace" style="font-family: 'Courier New', monospace;">Courier New</option>
+                    </select>
+                    <p class="input-hint">Escolha a fonte para o painel. A pré-visualização é mostrada na lista.</p>
+                </div>
+
+                <div class="input-group appearance-setting">
+                    <label for="fontSize">Tamanho da Fonte (px)</label>
+                    <input type="number" id="fontSize" value="16" min="10" max="24">
+                    <p class="input-hint">Define o tamanho da fonte base do painel (em pixels).</p>
+                </div>
+                
+                <p id="generalSettingsError" class="form-message error"></p>
+                <p id="generalSettingsSuccess" class="form-message success"></p>
+                <div class="form-actions">
+                    <button type="submit" class="btn-primary">Guardar Configurações Gerais</button>
+                </div>
+            </form>
+        </div>
+
+        <div class="content-section appearance-setting">
+            <div class="section-header">
+                <h4>Imagem de Fundo do Login</h4>
+            </div>
+            <form id="backgroundSettingsForm" enctype="multipart/form-data">
+                <div class="input-group">
+                    <label for="backgroundUpload">Imagem de Fundo (.png, .jpg)</label>
+                    <input type="file" id="backgroundUpload" accept="image/png, image/jpeg">
+                    <p class="input-hint">Recomendado: 1920x1080px, máx 2MB.</p>
+                    <div class="image-preview-container" style="margin-top: 15px;">
+                        <p>Pré-visualização da Imagem Atual:</p>
+                        <img id="currentBackgroundPreview" src="#" alt="Imagem de Fundo Atual" style="display: none; max-width: 100%; max-height: 150px;">
+                    </div>
+                </div>
+                <p id="backgroundSettingsError" class="form-message error"></p>
+                <p id="backgroundSettingsSuccess" class="form-message success"></p>
+                <div class="form-actions">
+                    <button type="submit" class="btn-primary">Guardar Imagem de Fundo</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Aba 3: Portal Hotspot (Fase 2.4) -->
+    <div id="tab-hotspot" class="tab-content admin-only master-only">
+        <div class="content-section">
+            <div class="section-header">
+                <h4>Configurações do Portal Hotspot</h4>
+            </div>
+            <form id="hotspotSettingsForm">
+                <div class="input-group">
+                    <!-- [CORRIGIDO] Adicionado for="sessionTimeoutMinutes" -->
+                    <label for="sessionTimeoutMinutes">Tempo de Sessão (minutos)</label>
+                    <input type="number" id="sessionTimeoutMinutes" placeholder="Ex: 60" min="1">
+                    <p class="input-hint">Tempo que o utilizador final fica autenticado antes de precisar logar novamente.</p>
+                </div>
+                
+                <div class="input-group">
+                    <!-- [CORRIGIDO] Adicionado for="domainWhitelist" -->
+                    <label for="domainWhitelist">Whitelist de Domínios (um por linha)</label>
+                    <textarea id="domainWhitelist" rows="5" placeholder="Ex:\ngoogle.com\nfacebook.com\nwhatsapp.net"></textarea>
+                    <p class="input-hint">Domínios que o utilizador pode aceder *antes* de se autenticar no hotspot.</p>
+                </div>
+
+                <p id="hotspotSettingsError" class="form-message error"></p>
+                <p id="hotspotSettingsSuccess" class="form-message success"></p>
+                <div class="form-actions">
+                    <button type="submit" class="btn-primary">Guardar Configurações do Hotspot</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Aba 4: Funções e Permissões (Fase 3.1 - V13.5.3) -->
+    <div id="tab-permissoes" class="tab-content admin-only"> <!-- JS V13.1 irá controlar a visibilidade disto -->
+        <div class="content-section">
+             <div class="section-header">
+                <h4>Funções e Permissões</h4>
+            </div>
+            <div class="permissions-matrix" style="margin-top: 20px;">
+                <p id="permissionsError" class="form-message error"></p>
+                
+                <p id="permHelpTextMaster" class="input-hint" style="display: none; margin-bottom: 15px;">
+                    Selecione as permissões para cada função. As alterações só serão aplicadas após clicar em "Salvar Alterações".
+                </p>
+                <p id="permHelpTextDPO" class="input-hint" style="display: none; margin-bottom: 15px;">
+                    Modo de auditoria (Leitura). Apenas o 'master' pode editar as permissões.
+                </p>
+
+                <!-- O contêiner da nova grade de permissões -->
+                <div id="permissionsGridContainer"></div>
+                
+                <!-- Botão Salvar (V13.5.3) -->
+                <div id="permSaveChangesContainer" class="form-actions" style="display: none; margin-top: 25px;">
+                     <button type="button" id="permSaveChangesBtn" class="btn-primary">Salvar Alterações</button>
+                     <p id="permSaveStatus" style="margin-left: 15px;"></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Aba 5: Logs de Atividade (Fase 3.2) -->
+    <div id="tab-logs" class="tab-content admin-only master-only">
+        <div class="content-section">
+            <div class="section-header">
+                <h4>Logs de Atividade do Painel</h4>
+            </div>
+             <p style="margin-top: 10px;">(Fase 3.2) - O visualizador de logs de auditoria será implementado aqui.</p>
+        </div>
+    </div>
+
+    <!-- Aba 6: Gestão LGPD (Fase 3.3) -->
+    <div id="tab-lgpd" class="tab-content admin-only master-only">
+        <div class="content-section">
+             <div class="section-header">
+                <h4>Gestão LGPD</h4>
+            </div>
+            <p style="margin-top: 10px;">(Fase 3.3) - A gestão de pedidos de exclusão de dados será implementada aqui.</p>
+        </div>
+    </div>
+
+</div>
+

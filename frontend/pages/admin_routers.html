@@ -1,0 +1,161 @@
+<!-- Ficheiro: pages/admin_routers.html -->
+
+<!-- [ADICIONADO] Cartões de Estatísticas (Movidos do Dashboard) -->
+<div class="stats-grid">
+    <!-- Cartão Total de Roteadores -->
+    <div class="stat-card">
+        <div class="stat-card-icon" style="background-color: #3182ce;">
+            <span>📡</span>
+        </div>
+        <div class="stat-card-info">
+            <span class="stat-card-title">Total de Roteadores</span>
+            <span class="stat-card-value" id="totalRouters">...</span>
+        </div>
+    </div>
+
+    <!-- Cartão Total de Grupos -->
+    <div class="stat-card">
+        <div class="stat-card-icon" style="background-color: #dd6b20;">
+            <span>📦</span>
+        </div>
+        <div class="stat-card-info">
+            <span class="stat-card-title">Grupos Criados</span>
+            <span class="stat-card-value" id="totalGroups">...</span>
+        </div>
+    </div>
+</div>
+
+<!-- Secção de Grupos -->
+<div class="content-section" style="margin-top: 2rem;">
+    <div class="section-header">
+        <h3>Grupos de Roteadores</h3>
+        <button id="addGroupBtn" class="btn-primary">Adicionar Grupo</button>
+    </div>
+    <div class="table-container">
+        <table id="groupsTable">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Nome do Grupo</th>
+                    <th>Observação</th>
+                    <th>Nº de Roteadores</th>
+                    <th>Ações</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Conteúdo dos grupos via JS -->
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Secção de Roteadores Individuais -->
+<div class="content-section">
+    <div class="section-header">
+        <h3>Roteadores Individuais</h3>
+        <button id="discoverRoutersBtn" class="btn-secondary">Verificar Roteadores Novos</button>
+        <button id="checkStatusBtn" class="btn-primary">Verificar Status</button>
+
+    </div>
+    <div class="table-container">
+        <table id="routersTable">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Nome do Roteador</th>
+                    <th>Status</th>
+                    <th>Grupo</th>
+                    <th>Observação</th>
+                    <th>Ações</th>
+                    
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Conteúdo dos roteadores via JS -->
+            </tbody>
+        </table>
+    </div>
+</div>
+
+
+<!-- Modal para Grupos -->
+<div id="groupModal" class="modal-overlay hidden">
+    <div class="modal-content large">
+        <button class="modal-close-btn">&times;</button>
+        <h3 id="groupModalTitle">Adicionar Novo Grupo</h3>
+        <form id="groupForm">
+            <input type="hidden" id="groupId">
+            <div class="input-group">
+                <label for="groupPrefix">Preenchimento Rápido</label>
+                <select id="groupPrefix">
+                    <option value="">Selecionar para preencher...</option>
+                </select>
+            </div>
+            <div class="input-group">
+                <label for="groupName">Nome do Grupo</label>
+                <input type="text" id="groupName" required>
+            </div>
+            <div class="input-group">
+                <label for="groupDescription">Observação</label>
+                <textarea id="groupDescription" rows="3"></textarea>
+            </div>
+            <div class="input-group">
+                <label>Selecionar Roteadores</label>
+                <div id="routerListForGroup" class="checkbox-list">
+                    <!-- Checkboxes de roteadores via JS -->
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button type="button" id="cancelGroupBtn" class="btn-secondary">Cancelar</button>
+                <button type="submit" class="btn-primary">Guardar Grupo</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal para Deteção de Roteadores -->
+<div id="discoverModal" class="modal-overlay hidden">
+    <div class="modal-content">
+        <button class="modal-close-btn">&times;</button>
+        <h3>Novos Roteadores Detetados</h3>
+        <form id="discoverForm">
+            <p>Selecione os roteadores que deseja adicionar ao sistema.</p>
+            <div id="discoveredRouterList" class="checkbox-list" style="margin-top: 20px;">
+                <!-- Lista de roteadores detetados será inserida aqui -->
+            </div>
+            <div class="modal-actions">
+                <button type="button" id="cancelDiscoverBtn" class="btn-secondary">Cancelar</button>
+                <button type="submit" class="btn-primary">Adicionar Selecionados</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal para Editar Roteador (Atualizado) -->
+<div id="routerModal" class="modal-overlay hidden">
+    <div class="modal-content">
+        <button class="modal-close-btn">&times;</button>
+        <h3 id="routerModalTitle">Editar Roteador</h3>
+        <form id="routerForm">
+            <input type="hidden" id="routerId">
+            <div class="input-group">
+                <label for="routerName">Nome do Roteador</label>
+                <input type="text" id="routerName" readonly>
+            </div>
+            <!-- NOVO CAMPO DE IP -->
+            <div class="input-group">
+                <label for="routerIpAddress">Endereço IP</label>
+                <input type="text" id="routerIpAddress" placeholder="Ex: 192.168.1.1" pattern="^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$" title="Digite um endereço IP válido.">
+            </div>
+            <div class="input-group">
+                <label for="routerDescription">Observação</label>
+                <textarea id="routerDescription" rows="4"></textarea>
+            </div>
+            <div class="modal-actions">
+                <button type="button" id="cancelRouterBtn" class="btn-secondary">Cancelar</button>
+                <button type="submit" class="btn-primary">Guardar Alterações</button>
+            </div>
+        </form>
+    </div>
+</div>
+

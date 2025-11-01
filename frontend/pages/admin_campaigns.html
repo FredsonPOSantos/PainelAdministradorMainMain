@@ -1,0 +1,75 @@
+<div class="page-header">
+    <h3>Gestão de Campanhas</h3>
+    <button id="addCampaignBtn" class="btn-primary">Adicionar Campanha</button>
+</div>
+
+<div class="table-container">
+    <table id="campaignsTable">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Nome</th>
+                <th>Template</th>
+                <th>Tipo de Alvo</th>
+                <th>Estado</th>
+                <th>Ações</th>
+            </tr>
+        </thead>
+        <tbody>
+            <!-- As linhas da tabela serão inseridas aqui via JavaScript -->
+        </tbody>
+    </table>
+</div>
+
+<!-- Modal para Adicionar/Editar Campanha -->
+<div id="campaignModal" class="modal-overlay hidden">
+    <div class="modal-content">
+        <button class="modal-close-btn">&times;</button>
+        <h3 id="modalTitle">Adicionar Nova Campanha</h3>
+        <form id="campaignForm">
+            <input type="hidden" id="campaignId">
+            <div class="input-group">
+                <label for="campaignName">Nome da Campanha</label>
+                <input type="text" id="campaignName" required>
+            </div>
+            <div class="input-group">
+                <label for="campaignTemplateId">Template</label>
+                <select id="campaignTemplateId" required>
+                    <option value="">Selecione um Template</option>
+                    <!-- Templates serão carregados aqui -->
+                </select>
+            </div>
+            <div class="input-group">
+                <label for="campaignTargetType">Tipo de Alvo</label>
+                <select id="campaignTargetType" required>
+                    <option value="all">Todos os Roteadores</option>
+                    <option value="group">Grupo de Roteadores</option>
+                    <option value="single_router">Roteador Individual</option>
+                </select>
+            </div>
+            <div class="input-group">
+                <label for="campaignTargetId">Alvo</label>
+                <select id="campaignTargetId">
+                    <option value="">Selecione um alvo...</option>
+                </select>
+            </div>
+            <div class="input-group">
+                <label for="campaignStartDate">Data de Início</label>
+                <input type="date" id="campaignStartDate" required>
+            </div>
+            <div class="input-group">
+                <label for="campaignEndDate">Data de Fim</label>
+                <input type="date" id="campaignEndDate" required>
+            </div>
+            <div class="input-group checkbox-group">
+                <input type="checkbox" id="campaignIsActive" checked>
+                <label for="campaignIsActive">Campanha Ativa</label>
+            </div>
+            <div class="modal-actions">
+                <button type="button" id="cancelBtn" class="btn-secondary">Cancelar</button>
+                <button type="submit" class="btn-primary">Guardar</button>
+            </div>
+        </form>
+    </div>
+</div>
+

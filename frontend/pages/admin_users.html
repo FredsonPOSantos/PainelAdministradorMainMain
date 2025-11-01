@@ -1,0 +1,117 @@
+<!-- Ficheiro: pages/admin_users.html -->
+<!-- [VERSÃO ATUALIZADA - FASE 1.2 / MATRIZ V3] -->
+
+<div class="page-header">
+    <h3>Gestão de Utilizadores</h3>
+    <!-- Este botão será escondido via JS se o utilizador não for 'master' -->
+    <button id="addUserBtn" class="btn-primary" style="display: none;">Adicionar Utilizador</button>
+</div>
+
+<div class="table-container">
+    <table id="usersTable">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Nome</th>
+                <th>Email</th>
+                <th>Função (Role)</th>
+                <!-- Colunas de dados sensíveis - escondidas por defeito -->
+                <th class="sensitive-data" style="display: none;">Setor</th>
+                <th class="sensitive-data" style="display: none;">Matrícula</th>
+                <th class="sensitive-data" style="display: none;">CPF</th>
+                <th>Estado</th>
+                <th>Ações</th>
+            </tr>
+        </thead>
+        <tbody>
+            <!-- As linhas da tabela serão inseridas aqui via JavaScript -->
+        </tbody>
+    </table>
+</div>
+
+<!-- Modal para Adicionar/Editar Utilizador -->
+<div id="userModal" class="modal-overlay hidden">
+    <div class="modal-content">
+        <button class="modal-close-btn">&times;</button>
+        <h3 id="modalTitle">Adicionar Novo Utilizador</h3>
+        
+        <form id="userForm">
+            <input type="hidden" id="userId">
+
+            <div class="input-group">
+                <label for="userFullName">Nome Completo</label>
+                <input type="text" id="userFullName" required>
+            </div>
+            
+            <div class="input-group">
+                <label for="userEmail">Email</label>
+                <input type="email" id="userEmail" required>
+            </div>
+            
+            <!-- Grupo de Senha (visível apenas ao criar) -->
+            <div class="input-group" id="passwordGroup">
+                <label for="userPassword">Senha</label>
+                <input type="password" id="userPassword" placeholder="Deixar em branco para não alterar">
+            </div>
+
+            <div class="input-group">
+                <label for="userRoleSelect">Função (Role)</label>
+                <select id="userRoleSelect" required>
+                    <option value="estetica">Estética</option>
+                    <option value="gestao">Gestão</option>
+                    <option value="DPO">DPO</option>
+                    <option value="master">Master</option>
+                </select>
+            </div>
+            
+            <div class="input-group checkbox-group">
+                <input type="checkbox" id="userIsActive" checked>
+                <label for="userIsActive">Utilizador Ativo</label>
+            </div>
+
+            <!-- Grupo de Dados Sensíveis (visível apenas para 'master') -->
+            <div class="sensitive-data-group" style="display: none;">
+                <hr style="margin: 20px 0;">
+                <h4>Dados Sensíveis (Apenas Master)</h4>
+                <div class="input-group">
+                    <label for="userSetor">Setor</label>
+                    <input type="text" id="userSetor">
+                </div>
+                <div class="input-group">
+                    <label for="userMatricula">Matrícula</label>
+                    <input type="text" id="userMatricula">
+                </div>
+                <div class="input-group">
+                    <label for="userCpf">CPF</label>
+                    <input type="text" id="userCpf">
+                </div>
+            </div>
+
+            <div class="modal-actions">
+                <button type="button" id="cancelBtn" class="btn-secondary">Cancelar</button>
+                <button type="submit" class="btn-primary">Guardar</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- [NOVO] Modal para Resetar Senha -->
+<div id="resetPasswordModal" class="modal-overlay hidden">
+    <div class="modal-content">
+        <button class="modal-close-btn">&times;</button>
+        <h3 id="resetModalTitle">Resetar Senha</h3>
+        <p>A definir nova senha para: <strong id="resetUserEmail"></strong></p>
+        
+        <form id="resetPasswordForm">
+            <input type="hidden" id="resetUserId">
+            <div class="input-group">
+                <label for="newPassword">Nova Senha (mín. 6 caracteres)</label>
+                <input type="password" id="newPassword" required minlength="6">
+            </div>
+            <div class="modal-actions">
+                <button type="button" id="cancelResetBtn" class="btn-secondary">Cancelar</button>
+                <button type="submit" class="btn-primary">Definir Nova Senha</button>
+            </div>
+        </form>
+    </div>
+</div>
