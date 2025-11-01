@@ -19,41 +19,47 @@ if (window.initCampaignsPage) {
 
         // --- FUNÇÕES DA PÁGINA ---
 
-        const loadTargetsIntoSelect = async () => {
+        const loadTargetsIntoSelect = async (campaignId = null) => {
             const targetType = targetTypeSelect.value;
             targetIdSelect.innerHTML = '<option value="">A carregar...</option>';
 
-            // Oculte o seletor de alvo se "Todos os Roteadores" for selecionado
             if (targetType === 'all') {
                 targetIdGroup.style.display = 'none';
-                targetIdSelect.innerHTML = ''; // Limpa as opções
+                targetIdSelect.innerHTML = '';
                 return;
             }
-            targetIdGroup.style.display = ''; // Garanta que seja exibido para outras opções
+            targetIdGroup.style.display = '';
 
-            let endpoint = '';
-            if (targetType === 'group') {
-                endpoint = '/api/routers/groups';
-            } else if (targetType === 'single_router') {
-                endpoint = '/api/routers';
-            }
+            try {
+                const endpoint = campaignId 
+                    ? `/api/campaigns/available-targets?campaign_id=${campaignId}` 
+                    : '/api/campaigns/available-targets';
+                
+                const available = await apiRequest(endpoint);
 
-            if (endpoint) {
-                try {
-                    const targets = await apiRequest(endpoint);
-                    targetIdSelect.innerHTML = '<option value="">Selecione um alvo...</option>';
-                    targets.forEach(target => {
-                        const option = document.createElement('option');
-                        option.value = target.id;
-                        option.textContent = `${target.name} (ID: ${target.id})`;
-                        targetIdSelect.appendChild(option);
-                    });
-                } catch (error) {
-                    console.error(`Erro ao carregar alvos (${targetType}):`, error);
-                    targetIdSelect.innerHTML = '<option value="">Erro ao carregar</option>';
+                let targets = [];
+                if (targetType === 'group') {
+                    targets = available.groups;
+                } else if (targetType === 'single_router') {
+                    targets = available.routers;
                 }
-            } else {
-                targetIdSelect.innerHTML = '<option value="">Selecione um tipo de alvo</option>';
+
+                targetIdSelect.innerHTML = '<option value="">Selecione um alvo...</option>';
+                if (targets.length === 0) {
+                    targetIdSelect.innerHTML = '<option value="">Nenhum alvo disponível</option>';
+                    return;
+                }
+
+                targets.forEach(target => {
+                    const option = document.createElement('option');
+                    option.value = target.id;
+                    option.textContent = `${target.name} (ID: ${target.id})`;
+                    targetIdSelect.appendChild(option);
+                });
+
+            } catch (error) {
+                console.error(`Erro ao carregar alvos (${targetType}):`, error);
+                targetIdSelect.innerHTML = '<option value="">Erro ao carregar</option>';
             }
         };
 
@@ -170,7 +176,7 @@ if (window.initCampaignsPage) {
                 document.getElementById('campaignTemplateId').value = campaign.template_id;
             });
 
-            loadTargetsIntoSelect().then(() => {
+            loadTargetsIntoSelect(campaign.id).then(() => {
                 document.getElementById('campaignTargetId').value = campaign.target_id || '';
             });
 
@@ -184,7 +190,10 @@ if (window.initCampaignsPage) {
         closeBtn.addEventListener('click', closeModal);
         cancelBtn.addEventListener('click', closeModal);
         campaignForm.addEventListener('submit', handleFormSubmit);
-        targetTypeSelect.addEventListener('change', loadTargetsIntoSelect);
+        targetTypeSelect.addEventListener('change', () => {
+            const campaignId = document.getElementById('campaignId').value;
+            loadTargetsIntoSelect(campaignId || null);
+        });
 
         // --- INICIALIZAÇÃO ---
         loadCampaigns();

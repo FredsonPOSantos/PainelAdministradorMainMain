@@ -250,26 +250,38 @@ if (window.initRoutersPage) {
             }
         };
 
-        const handlePrefixChange = () => {
+        const handlePrefixChangeAndFilter = () => {
             const groupPrefixSelect = document.getElementById('groupPrefix');
             const selectedPrefix = groupPrefixSelect.value;
+
             if (selectedPrefix && groupPrefixes[selectedPrefix]) {
                 document.getElementById('groupName').value = `Grupo ${groupPrefixes[selectedPrefix]}`;
                 document.getElementById('groupDescription').value = `Grupo de roteadores da ${groupPrefixes[selectedPrefix]}`;
             }
+
+            // Filtra os roteadores com base no prefixo
+            loadRoutersIntoGroupModal([], selectedPrefix);
         };
         
-        const loadRoutersIntoGroupModal = (currentGroupRouters = []) => {
+        const loadRoutersIntoGroupModal = (currentGroupRouters = [], prefix = '') => {
             const routerListDiv = document.getElementById('routerListForGroup');
             routerListDiv.innerHTML = '';
+
+            let routersToDisplay = allRouters;
+
+            if (prefix && prefix !== 'GNC') {
+                routersToDisplay = allRouters.filter(r => r.name.startsWith(prefix));
+            }
+
             // Roteadores disponíveis são os que não têm grupo (group_id == null)
             // OU os que já estão neste grupo (currentGroupRouters)
-            const availableRouters = allRouters.filter(r => r.group_id === null || currentGroupRouters.includes(r.id));
-            
+            const availableRouters = routersToDisplay.filter(r => r.group_id === null || currentGroupRouters.includes(r.id));
+
             if (availableRouters.length === 0) {
-                 routerListDiv.innerHTML = '<p>Nenhum roteador disponível para adicionar ao grupo (todos os roteadores já pertencem a outros grupos).</p>';
-                 return;
+                routerListDiv.innerHTML = '<p>Nenhum roteador disponível para adicionar ao grupo (todos os roteadores já pertencem a outros grupos ou não correspondem ao filtro).</p>';
+                return;
             }
+
             availableRouters.forEach(router => {
                 const isChecked = currentGroupRouters.includes(router.id) ? 'checked' : '';
                 const itemHTML = `
@@ -317,10 +329,8 @@ if (window.initRoutersPage) {
             document.getElementById('groupId').value = '';
             document.getElementById('groupModalTitle').textContent = 'Adicionar Novo Grupo';
             document.getElementById('groupPrefix').disabled = false;
-            handlePrefixChange();
-            loadRoutersIntoGroupModal();
+            handlePrefixChangeAndFilter(); // Chama a nova função para preencher e filtrar
             groupModal.classList.remove('hidden');
-
         };
 
         window.openModalForEditGroup = (groupId) => {
@@ -372,7 +382,7 @@ if (window.initRoutersPage) {
         groupForm.addEventListener('submit', handleGroupFormSubmit);
         groupModal.querySelector('.modal-close-btn').addEventListener('click', () => groupModal.classList.add('hidden'));
         groupModal.querySelector('#cancelGroupBtn').addEventListener('click', () => groupModal.classList.add('hidden'));
-        document.getElementById('groupPrefix').addEventListener('change', handlePrefixChange);
+        document.getElementById('groupPrefix').addEventListener('change', handlePrefixChangeAndFilter);
     };
 }
 

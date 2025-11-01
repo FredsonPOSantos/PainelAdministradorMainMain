@@ -4,7 +4,6 @@
 // --- Variáveis Globais ---
 let isProfileLoaded = false;
 window.currentUserProfile = null;
-let loadPageExternal;
 window.systemSettings = null; 
 
 // --- Funções Globais ---
@@ -314,7 +313,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (mainContentArea) mainContentArea.innerHTML = `<h2>Erro ao carregar ${pageName}.</h2><p>${error.message}.</p>`;
         }
     };
-    loadPageExternal = loadPage;
+    window.loadPageExternal = loadPage;
 
     // --- USER PROFILE & AUTH ---
     const fetchUserProfile = async () => {
@@ -464,6 +463,21 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     });
 
+    // [NOVO] Delegação de eventos para botões de atalho rápido
+    if (mainContentArea) {
+        mainContentArea.addEventListener('click', (e) => {
+            const quickLink = e.target.closest('.quick-link-btn');
+            if (quickLink) {
+                e.preventDefault();
+                const page = quickLink.getAttribute('data-page');
+                const correspondingNavLink = document.querySelector(`.nav-item[data-page="${page}"]`);
+                if (page && window.loadPageExternal && correspondingNavLink) {
+                    window.loadPageExternal(page, correspondingNavLink);
+                }
+            }
+        });
+    }
+
     // --- Modal Troca Senha ---
     if (changePasswordForm) {
         changePasswordForm.addEventListener('submit', async (e) => {
@@ -565,4 +579,3 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     console.log("Dashboard (V13.1.3): Inicialização concluída com sucesso.");
 }); // Fim do DOMContentLoaded
-

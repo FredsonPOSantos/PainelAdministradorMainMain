@@ -42,16 +42,7 @@ if (window.initHomePage) {
             }
         };
         
-        // Adiciona funcionalidade aos botões de atalho rápido
-        document.querySelectorAll('.quick-link-btn').forEach(button => {
-            button.addEventListener('click', () => {
-                const page = button.getAttribute('data-page');
-                const correspondingNavLink = document.querySelector(`.nav-item[data-page="${page}"]`);
-                if (window.loadPageExternal && correspondingNavLink) {
-                    window.loadPageExternal(page, correspondingNavLink);
-                }
-            });
-        });
+
 
         fetchDashboardData();
     };

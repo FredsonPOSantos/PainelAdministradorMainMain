@@ -37,4 +37,11 @@ router.delete(
   campaignController.deleteCampaign
 );
 
+// Rota para obter alvos (roteadores e grupos) disponíveis para campanhas
+router.get(
+  '/available-targets',
+  [authMiddleware, checkPermission('campaigns.read')],
+  campaignController.getAvailableTargets
+);
+
 module.exports = router;
