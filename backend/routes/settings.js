@@ -32,6 +32,13 @@ router.post(
     settingsController.updateBackgroundImage
 );
 
+// Atualização das configurações de aparência da página de login
+router.post(
+    '/login-appearance',
+    [verifyToken, checkPermission('settings.login_page')],
+    settingsController.updateLoginAppearanceSettings
+);
+
 // --- ROTAS DE CONFIGURAÇÕES DO PORTAL HOTSPOT ---
 
 // Leitura das configurações do hotspot

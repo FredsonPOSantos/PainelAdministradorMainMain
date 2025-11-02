@@ -19,6 +19,7 @@ if (window.initSettingsPage) {
         const changeOwnPasswordForm = document.getElementById('changeOwnPasswordForm');
         const companySettingsForm = document.getElementById('companySettingsForm');
         const appearanceSettingsForm = document.getElementById('appearanceSettingsForm');
+        const loginAppearanceSettingsForm = document.getElementById('loginAppearanceSettingsForm');
         const hotspotSettingsForm = document.getElementById('hotspotSettingsForm');
         const backgroundSettingsForm = document.getElementById('backgroundSettingsForm');
         
@@ -133,6 +134,43 @@ if (window.initSettingsPage) {
                 }
             });
         }
+
+        if (loginAppearanceSettingsForm) {
+            loginAppearanceSettingsForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const successMsg = document.getElementById('loginAppearanceSettingsSuccess');
+                const errorMsg = document.getElementById('loginAppearanceSettingsError');
+                const submitButton = loginAppearanceSettingsForm.querySelector('button[type="submit"]');
+
+                successMsg.textContent = '';
+                errorMsg.textContent = '';
+                submitButton.disabled = true;
+                submitButton.textContent = 'A guardar...';
+
+                const formData = new FormData();
+                formData.append('login_background_color', document.getElementById('loginBackgroundColor').value);
+                formData.append('login_form_background_color', document.getElementById('loginFormBackgroundColor').value);
+                formData.append('login_font_color', document.getElementById('loginFontColor').value);
+
+                try {
+                    const response = await apiRequest('/api/settings/login-appearance', 'POST', formData);
+
+                    if (response && response.settings) {
+                        window.systemSettings = response.settings;
+                        
+                        successMsg.textContent = response.message || 'Configurações guardadas com sucesso!';
+                    } else {
+                        throw new Error('A API não retornou as novas configurações.');
+                    }
+
+                } catch (error) {
+                    errorMsg.textContent = `Erro ao guardar configurações: ${error.message}`;
+                } finally {
+                    submitButton.disabled = false;
+                    submitButton.textContent = 'Guardar Cores do Login';
+                }
+            });
+        }
         if (hotspotSettingsForm) { /* ... listener ... */ }
         if (backgroundSettingsForm) {
             backgroundSettingsForm.addEventListener('submit', async (e) => {
@@ -184,6 +222,9 @@ if (window.initSettingsPage) {
                     document.getElementById('modalBackgroundColor').value = settings.modal_background_color || '#2d3748';
                     document.getElementById('modalFontColor').value = settings.modal_font_color || '#edf2f7';
                     document.getElementById('modalBorderColor').value = settings.modal_border_color || '#4a5568';
+                    document.getElementById('loginBackgroundColor').value = settings.login_background_color || '#1a202c';
+                    document.getElementById('loginFormBackgroundColor').value = settings.login_form_background_color || '#2d3748';
+                    document.getElementById('loginFontColor').value = settings.login_font_color || '#edf2f7';
                     const logoPreview = document.getElementById('currentLogoPreview');
                     if (settings.logo_url) {
                         logoPreview.src = `http://${window.location.hostname}:3000${settings.logo_url}`;

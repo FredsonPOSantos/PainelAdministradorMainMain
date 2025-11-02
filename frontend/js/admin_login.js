@@ -113,5 +113,37 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
+
+    // --- Carregar e Aplicar Configurações Visuais ---
+    const applyLoginVisualSettings = (settings) => {
+        if (!settings) return;
+
+        if (settings.login_background_color) {
+            document.documentElement.style.setProperty('--background-dark', settings.login_background_color);
+        }
+        if (settings.login_form_background_color) {
+            document.documentElement.style.setProperty('--background-medium', settings.login_form_background_color);
+        }
+        if (settings.login_font_color) {
+            document.documentElement.style.setProperty('--text-primary', settings.login_font_color);
+        }
+        if (settings.primary_color) {
+            document.documentElement.style.setProperty('--primary-color', settings.primary_color);
+        }
+    };
+
+    const fetchAndApplySettings = async () => {
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/settings/general`);
+            if (response.ok) {
+                const settings = await response.json();
+                applyLoginVisualSettings(settings);
+            }
+        } catch (error) {
+            console.error('Erro ao buscar configurações de aparência do login:', error);
+        }
+    };
+
+    fetchAndApplySettings();
 });
 

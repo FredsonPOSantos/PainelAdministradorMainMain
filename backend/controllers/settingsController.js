@@ -14,7 +14,7 @@ const getGeneralSettings = async (req, res) => {
     console.log("getGeneralSettings: Buscando configurações...");
     try {
         const settings = await pool.query(
-            'SELECT company_name, logo_url, primary_color, background_color, font_color, font_family, font_size, background_image_url, modal_background_color, modal_font_color, modal_border_color, sidebar_color FROM system_settings WHERE id = 1'
+            'SELECT company_name, logo_url, primary_color, background_color, font_color, font_family, font_size, background_image_url, modal_background_color, modal_font_color, modal_border_color, sidebar_color, login_background_color, login_form_background_color, login_font_color FROM system_settings WHERE id = 1'
         );
 
         if (settings.rows.length === 0) {
@@ -282,7 +282,52 @@ const updateHotspotSettings = async (req, res) => {
         });
     } catch (error) {
         console.error('Erro ao atualizar configs do hotspot:', error);
-        res.status(500).json({ message: error.message || 'Erro interno do servidor ao atualizar configs do hotspot.' });
+    }
+};
+
+const updateLoginAppearanceSettings = async (req, res) => {
+    console.log("updateLoginAppearanceSettings: Iniciando atualização...");
+    const { login_background_color, login_form_background_color, login_font_color } = req.body;
+    console.log("updateLoginAppearanceSettings: Dados recebidos (body):", { login_background_color, login_form_background_color, login_font_color });
+
+    try {
+        const params = [];
+        const fields = [];
+        let queryIndex = 1;
+
+        if (login_background_color) {
+            fields.push(`login_background_color = ${queryIndex++}`);
+            params.push(login_background_color);
+        }
+        if (login_form_background_color) {
+            fields.push(`login_form_background_color = ${queryIndex++}`);
+            params.push(login_form_background_color);
+        }
+        if (login_font_color) {
+            fields.push(`login_font_color = ${queryIndex++}`);
+            params.push(login_font_color);
+        }
+
+        if (fields.length > 0) {
+            const updateQuery = `UPDATE system_settings SET ${fields.join(', ')} WHERE id = 1 RETURNING *`;
+            const updatedSettings = await pool.query(updateQuery, params);
+
+            if (updatedSettings.rows.length === 0) {
+                throw new Error("Falha ao encontrar o registo de configurações para atualizar.");
+            }
+
+            res.status(200).json({
+                message: "Configurações de aparência da página de login atualizadas com sucesso!",
+                settings: updatedSettings.rows[0]
+            });
+        } else {
+            res.status(200).json({
+                message: "Nenhuma alteração detectada nas configurações de aparência da página de login."
+            });
+        }
+    } catch (error) {
+        console.error('Erro ao atualizar configurações de aparência da página de login:', error);
+        res.status(500).json({ message: error.message || 'Erro interno do servidor ao atualizar configurações.' });
     }
 };
 
@@ -292,6 +337,7 @@ module.exports = {
     updateGeneralSettings,
     getHotspotSettings,
     updateHotspotSettings,
-    updateBackgroundImage
+    updateBackgroundImage,
+    updateLoginAppearanceSettings
 };
 
