@@ -5,7 +5,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Seletores de Elementos ---
     const adminLoginForm = document.getElementById('adminLoginForm');
-    const loginMessage = document.getElementById('loginMessage');
     const forgotPasswordLink = document.getElementById('forgotPasswordLink');
     
     // API URL (deve ser o mesmo IP/domínio do frontend, mas na porta 3000)
@@ -15,8 +14,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (adminLoginForm) {
         adminLoginForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-            loginMessage.textContent = '';
-            loginMessage.className = 'form-message';
             const submitButton = adminLoginForm.querySelector('button[type="submit"]');
             submitButton.disabled = true;
             submitButton.textContent = 'A processar...';
@@ -42,8 +39,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 window.location.href = 'admin_dashboard.html';
 
             } catch (error) {
-                loginMessage.textContent = `Erro: ${error.message}`;
-                loginMessage.classList.add('error');
+                showNotification(`Erro: ${error.message}`, 'error');
                 submitButton.disabled = false;
                 submitButton.textContent = 'Entrar';
             }

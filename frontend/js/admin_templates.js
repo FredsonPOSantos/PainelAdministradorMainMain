@@ -30,11 +30,11 @@ if (window.initTemplatesPage) {
             try {
                 const templates = await apiRequest('/api/templates');
                 tableBody.innerHTML = '';
-                if (templates.length === 0) {
+                if (templates.data.length === 0) {
                     tableBody.innerHTML = '<tr><td colspan="5">Nenhum template encontrado.</td></tr>';
                     return;
                 }
-                templates.forEach(template => {
+                templates.data.forEach(template => {
                     const row = document.createElement('tr');
                     row.innerHTML = `
                         <td>${template.id}</td>
@@ -98,7 +98,12 @@ if (window.initTemplatesPage) {
 
         const loadBannersIntoSelect = async () => {
             try {
-                const banners = await apiRequest('/api/banners');
+                const response = await apiRequest('/api/banners');
+                if (!response.success) {
+                    console.error("Erro ao carregar banners: ", response.message);
+                    return;
+                }
+                const banners = response.data;
                 bannerSelect.innerHTML = '<option value="">Nenhum</option>';
                 banners.forEach(banner => {
                     if (banner.type === 'pre-login' && banner.is_active) {

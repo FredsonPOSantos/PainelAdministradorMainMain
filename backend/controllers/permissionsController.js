@@ -97,8 +97,8 @@ const updatePermissionsBatch = async (req, res) => {
             const { role, permission, checked } = change;
             
             // Validação de segurança
-            if (role === 'master') {
-                console.warn(`Tentativa de alterar permissão do 'master' (${permission}) foi bloqueada.`);
+            if (role === 'master' || role === 'DPO') {
+                console.warn(`Tentativa de alterar permissão da função protegida '${role}' (${permission}) foi bloqueada.`);
                 // Pula esta iteração, mas não para a transação
                 continue; 
             }
@@ -140,4 +140,3 @@ module.exports = {
     getPermissionsMatrix,
     updatePermissionsBatch
 };
-

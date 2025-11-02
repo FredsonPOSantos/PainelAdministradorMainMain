@@ -35,13 +35,19 @@ if (window.initCampaignsPage) {
                     ? `/api/campaigns/available-targets?campaign_id=${campaignId}` 
                     : '/api/campaigns/available-targets';
                 
-                const available = await apiRequest(endpoint);
+                const response = await apiRequest(endpoint);
+                if (!response.success) {
+                    console.error("Erro ao carregar alvos: ", response.message);
+                    targetIdSelect.innerHTML = '<option value="">Erro ao carregar</option>';
+                    return;
+                }
+                const availableData = response.data;
 
                 let targets = [];
                 if (targetType === 'group') {
-                    targets = available.groups;
+                    targets = availableData.groups;
                 } else if (targetType === 'single_router') {
-                    targets = available.routers;
+                    targets = availableData.routers;
                 }
 
                 targetIdSelect.innerHTML = '<option value="">Selecione um alvo...</option>';
@@ -66,7 +72,12 @@ if (window.initCampaignsPage) {
 
         const loadTemplatesIntoSelect = async () => {
             try {
-                const templates = await apiRequest('/api/templates');
+                const response = await apiRequest('/api/templates');
+                if (!response.success) {
+                    console.error("Erro ao carregar templates: ", response.message);
+                    return;
+                }
+                const templates = response.data;
                 templateSelect.innerHTML = '<option value="">Selecione um Template</option>';
                 templates.forEach(template => {
                     const option = document.createElement('option');
@@ -84,11 +95,11 @@ if (window.initCampaignsPage) {
             try {
                 const campaigns = await apiRequest('/api/campaigns');
                 tableBody.innerHTML = '';
-                if (campaigns.length === 0) {
+                if (campaigns.data.length === 0) {
                     tableBody.innerHTML = '<tr><td colspan="6">Nenhuma campanha encontrada.</td></tr>';
                     return;
                 }
-                campaigns.forEach(campaign => {
+                campaigns.data.forEach(campaign => {
                     const row = document.createElement('tr');
                     // Ajustado para mostrar as novas colunas
                     row.innerHTML = `

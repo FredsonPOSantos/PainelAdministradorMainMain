@@ -45,7 +45,47 @@ if (window.initSettingsPage) {
         };
 
         // --- Lógica Formulários (estável, omitida para brevidade) ---
-        if (changeOwnPasswordForm) { /* ... listener ... */ }
+        if (changeOwnPasswordForm) {
+            changeOwnPasswordForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const submitButton = changeOwnPasswordForm.querySelector('button[type="submit"]');
+                const currentPassword = document.getElementById('currentPassword').value;
+                const newVoluntaryPassword = document.getElementById('newVoluntaryPassword').value;
+                const confirmNewVoluntaryPassword = document.getElementById('confirmNewVoluntaryPassword').value;
+
+                if (newVoluntaryPassword !== confirmNewVoluntaryPassword) {
+                    showNotification('As novas senhas não coincidem.', 'error');
+                    return;
+                }
+
+                if (newVoluntaryPassword.length < 6) {
+                    showNotification('A nova senha deve ter no mínimo 6 caracteres.', 'error');
+                    return;
+                }
+
+                submitButton.disabled = true;
+                submitButton.textContent = 'A guardar...';
+
+                try {
+                    const result = await apiRequest('/api/user/change-password', 'POST', {
+                        currentPassword,
+                        newPassword: newVoluntaryPassword
+                    });
+
+                    if (result.success) {
+                        showNotification(result.message || 'Senha alterada com sucesso!', 'success');
+                        changeOwnPasswordForm.reset(); // Clear the form
+                    } else {
+                        showNotification(result.message || 'Erro ao alterar a senha.', 'error');
+                    }
+                } catch (error) {
+                    showNotification(`Erro ao alterar a senha: ${error.message}`, 'error');
+                } finally {
+                    submitButton.disabled = false;
+                    submitButton.textContent = 'Alterar Senha';
+                }
+            });
+        }
         if (companySettingsForm) {
             companySettingsForm.addEventListener('submit', async (e) => {
                 e.preventDefault();
@@ -400,7 +440,11 @@ if (window.initSettingsPage) {
             if (permHelpTextDPO) permHelpTextDPO.style.display = !isMaster ? 'block' : 'none';
 
             try {
-                const matrixData = await apiRequest('/api/permissions/matrix');
+                const response = await apiRequest('/api/permissions/matrix');
+                if (!response.success) {
+                    throw new Error(response.message || "Erro desconhecido ao carregar matriz de permissões.");
+                }
+                const matrixData = response.data;
                 permissionsGridContainer.innerHTML = ''; // Limpa o "A carregar..."
 
                 // Cria o seletor de Role

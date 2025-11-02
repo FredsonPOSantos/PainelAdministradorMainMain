@@ -19,17 +19,17 @@ if (window.initHomePage) {
                 // Atualiza os cartões com os dados recebidos
 
                 // Banners
-                document.getElementById('totalBanners').textContent = banners.length;
+                document.getElementById('totalBanners').textContent = banners.data.length;
 
                 // Campanhas
-                const activeCampaignsCount = campaigns.filter(c => c.is_active).length;
+                const activeCampaignsCount = campaigns.data.filter(c => c.is_active).length;
                 document.getElementById('activeCampaigns').textContent = activeCampaignsCount;
 
                 // [NOVO] Templates
-                document.getElementById('totalTemplates').textContent = templates.length;
+                document.getElementById('totalTemplates').textContent = templates.data.length;
 
                 // [NOVO] Utilizadores
-                document.getElementById('totalUsers').textContent = usersCount.count;
+                document.getElementById('totalUsers').textContent = usersCount.data.count;
 
             } catch (error) {
                 console.error("Erro ao carregar dados do dashboard:", error);

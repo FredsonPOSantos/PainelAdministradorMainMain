@@ -37,10 +37,12 @@ if (window.initRoutersPage) {
                 totalRoutersCard.textContent = '...';
                 totalGroupsCard.textContent = '...';
 
-                [allGroups, allRouters] = await Promise.all([
+                const [groupsResponse, routersResponse] = await Promise.all([
                     apiRequest('/api/routers/groups'),
                     apiRequest('/api/routers')
                 ]);
+                allGroups = groupsResponse.data;
+                allRouters = routersResponse.data;
 
                 // [ADICIONADO] Atualiza os cartões de estatísticas
                 totalRoutersCard.textContent = allRouters.length;
@@ -178,10 +180,14 @@ if (window.initRoutersPage) {
                 try {
                     // Atualiza o objeto 'router' na cache 'allRouters'
                     const routerInCache = allRouters.find(r => r.id === routerId);
-                    const result = await apiRequest(`/api/routers/${routerId}/ping`, 'POST');
+                    const response = await apiRequest(`/api/routers/${routerId}/ping`, 'POST');
                     
-                    statusCell.innerHTML = `<span class="status-dot status-${result.status}"></span> ${result.status}`;
-                    if (routerInCache) routerInCache.status = result.status; // Atualiza cache
+                    if (!response.success) {
+                        throw new Error(response.message || "Erro desconhecido ao verificar status.");
+                    }
+
+                    statusCell.innerHTML = `<span class="status-dot status-${response.data.status}"></span> ${response.data.status}`;
+                    if (routerInCache) routerInCache.status = response.data.status; // Atualiza cache
 
                 } catch (error) {
                     statusCell.innerHTML = `<span class="status-dot status-offline"></span> erro`;

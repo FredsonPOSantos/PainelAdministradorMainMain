@@ -89,7 +89,7 @@ body {
 
 /* Mensagens de feedback */
 .message-container { margin-top: 20px; }
-.form-message { padding: 12px; border-radius: 8px; font-weight: 500; margin-top: 15px; display: none; text-align: center; font-size: 14px; }
-.form-message.error { background-color: var(--error-bg); color: var(--error-text); border: 1px solid var(--error-border); display: block; }
-.form-message.success { background-color: var(--success-bg); color: var(--success-text); border: 1px solid var(--success-border); display: block; }
-.form-message.warning { background-color: var(--warning-bg); color: var(--warning-text); border: 1px solid var(--warning-border); display: block; }
+.form-message { display: none !important; }
+.form-message.error { display: none !important; }
+.form-message.success { display: none !important; }
+.form-message.warning { display: none !important; }

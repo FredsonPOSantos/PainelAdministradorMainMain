@@ -34,7 +34,11 @@ if (window.initBannersPage) {
         const loadBanners = async () => {
             tableBody.innerHTML = '<tr><td colspan="5">A carregar...</td></tr>';
             try {
-                const banners = await apiRequest('/api/banners');
+                const response = await apiRequest('/api/banners');
+                if (!response.success) {
+                    throw new Error(response.message || "Erro desconhecido ao carregar banners.");
+                }
+                const banners = response.data;
                 tableBody.innerHTML = '';
                 if (banners.length === 0) {
                     tableBody.innerHTML = '<tr><td colspan="5">Nenhum banner encontrado.</td></tr>';
@@ -155,7 +159,12 @@ if (window.initBannersPage) {
             resetModal();
             try {
                 // Para garantir que temos os dados mais recentes
-                const banners = await apiRequest('/api/banners');
+                const response = await apiRequest('/api/banners');
+                if (!response.success) {
+                    showNotification(response.message || "Erro desconhecido ao carregar banners para edição.", 'error');
+                    return;
+                }
+                const banners = response.data;
                 const banner = banners.find(b => b.id === bannerId);
                 if (!banner) {
                     showNotification('Banner não encontrado.', 'error');

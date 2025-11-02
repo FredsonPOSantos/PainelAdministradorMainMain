@@ -1,6 +1,5 @@
 document.addEventListener('DOMContentLoaded', () => {
     const resetPasswordForm = document.getElementById('resetPasswordForm');
-    const resetMessage = document.getElementById('resetMessage');
     const urlParams = new URLSearchParams(window.location.search);
     const token = urlParams.get('token');
 
@@ -14,14 +13,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const confirmPassword = document.getElementById('confirmPassword').value;
 
         if (newPassword !== confirmPassword) {
-            resetMessage.textContent = 'As senhas não coincidem.';
-            resetMessage.className = 'form-message error';
+            showNotification('As senhas não coincidem.', 'error');
             return;
         }
 
         if (!token) {
-            resetMessage.textContent = 'Token de redefinição inválido ou ausente.';
-            resetMessage.className = 'form-message error';
+            showNotification('Token de redefinição inválido ou ausente.', 'error');
             return;
         }
 
@@ -37,20 +34,17 @@ document.addEventListener('DOMContentLoaded', () => {
             const result = await response.json();
 
             if (response.ok) {
-                resetMessage.textContent = result.message;
-                resetMessage.className = 'form-message success';
+                showNotification(result.message, 'success');
                 // Opcional: redirecionar para a página de login após sucesso
                 setTimeout(() => {
                     window.location.href = 'admin_login.html';
                 }, 3000);
             } else {
-                resetMessage.textContent = result.message || 'Erro ao redefinir a senha.';
-                resetMessage.className = 'form-message error';
+                showNotification(result.message || 'Erro ao redefinir a senha.', 'error');
             }
         } catch (error) {
             console.error('Erro na requisição de redefinição de senha:', error);
-            resetMessage.textContent = 'Ocorreu um erro. Tente novamente.';
-            resetMessage.className = 'form-message error';
+            showNotification('Ocorreu um erro. Tente novamente.', 'error');
         }
     });
 });

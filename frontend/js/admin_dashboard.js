@@ -243,8 +243,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     const pageTitleElement = document.getElementById('pageTitle');
     const changePasswordModal = document.getElementById('forceChangePasswordModal');
     const changePasswordForm = document.getElementById('forceChangePasswordForm');
-    const changePasswordError = document.getElementById('forceChangePasswordError');
-    const changePasswordSuccess = document.getElementById('forceChangePasswordSuccess');
 
     // Mapeamento de inicializadores de página
     const pageInitializers = {
@@ -340,25 +338,40 @@ document.addEventListener('DOMContentLoaded', async () => {
         try {
             console.log("fetchUserProfile (V13.6.1): Buscando perfil e permissões...");
             const data = await apiRequest('/api/admin/profile');
+            console.log("API Response (full) for /api/admin/profile:", data);
+            // console.log("API Response (data.data) for /api/admin/profile:", data.data); // Comentado para evitar redundância, o 'data' completo já inclui 'data.data'
 
-            if (!data || !data.profile || !data.profile.role || !data.profile.permissions) {
+            if (!data.data) {
+                console.error("fetchUserProfile (V13.6.1): data.data está ausente.");
+                throw new Error("Perfil inválido ou sem permissões (V13.6.1).");
+            }
+            if (!data.data.profile) {
+                console.error("fetchUserProfile (V13.6.1): data.data.profile está ausente.");
+                throw new Error("Perfil inválido ou sem permissões (V13.6.1).");
+            }
+            if (!data.data.profile.role) {
+                console.error("fetchUserProfile (V13.6.1): data.data.profile.role está ausente.");
+                throw new Error("Perfil inválido ou sem permissões (V13.6.1).");
+            }
+            if (!data.data.profile.permissions) {
+                console.error("fetchUserProfile (V13.6.1): data.data.profile.permissions está ausente.");
                 throw new Error("Perfil inválido ou sem permissões (V13.6.1).");
             }
 
-            console.log(`fetchUserProfile (V13.6.1): Perfil recebido (Role: ${data.profile.role}).`);
-            window.currentUserProfile = data.profile;
+            console.log(`fetchUserProfile (V13.6.1): Perfil recebido (Role: ${data.data.profile.role}).`);
+            window.currentUserProfile = data.data.profile;
             isProfileLoaded = true;
 
             // Preenche os elementos no novo cabeçalho
-            if (userNameElement) userNameElement.textContent = data.profile.email;
-            if (userRoleElement) userRoleElement.textContent = data.profile.role.toUpperCase();
+            if (userNameElement) userNameElement.textContent = data.data.profile.email;
+            if (userRoleElement) userRoleElement.textContent = data.data.profile.role.toUpperCase();
 
             // [NOVO] Lógica para o nome de boas-vindas
             const userFirstNameElement = document.getElementById('userFirstName');
             if (userFirstNameElement) {
                 // Por enquanto, o campo 'nome_completo' não existe. Usaremos um fallback.
-                if (data.profile.nome_completo) {
-                    const firstName = data.profile.nome_completo.split(' ')[0];
+                if (data.data.profile.nome_completo) {
+                    const firstName = data.data.profile.nome_completo.split(' ')[0];
                     userFirstNameElement.textContent = firstName;
                 } else {
                     // Fallback se não houver nome completo, esconde a mensagem
@@ -367,7 +380,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
             }
 
-            if (data.profile.must_change_password) {
+            if (data.data.profile.must_change_password) {
                 console.log("fetchUserProfile (V13.6.1): Senha obrigatória.");
                 showForcePasswordChangeModal();
                 return false;
@@ -511,17 +524,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             e.preventDefault();
             console.log("Form troca senha submetido (V13.1.3).");
             
-            if(changePasswordError) changePasswordError.textContent = '';
-            if(changePasswordSuccess) changePasswordSuccess.textContent = '';
-            
-            const btn = changePasswordForm.querySelector('button[type="submit"]');
-            if(btn) { btn.disabled = true; btn.textContent = 'A processar...'; }
-
-            const currIn = document.getElementById('currentTemporaryPassword');
-            const newIn = document.getElementById('newPassword');
-
             if(!currIn || !newIn) {
-                 if(changePasswordError) changePasswordError.textContent = "Erro interno (campos não encontrados).";
+                 showNotification("Erro interno (campos não encontrados).", 'error');
                  if(btn) { btn.disabled = false; btn.textContent = 'Alterar'; }
                  return;
             }
@@ -530,7 +534,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             const nv = newIn.value;
 
             if (nv.length < 6) {
-                if(changePasswordError) changePasswordError.textContent = 'A nova senha deve ter pelo menos 6 caracteres.';
+                showNotification('A nova senha deve ter pelo menos 6 caracteres.', 'error');
                 if(btn) { btn.disabled = false; btn.textContent = 'Alterar'; }
                 return;
             }
@@ -541,7 +545,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     newPassword: nv
                 });
                 
-                if(changePasswordSuccess) changePasswordSuccess.textContent = (result.message || "Senha alterada com sucesso!") + " A redirecionar para o login...";
+                showNotification((result.message || "Senha alterada com sucesso!") + " A redirecionar para o login...", 'success');
                 
                 // Redireciona para o login após o sucesso
                 setTimeout(() => {
@@ -551,12 +555,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }, 4000);
 
             } catch (error) {
-                if(changePasswordError) changePasswordError.textContent = `Erro: ${error.message || 'Falha ao alterar a senha.'}`;
+                showNotification(`Erro: ${error.message || 'Falha ao alterar a senha.'}`, 'error');
                 if(btn) { btn.disabled = false; btn.textContent = 'Alterar'; }
             }
         });
-    } else {
-        console.warn("Form 'forceChangePasswordForm' (V13.1.3) não encontrado.");
     }
 
     // --- [REESTRUTURADO V13] INICIALIZAÇÃO ---
@@ -576,10 +578,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     // 2. Busca as configurações gerais
     try {
         console.log("Dashboard (V13.1.3): Buscando configurações gerais...");
-        const settings = await apiRequest('/api/settings/general');
-        if (settings) {
-             window.systemSettings = settings; 
-             applyVisualSettings(settings); // Aplica nome, logo e cor
+        const settingsResponse = await apiRequest('/api/settings/general');
+        if (settingsResponse.data) {
+             window.systemSettings = settingsResponse.data; 
+             applyVisualSettings(settingsResponse.data); // Aplica nome, logo e cor
              console.log("Dashboard (V13.1.3): Configurações visuais aplicadas.");
         } else {
              console.warn("Dashboard (V13.1.3): Configurações gerais não retornadas pela API.");
@@ -591,6 +593,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // 3. [LÓGICA V13.6.1] Aplica permissões ao menu
+    console.log("Dashboard (V13.6.1): Permissões do usuário:", window.currentUserProfile.permissions);
     applyMenuPermissions(window.currentUserProfile.permissions);
 
 

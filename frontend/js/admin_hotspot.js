@@ -47,15 +47,16 @@ if (window.initHotspotPage) {
                         apiRequest('/api/campaigns')
                     ]);
 
-                    routers.forEach(r => {
+                    routers.data.forEach(r => {
                         routerSelect.innerHTML += `<option value="${r.id}">${r.name}</option>`;
                     });
 
-                    groups.forEach(g => {
+                    groups.data.forEach(g => {
                         groupSelect.innerHTML += `<option value="${g.id}">${g.name}</option>`;
                     });
 
-                    campaigns.forEach(c => {
+                    const campaignsResponse = await apiRequest('/api/campaigns');
+                    campaignsResponse.data.forEach(c => {
                         campaignSelect.innerHTML += `<option value="${c.id}">${c.name}</option>`;
                     });
                 }
@@ -70,9 +71,7 @@ if (window.initHotspotPage) {
                     if (groupSelect) groupSelect.disabled = true;
 
                     // Busca apenas as campanhas (que 'estetica' tem permissão)
-                    const campaigns = await apiRequest('/api/campaigns');
-                    campaigns.forEach(c => {
-                        campaignSelect.innerHTML += `<option value="${c.id}">${c.name}</option>`;
+                                        campaigns.data.forEach(c => {                        campaignSelect.innerHTML += `<option value="${c.id}">${c.name}</option>`;
                     });
                 }
 
@@ -112,9 +111,9 @@ if (window.initHotspotPage) {
 
             try {
                 // A rota /api/hotspot/users já foi corrigida no backend para aceitar 'estetica'
-                const results = await apiRequest(`/api/hotspot/users?${params.toString()}`);
-                currentResults = results; // Guarda os resultados para exportação
-                displayResults(results);
+                const resultsResponse = await apiRequest(`/api/hotspot/users?${params.toString()}`);
+                currentResults = resultsResponse.data; // Guarda os resultados para exportação
+                displayResults(resultsResponse.data);
             } catch (error) {
                 console.error("Erro na pesquisa:", error);
                 resultsBody.innerHTML = `<tr><td colspan="10" style="text-align:center;">Erro ao realizar a pesquisa.</td></tr>`;
