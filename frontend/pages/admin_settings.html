@@ -160,7 +160,7 @@
             </form>
         </div>
 
-        <div class="content-section appearance-setting">
+        <div class="content-section login-appearance-setting">
             <div class="section-header">
                 <h4>Imagem de Fundo do Login</h4>
             </div>
@@ -181,7 +181,30 @@
                 </div>
             </form>
         </div>
-        <div class="content-section">
+
+        <div class="content-section login-appearance-setting">
+            <div class="section-header">
+                <h4>Logo da Página de Login</h4>
+            </div>
+            <form id="loginLogoSettingsForm" enctype="multipart/form-data">
+                <div class="input-group">
+                    <label for="loginLogoUpload">Logo da Página de Login (.png, .jpg, .svg)</label>
+                    <input type="file" id="loginLogoUpload" name="loginLogo" accept="image/png, image/jpeg, image/svg+xml">
+                    <p class="input-hint">Este logo aparecerá na página de login. Máx 5MB.</p>
+                    <div class="image-preview-container" style="margin-top: 15px;">
+                        <p>Pré-visualização do Logo de Login Atual:</p>
+                        <img id="currentLoginLogoPreview" src="#" alt="Logo de Login Atual" style="display: none; max-width: 100%; max-height: 150px; background-color: #fff; border-radius: 4px; padding: 5px;">
+                    </div>
+                </div>
+                <p id="loginLogoSettingsError" class="form-message error"></p>
+                <p id="loginLogoSettingsSuccess" class="form-message success"></p>
+                <div class="form-actions">
+                    <button type="submit" class="btn-primary">Guardar Logo do Login</button>
+                </div>
+            </form>
+        </div>
+
+        <div class="content-section login-appearance-setting">
             <div class="section-header">
                 <h4>Cores da Página de Login</h4>
             </div>
@@ -200,6 +223,11 @@
                     <label for="loginFontColor">Cor da Fonte do Formulário de Login</label>
                     <input type="color" id="loginFontColor" value="#edf2f7" class="color-picker">
                     <p class="input-hint">Define a cor da fonte do formulário de login.</p>
+                </div>
+                <div class="input-group">
+                    <label for="loginButtonColor">Cor do Botão de Login</label>
+                    <input type="color" id="loginButtonColor" value="#062f51" class="color-picker">
+                    <p class="input-hint">Define a cor do botão "Entrar" na página de login.</p>
                 </div>
                 <p id="loginAppearanceSettingsError" class="form-message error"></p>
                 <p id="loginAppearanceSettingsSuccess" class="form-message success"></p>

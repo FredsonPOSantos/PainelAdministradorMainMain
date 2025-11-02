@@ -14,7 +14,7 @@ const getGeneralSettings = async (req, res) => {
     console.log("getGeneralSettings: Buscando configurações...");
     try {
         const settings = await pool.query(
-            'SELECT company_name, logo_url, primary_color, background_color, font_color, font_family, font_size, background_image_url, modal_background_color, modal_font_color, modal_border_color, sidebar_color, login_background_color, login_form_background_color, login_font_color FROM system_settings WHERE id = 1'
+            'SELECT company_name, logo_url, primary_color, background_color, font_color, font_family, font_size, background_image_url, modal_background_color, modal_font_color, modal_border_color, sidebar_color, login_background_color, login_form_background_color, login_font_color, login_button_color, login_logo_url FROM system_settings WHERE id = 1'
         );
 
         if (settings.rows.length === 0) {
@@ -287,8 +287,8 @@ const updateHotspotSettings = async (req, res) => {
 
 const updateLoginAppearanceSettings = async (req, res) => {
     console.log("updateLoginAppearanceSettings: Iniciando atualização...");
-    const { login_background_color, login_form_background_color, login_font_color } = req.body;
-    console.log("updateLoginAppearanceSettings: Dados recebidos (body):", { login_background_color, login_form_background_color, login_font_color });
+    const { login_background_color, login_form_background_color, login_font_color, login_button_color } = req.body;
+    console.log("updateLoginAppearanceSettings: Dados recebidos (body):", { login_background_color, login_form_background_color, login_font_color, login_button_color });
 
     try {
         const params = [];
@@ -296,16 +296,20 @@ const updateLoginAppearanceSettings = async (req, res) => {
         let queryIndex = 1;
 
         if (login_background_color) {
-            fields.push(`login_background_color = ${queryIndex++}`);
+            fields.push(`login_background_color = $${queryIndex++}`);
             params.push(login_background_color);
         }
         if (login_form_background_color) {
-            fields.push(`login_form_background_color = ${queryIndex++}`);
+            fields.push(`login_form_background_color = $${queryIndex++}`);
             params.push(login_form_background_color);
         }
         if (login_font_color) {
-            fields.push(`login_font_color = ${queryIndex++}`);
+            fields.push(`login_font_color = $${queryIndex++}`);
             params.push(login_font_color);
+        }
+        if (login_button_color) {
+            fields.push(`login_button_color = $${queryIndex++}`);
+            params.push(login_button_color);
         }
 
         if (fields.length > 0) {
@@ -331,6 +335,42 @@ const updateLoginAppearanceSettings = async (req, res) => {
     }
 };
 
+const updateLoginLogo = async (req, res) => {
+    console.log("updateLoginLogo: Iniciando atualização...");
+    const newLoginLogoFile = req.file;
+    console.log("updateLoginLogo: Ficheiro recebido (req.file):", newLoginLogoFile ? newLoginLogoFile.filename : "Nenhum");
+
+    try {
+        if (newLoginLogoFile) {
+            const relativePath = path.relative('public', newLoginLogoFile.path);
+            const loginLogoUrlForDB = '/' + relativePath.replace(/\\/g, '/');
+            console.log(`updateLoginLogo: Novo login logo URL para DB: ${loginLogoUrlForDB}`);
+
+            const updateQuery = `UPDATE system_settings SET login_logo_url = $1 WHERE id = 1 RETURNING *`;
+            const updatedSettings = await pool.query(updateQuery, [loginLogoUrlForDB]);
+
+            if (updatedSettings.rows.length === 0) {
+                console.error("updateLoginLogo: Falha ao atualizar, linha ID 1 não encontrada?");
+                throw new Error("Falha ao encontrar o registo de configurações para atualizar.");
+            }
+
+            console.log("updateLoginLogo: Configurações atualizadas no DB:", updatedSettings.rows[0]);
+            res.status(200).json({
+                message: "Logo da página de login atualizado com sucesso!",
+                settings: updatedSettings.rows[0]
+            });
+        } else {
+            console.log("updateLoginLogo: Nenhum ficheiro enviado para atualização.");
+            res.status(400).json({
+                message: "Nenhum ficheiro enviado."
+            });
+        }
+    } catch (error) {
+        console.error('Erro ao atualizar o logo da página de login:', error);
+        res.status(500).json({ message: error.message || 'Erro interno do servidor ao atualizar o logo.' });
+    }
+};
+
 // Exporta todas as funções do controller
 module.exports = {
     getGeneralSettings,
@@ -338,6 +378,7 @@ module.exports = {
     getHotspotSettings,
     updateHotspotSettings,
     updateBackgroundImage,
-    updateLoginAppearanceSettings
+    updateLoginAppearanceSettings,
+    updateLoginLogo
 };
 

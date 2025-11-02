@@ -22,6 +22,7 @@ if (window.initSettingsPage) {
         const loginAppearanceSettingsForm = document.getElementById('loginAppearanceSettingsForm');
         const hotspotSettingsForm = document.getElementById('hotspotSettingsForm');
         const backgroundSettingsForm = document.getElementById('backgroundSettingsForm');
+        const loginLogoSettingsForm = document.getElementById('loginLogoSettingsForm');
         
         // --- Elementos da Aba de Permissões (NOVO LAYOUT) ---
         const permissionsGridContainer = document.getElementById('permissionsGridContainer');
@@ -147,13 +148,15 @@ if (window.initSettingsPage) {
                 submitButton.disabled = true;
                 submitButton.textContent = 'A guardar...';
 
-                const formData = new FormData();
-                formData.append('login_background_color', document.getElementById('loginBackgroundColor').value);
-                formData.append('login_form_background_color', document.getElementById('loginFormBackgroundColor').value);
-                formData.append('login_font_color', document.getElementById('loginFontColor').value);
+                const data = {
+                    login_background_color: document.getElementById('loginBackgroundColor').value,
+                    login_form_background_color: document.getElementById('loginFormBackgroundColor').value,
+                    login_font_color: document.getElementById('loginFontColor').value,
+                    login_button_color: document.getElementById('loginButtonColor').value
+                };
 
                 try {
-                    const response = await apiRequest('/api/settings/login-appearance', 'POST', formData);
+                    const response = await apiRequest('/api/settings/login-appearance', 'POST', data);
 
                     if (response && response.settings) {
                         window.systemSettings = response.settings;
@@ -208,6 +211,47 @@ if (window.initSettingsPage) {
             });
         }
 
+        if (loginLogoSettingsForm) {
+            loginLogoSettingsForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const successMsg = document.getElementById('loginLogoSettingsSuccess');
+                const errorMsg = document.getElementById('loginLogoSettingsError');
+                const submitButton = loginLogoSettingsForm.querySelector('button[type="submit"]');
+
+                successMsg.textContent = '';
+                errorMsg.textContent = '';
+                submitButton.disabled = true;
+                submitButton.textContent = 'A guardar...';
+
+                const formData = new FormData();
+                const loginLogoFile = document.getElementById('loginLogoUpload').files[0];
+                if (loginLogoFile) {
+                    formData.append('loginLogo', loginLogoFile);
+                } else {
+                    errorMsg.textContent = 'Nenhum ficheiro selecionado.';
+                    submitButton.disabled = false;
+                    submitButton.textContent = 'Guardar Logo do Login';
+                    return;
+                }
+
+                try {
+                    const response = await apiRequest('/api/settings/login-logo', 'POST', formData);
+                    if (response && response.settings) {
+                        window.systemSettings = response.settings;
+                        successMsg.textContent = response.message || 'Logo guardado com sucesso!';
+                        loadGeneralSettings(); // Recarrega as configurações para mostrar a nova imagem
+                    } else {
+                        throw new Error('A API não retornou as novas configurações.');
+                    }
+                } catch (error) {
+                    errorMsg.textContent = `Erro ao guardar o logo: ${error.message}`;
+                } finally {
+                    submitButton.disabled = false;
+                    submitButton.textContent = 'Guardar Logo do Login';
+                }
+            });
+        }
+
         const loadGeneralSettings = async () => {
             try {
                 const settings = await apiRequest('/api/settings/general');
@@ -225,6 +269,7 @@ if (window.initSettingsPage) {
                     document.getElementById('loginBackgroundColor').value = settings.login_background_color || '#1a202c';
                     document.getElementById('loginFormBackgroundColor').value = settings.login_form_background_color || '#2d3748';
                     document.getElementById('loginFontColor').value = settings.login_font_color || '#edf2f7';
+                    document.getElementById('loginButtonColor').value = settings.login_button_color || '#062f51';
                     const logoPreview = document.getElementById('currentLogoPreview');
                     if (settings.logo_url) {
                         logoPreview.src = `http://${window.location.hostname}:3000${settings.logo_url}`;
@@ -238,6 +283,14 @@ if (window.initSettingsPage) {
                         backgroundPreview.style.display = 'block';
                     } else {
                         backgroundPreview.style.display = 'none';
+                    }
+
+                    const loginLogoPreview = document.getElementById('currentLoginLogoPreview');
+                    if (settings.login_logo_url) {
+                        loginLogoPreview.src = `http://${window.location.hostname}:3000${settings.login_logo_url}`;
+                        loginLogoPreview.style.display = 'block';
+                    } else {
+                        loginLogoPreview.style.display = 'none';
                     }
                 }
             } catch (error) {
@@ -455,9 +508,16 @@ if (window.initSettingsPage) {
 
             // Controla a visibilidade das configurações de aparência
             const appearanceSettings = document.querySelectorAll('.appearance-setting');
-            const canChangeAppearance = window.currentUserProfile?.permissions['settings.appearance'] === true;
+            const canChangeAppearance = isMaster || window.currentUserProfile?.permissions['settings.appearance'] === true;
             appearanceSettings.forEach(el => {
                 el.style.display = canChangeAppearance ? '' : 'none';
+            });
+
+            // Controla a visibilidade das configurações de aparência da página de login
+            const loginAppearanceSettings = document.querySelectorAll('.login-appearance-setting');
+            const canChangeLoginAppearance = isMaster || window.currentUserProfile?.permissions['settings.login_page'] === true;
+            loginAppearanceSettings.forEach(el => {
+                el.style.display = canChangeLoginAppearance ? '' : 'none';
             });
 
             switchTab(firstVisibleTabId);

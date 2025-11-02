@@ -1,0 +1,1 @@
+ALTER TABLE system_settings ADD COLUMN login_button_color VARCHAR(20) DEFAULT '#062f51';

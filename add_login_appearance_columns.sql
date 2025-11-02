@@ -1,0 +1,4 @@
+ALTER TABLE system_settings
+ADD COLUMN IF NOT EXISTS login_background_color VARCHAR(7) DEFAULT '#1A202C',
+ADD COLUMN IF NOT EXISTS login_form_background_color VARCHAR(7) DEFAULT '#2D3748',
+ADD COLUMN IF NOT EXISTS login_font_color VARCHAR(7) DEFAULT '#EDF2F7';

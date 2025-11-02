@@ -1,0 +1,1 @@
+ALTER TABLE system_settings ADD COLUMN login_logo_url VARCHAR(255);
