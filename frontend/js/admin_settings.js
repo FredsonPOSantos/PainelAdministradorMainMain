@@ -49,12 +49,8 @@ if (window.initSettingsPage) {
         if (companySettingsForm) {
             companySettingsForm.addEventListener('submit', async (e) => {
                 e.preventDefault();
-                const successMsg = document.getElementById('companySettingsSuccess');
-                const errorMsg = document.getElementById('companySettingsError');
                 const submitButton = companySettingsForm.querySelector('button[type="submit"]');
 
-                successMsg.textContent = '';
-                errorMsg.textContent = '';
                 submitButton.disabled = true;
                 submitButton.textContent = 'A guardar...';
 
@@ -67,22 +63,22 @@ if (window.initSettingsPage) {
                 }
 
                 try {
-                    const response = await apiRequest('/api/settings/general', 'POST', formData);
+                    const result = await apiRequest('/api/settings/general', 'POST', formData);
 
-                    if (response && response.settings) {
-                        window.systemSettings = response.settings;
+                    if (result.success) {
+                        window.systemSettings = result.data.settings;
                         
                         if (window.applyVisualSettings) {
-                            window.applyVisualSettings(response.settings);
+                            window.applyVisualSettings(result.data.settings);
                         }
                         
-                        successMsg.textContent = response.message || 'Configurações guardadas com sucesso!';
+                        showNotification(result.message || 'Configurações guardadas com sucesso!', 'success');
                     } else {
-                        throw new Error('A API não retornou as novas configurações.');
+                        showNotification(result.message || 'Erro ao guardar configurações.', 'error');
                     }
 
                 } catch (error) {
-                    errorMsg.textContent = `Erro ao guardar configurações: ${error.message}`;
+                    showNotification(`Erro ao guardar configurações: ${error.message}`, 'error');
                 } finally {
                     submitButton.disabled = false;
                     submitButton.textContent = 'Guardar Configurações da Empresa';
@@ -92,12 +88,8 @@ if (window.initSettingsPage) {
         if (appearanceSettingsForm) {
             appearanceSettingsForm.addEventListener('submit', async (e) => {
                 e.preventDefault();
-                const successMsg = document.getElementById('appearanceSettingsSuccess');
-                const errorMsg = document.getElementById('appearanceSettingsError');
                 const submitButton = appearanceSettingsForm.querySelector('button[type="submit"]');
 
-                successMsg.textContent = '';
-                errorMsg.textContent = '';
                 submitButton.disabled = true;
                 submitButton.textContent = 'A guardar...';
 
@@ -113,22 +105,22 @@ if (window.initSettingsPage) {
                 formData.append('modal_border_color', document.getElementById('modalBorderColor').value);
 
                 try {
-                    const response = await apiRequest('/api/settings/general', 'POST', formData);
+                    const result = await apiRequest('/api/settings/general', 'POST', formData);
 
-                    if (response && response.settings) {
-                        window.systemSettings = response.settings;
+                    if (result.success) {
+                        window.systemSettings = result.data.settings;
                         
                         if (window.applyVisualSettings) {
-                            window.applyVisualSettings(response.settings);
+                            window.applyVisualSettings(result.data.settings);
                         }
                         
-                        successMsg.textContent = response.message || 'Configurações guardadas com sucesso!';
+                        showNotification(result.message || 'Configurações guardadas com sucesso!', 'success');
                     } else {
-                        throw new Error('A API não retornou as novas configurações.');
+                        showNotification(result.message || 'Erro ao guardar configurações.', 'error');
                     }
 
                 } catch (error) {
-                    errorMsg.textContent = `Erro ao guardar configurações: ${error.message}`;
+                    showNotification(`Erro ao guardar configurações: ${error.message}`, 'error');
                 } finally {
                     submitButton.disabled = false;
                     submitButton.textContent = 'Guardar Alterações de Aparência';
@@ -139,12 +131,8 @@ if (window.initSettingsPage) {
         if (loginAppearanceSettingsForm) {
             loginAppearanceSettingsForm.addEventListener('submit', async (e) => {
                 e.preventDefault();
-                const successMsg = document.getElementById('loginAppearanceSettingsSuccess');
-                const errorMsg = document.getElementById('loginAppearanceSettingsError');
                 const submitButton = loginAppearanceSettingsForm.querySelector('button[type="submit"]');
 
-                successMsg.textContent = '';
-                errorMsg.textContent = '';
                 submitButton.disabled = true;
                 submitButton.textContent = 'A guardar...';
 
@@ -156,18 +144,18 @@ if (window.initSettingsPage) {
                 };
 
                 try {
-                    const response = await apiRequest('/api/settings/login-appearance', 'POST', data);
+                    const result = await apiRequest('/api/settings/login-appearance', 'POST', data);
 
-                    if (response && response.settings) {
-                        window.systemSettings = response.settings;
+                    if (result.success) {
+                        window.systemSettings = result.data.settings;
                         
-                        successMsg.textContent = response.message || 'Configurações guardadas com sucesso!';
+                        showNotification(result.message || 'Configurações guardadas com sucesso!', 'success');
                     } else {
-                        throw new Error('A API não retornou as novas configurações.');
+                        showNotification(result.message || 'Erro ao guardar configurações.', 'error');
                     }
 
                 } catch (error) {
-                    errorMsg.textContent = `Erro ao guardar configurações: ${error.message}`;
+                    showNotification(`Erro ao guardar configurações: ${error.message}`, 'error');
                 } finally {
                     submitButton.disabled = false;
                     submitButton.textContent = 'Guardar Cores do Login';
@@ -178,12 +166,8 @@ if (window.initSettingsPage) {
         if (backgroundSettingsForm) {
             backgroundSettingsForm.addEventListener('submit', async (e) => {
                 e.preventDefault();
-                const successMsg = document.getElementById('backgroundSettingsSuccess');
-                const errorMsg = document.getElementById('backgroundSettingsError');
                 const submitButton = backgroundSettingsForm.querySelector('button[type="submit"]');
 
-                successMsg.textContent = '';
-                errorMsg.textContent = '';
                 submitButton.disabled = true;
                 submitButton.textContent = 'A guardar...';
 
@@ -194,16 +178,16 @@ if (window.initSettingsPage) {
                 }
 
                 try {
-                    const response = await apiRequest('/api/settings/background', 'POST', formData);
-                    if (response && response.settings) {
-                        window.systemSettings = response.settings;
-                        successMsg.textContent = response.message || 'Imagem de fundo guardada com sucesso!';
+                    const result = await apiRequest('/api/settings/background', 'POST', formData);
+                    if (result.success) {
+                        window.systemSettings = result.data.settings;
+                        showNotification(result.message || 'Imagem de fundo guardada com sucesso!', 'success');
                         loadGeneralSettings(); // Recarrega as configurações para mostrar a nova imagem
                     } else {
-                        throw new Error('A API não retornou as novas configurações.');
+                        showNotification(result.message || 'Erro ao guardar imagem de fundo.', 'error');
                     }
                 } catch (error) {
-                    errorMsg.textContent = `Erro ao guardar imagem de fundo: ${error.message}`;
+                    showNotification(`Erro ao guardar imagem de fundo: ${error.message}`, 'error');
                 } finally {
                     submitButton.disabled = false;
                     submitButton.textContent = 'Guardar Imagem de Fundo';

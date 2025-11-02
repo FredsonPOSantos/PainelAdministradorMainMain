@@ -53,49 +53,53 @@ const apiRequest = async (endpoint, method = 'GET', body = null) => {
         if (!response.ok) {
             let errorData = {};
             try {
-                // Tenta extrair a mensagem de erro do JSON da API
                 errorData = await response.json();
             } catch (e) {
-                // Fallback se a resposta não for JSON
                 errorData.message = response.statusText || `Erro HTTP ${response.status}`;
             }
 
             // Tratamento de erros específicos
             if (response.status === 401) {
                 console.warn("Token inválido/expirado (V13.1.3). Deslogando...");
-                // Limpa os dados de sessão e redireciona para o login
                 localStorage.removeItem('adminToken');
                 window.currentUserProfile = null;
                 isProfileLoaded = false;
                 window.systemSettings = null;
                 window.location.href = 'admin_login.html';
-                throw new Error('Não autorizado.');
+                throw new Error('Não autorizado.'); // Ainda lança para redirecionamento crítico
             } else if (errorData.code === 'PASSWORD_CHANGE_REQUIRED') {
                 console.warn("API bloqueada (V13.1.3). Troca de senha obrigatória.");
                 showForcePasswordChangeModal();
-                throw new Error(errorData.message || "Troca de senha obrigatória.");
+                throw new Error(errorData.message || "Troca de senha obrigatória."); // Ainda lança para modal crítico
             } else {
-                // Outros erros (403, 404, 500, etc.)
-                throw new Error(errorData.message || `Erro ${response.status}`);
+                // Outros erros (403, 404, 500, etc.) - Retorna um objeto de erro estruturado
+                return {
+                    success: false,
+                    message: errorData.message || `Erro ${response.status}`,
+                    status: response.status,
+                    code: errorData.code // Se houver um código de erro específico da API
+                };
             }
         }
         
         // Trata respostas sem conteúdo (ex: 204 No Content)
         if (response.status === 204) {
-            return null;
+            return { success: true, data: null, message: "Operação realizada com sucesso." };
         }
 
         // Verifica o tipo de conteúdo da resposta
         const contentType = response.headers.get("content-type");
         if (contentType && contentType.includes("application/json")) {
-            return await response.json(); // Resposta JSON
+            const data = await response.json();
+            return { success: true, data: data, message: data.message || "Operação realizada com sucesso." };
         } else {
-            return await response.text() || null; // Resposta de texto (ou vazia)
+            const textData = await response.text();
+            return { success: true, data: textData || null, message: "Operação realizada com sucesso." };
         }
 
     } catch (error) {
-        // Captura erros de rede ou os erros lançados acima
         console.error(`Erro em apiRequest (V13.1.3) ${method} ${endpoint}:`, error);
+        // Para erros de rede ou erros lançados acima, ainda lança o erro
         throw error;
     }
 };
