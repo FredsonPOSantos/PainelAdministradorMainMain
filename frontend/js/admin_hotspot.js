@@ -71,7 +71,8 @@ if (window.initHotspotPage) {
                     if (groupSelect) groupSelect.disabled = true;
 
                     // Busca apenas as campanhas (que 'estetica' tem permissão)
-                                        campaigns.data.forEach(c => {                        campaignSelect.innerHTML += `<option value="${c.id}">${c.name}</option>`;
+                    const campaignsResponse = await apiRequest('/api/campaigns');
+                    campaignsResponse.data.forEach(c => {                        campaignSelect.innerHTML += `<option value="${c.id}">${c.name}</option>`;
                     });
                 }
 

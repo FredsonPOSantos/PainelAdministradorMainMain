@@ -1,6 +1,7 @@
 // Ficheiro: controllers/routerController.js
 const pool = require('../connection');
 const ping = require('ping'); // Importa a biblioteca de ping
+const { logAction } = require('../services/auditLogService');
 
 // --- Funções de Roteadores Individuais ---
 
@@ -47,8 +48,28 @@ const updateRouter = async (req, res) => {
         if (updatedRouter.rowCount === 0) {
             return res.status(404).json({ message: 'Roteador não encontrado.' });
         }
+
+        await logAction({
+            req,
+            action: 'ROUTER_UPDATE',
+            status: 'SUCCESS',
+            description: `Utilizador "${req.user.email}" atualizou o roteador "${updatedRouter.rows[0].name}".`,
+            target_type: 'router',
+            target_id: id
+        });
+
         res.json({ message: 'Roteador atualizado com sucesso!', router: updatedRouter.rows[0] });
     } catch (error) {
+        await logAction({
+            req,
+            action: 'ROUTER_UPDATE_FAILURE',
+            status: 'FAILURE',
+            description: `Falha ao atualizar roteador com ID "${id}". Erro: ${error.message}`,
+            target_type: 'router',
+            target_id: id,
+            details: { error: error.message }
+        });
+
         console.error('Erro ao atualizar roteador:', error);
         res.status(500).json({ message: 'Erro interno do servidor.' });
     }
@@ -62,8 +83,28 @@ const deleteRouter = async (req, res) => {
         if (result.rowCount === 0) {
             return res.status(404).json({ message: 'Roteador não encontrado.' });
         }
+
+        await logAction({
+            req,
+            action: 'ROUTER_DELETE',
+            status: 'SUCCESS',
+            description: `Utilizador "${req.user.email}" eliminou o roteador com ID ${id}.`,
+            target_type: 'router',
+            target_id: id
+        });
+
         res.json({ message: 'Roteador eliminado com sucesso.' });
     } catch (error) {
+        await logAction({
+            req,
+            action: 'ROUTER_DELETE_FAILURE',
+            status: 'FAILURE',
+            description: `Falha ao eliminar roteador com ID "${id}". Erro: ${error.message}`,
+            target_type: 'router',
+            target_id: id,
+            details: { error: error.message }
+        });
+
         console.error('Erro ao eliminar roteador:', error);
         res.status(500).json({ message: 'Erro interno do servidor.' });
     }
@@ -123,9 +164,29 @@ const batchAddRouters = async (req, res) => {
         `;
         await client.query(query, [routerNames]);
         await client.query('COMMIT');
+
+        await logAction({
+            req,
+            action: 'ROUTER_BATCH_ADD',
+            status: 'SUCCESS',
+            description: `Utilizador "${req.user.email}" adicionou ${routerNames.length} roteador(es) em massa.`,
+            target_type: 'router',
+            details: { routerNames: routerNames }
+        });
+
         res.status(201).json({ message: `${routerNames.length} roteador(es) adicionado(s) com sucesso!` });
     } catch (error) {
         await client.query('ROLLBACK');
+
+        await logAction({
+            req,
+            action: 'ROUTER_BATCH_ADD_FAILURE',
+            status: 'FAILURE',
+            description: `Falha ao adicionar roteadores em massa. Erro: ${error.message}`,
+            target_type: 'router',
+            details: { error: error.message }
+        });
+
         console.error('Erro ao adicionar roteadores em massa:', error);
         res.status(500).json({ message: 'Erro interno do servidor.' });
     } finally {
@@ -171,9 +232,29 @@ const createRouterGroup = async (req, res) => {
     const updateRoutersQuery = 'UPDATE routers SET group_id = $1 WHERE id = ANY($2::int[])';
     await client.query(updateRoutersQuery, [newGroupId, routerIds]);
     await client.query('COMMIT');
+
+    await logAction({
+        req,
+        action: 'ROUTER_GROUP_CREATE',
+        status: 'SUCCESS',
+        description: `Utilizador "${req.user.email}" criou o grupo de roteadores "${name}".`,
+        target_type: 'router_group',
+        target_id: newGroupId
+    });
+
     res.status(201).json({ message: `Grupo '${name}' criado com sucesso.` });
   } catch (error) {
     await client.query('ROLLBACK');
+
+    await logAction({
+        req,
+        action: 'ROUTER_GROUP_CREATE_FAILURE',
+        status: 'FAILURE',
+        description: `Falha ao criar grupo de roteadores com nome "${name}". Erro: ${error.message}`,
+        target_type: 'router_group',
+        details: { error: error.message }
+    });
+
     console.error('Erro ao criar grupo:', error);
     res.status(500).json({ message: "Erro interno do servidor." });
   } finally {
@@ -195,9 +276,30 @@ const updateRouterGroup = async (req, res) => {
             await client.query(updateRoutersQuery, [id, routerIds]);
         }
         await client.query('COMMIT');
+
+        await logAction({
+            req,
+            action: 'ROUTER_GROUP_UPDATE',
+            status: 'SUCCESS',
+            description: `Utilizador "${req.user.email}" atualizou o grupo de roteadores "${name}".`,
+            target_type: 'router_group',
+            target_id: id
+        });
+
         res.json({ message: 'Grupo atualizado com sucesso!' });
     } catch (error) {
         await client.query('ROLLBACK');
+
+        await logAction({
+            req,
+            action: 'ROUTER_GROUP_UPDATE_FAILURE',
+            status: 'FAILURE',
+            description: `Falha ao atualizar grupo de roteadores com ID "${id}". Erro: ${error.message}`,
+            target_type: 'router_group',
+            target_id: id,
+            details: { error: error.message }
+        });
+
         console.error('Erro ao atualizar grupo:', error);
         res.status(500).json({ message: 'Erro interno do servidor.' });
     } finally {
@@ -213,9 +315,30 @@ const deleteRouterGroup = async (req, res) => {
         await client.query('UPDATE routers SET group_id = NULL WHERE group_id = $1', [id]);
         await client.query('DELETE FROM router_groups WHERE id = $1', [id]);
         await client.query('COMMIT');
+
+        await logAction({
+            req,
+            action: 'ROUTER_GROUP_DELETE',
+            status: 'SUCCESS',
+            description: `Utilizador "${req.user.email}" eliminou o grupo de roteadores com ID ${id}.`,
+            target_type: 'router_group',
+            target_id: id
+        });
+
         res.json({ message: 'Grupo eliminado com sucesso.' });
     } catch (error) {
         await client.query('ROLLBACK');
+
+        await logAction({
+            req,
+            action: 'ROUTER_GROUP_DELETE_FAILURE',
+            status: 'FAILURE',
+            description: `Falha ao eliminar grupo de roteadores com ID "${id}". Erro: ${error.message}`,
+            target_type: 'router_group',
+            target_id: id,
+            details: { error: error.message }
+        });
+
         console.error('Erro ao eliminar grupo:', error);
         res.status(500).json({ message: 'Erro interno do servidor.' });
     } finally {

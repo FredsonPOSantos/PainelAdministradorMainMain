@@ -523,6 +523,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         changePasswordForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             console.log("Form troca senha submetido (V13.1.3).");
+            const btn = changePasswordForm.querySelector('button[type="submit"]');
+            const currIn = document.getElementById('currentTemporaryPassword');
+            const newIn = document.getElementById('newPassword');
             
             if(!currIn || !newIn) {
                  showNotification("Erro interno (campos não encontrados).", 'error');

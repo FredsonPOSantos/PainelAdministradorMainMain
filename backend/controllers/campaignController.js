@@ -2,6 +2,7 @@
 // Descrição: Contém a lógica de negócio para a gestão de campanhas.
 
 const pool = require('../connection'); // Caminho atualizado
+const { logAction } = require('../services/auditLogService');
 
 /**
  * @description Retorna um Set com os IDs de todos os roteadores que já estão em uma campanha ativa.
@@ -94,9 +95,29 @@ const createCampaign = async (req, res) => {
     const result = await client.query(query, values);
     
     await client.query('COMMIT');
+
+    await logAction({
+      req,
+      action: 'CAMPAIGN_CREATE',
+      status: 'SUCCESS',
+      description: `Utilizador "${req.user.email}" criou a campanha "${result.rows[0].name}".`,
+      target_type: 'campaign',
+      target_id: result.rows[0].id
+    });
+
     res.status(201).json({ message: 'Campanha criada com sucesso!', campaign: result.rows[0] });
   } catch (error) {
     await client.query('ROLLBACK');
+
+    await logAction({
+      req,
+      action: 'CAMPAIGN_CREATE_FAILURE',
+      status: 'FAILURE',
+      description: `Falha ao criar campanha com nome "${name}". Erro: ${error.message}`,
+      target_type: 'campaign',
+      details: { error: error.message }
+    });
+
     console.error('Erro ao criar campanha:', error);
     res.status(500).json({ message: 'Erro interno do servidor.' });
   } finally {
@@ -172,9 +193,30 @@ const updateCampaign = async (req, res) => {
     }
 
     await client.query('COMMIT');
+
+    await logAction({
+      req,
+      action: 'CAMPAIGN_UPDATE',
+      status: 'SUCCESS',
+      description: `Utilizador "${req.user.email}" atualizou a campanha "${result.rows[0].name}".`,
+      target_type: 'campaign',
+      target_id: id
+    });
+
     res.json({ message: 'Campanha atualizada com sucesso!', campaign: result.rows[0] });
   } catch (error) {
     await client.query('ROLLBACK');
+
+    await logAction({
+      req,
+      action: 'CAMPAIGN_UPDATE_FAILURE',
+      status: 'FAILURE',
+      description: `Falha ao atualizar campanha com ID "${id}". Erro: ${error.message}`,
+      target_type: 'campaign',
+      target_id: id,
+      details: { error: error.message }
+    });
+
     console.error('Erro ao atualizar campanha:', error);
     res.status(500).json({ message: 'Erro interno do servidor.' });
   } finally {
@@ -192,8 +234,28 @@ const deleteCampaign = async (req, res) => {
     if (result.rowCount === 0) {
       return res.status(404).json({ message: 'Campanha não encontrada.' });
     }
+
+    await logAction({
+      req,
+      action: 'CAMPAIGN_DELETE',
+      status: 'SUCCESS',
+      description: `Utilizador "${req.user.email}" eliminou a campanha com ID ${id}.`,
+      target_type: 'campaign',
+      target_id: id
+    });
+
     res.json({ message: 'Campanha eliminada com sucesso.' });
   } catch (error) {
+    await logAction({
+      req,
+      action: 'CAMPAIGN_DELETE_FAILURE',
+      status: 'FAILURE',
+      description: `Falha ao eliminar campanha com ID "${id}". Erro: ${error.message}`,
+      target_type: 'campaign',
+      target_id: id,
+      details: { error: error.message }
+    });
+
     console.error('Erro ao eliminar campanha:', error);
     res.status(500).json({ message: 'Erro interno do servidor.' });
   }

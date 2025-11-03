@@ -4,6 +4,7 @@
 const pool = require('../connection');
 const path = require('path');
 const fs = require('fs'); // Para lidar com caminhos de ficheiro e remoção
+const { logAction } = require('../services/auditLogService');
 
 // --- FASE 2.3: Configurações Gerais ---
 
@@ -143,6 +144,15 @@ const updateGeneralSettings = async (req, res) => {
             }
 
             console.log("updateGeneralSettings: Configurações atualizadas no DB:", updatedSettings.rows[0]);
+
+            await logAction({
+                req,
+                action: 'SETTINGS_UPDATE_GENERAL',
+                status: 'SUCCESS',
+                description: `Utilizador "${req.user.email}" atualizou as configurações gerais.`,
+                target_type: 'settings'
+            });
+
             res.status(200).json({
                 message: "Configurações gerais atualizadas com sucesso!",
                 settings: updatedSettings.rows[0] // Retorna as configurações atualizadas
@@ -158,6 +168,15 @@ const updateGeneralSettings = async (req, res) => {
         }
 
     } catch (error) {
+        await logAction({
+            req,
+            action: 'SETTINGS_UPDATE_GENERAL_FAILURE',
+            status: 'FAILURE',
+            description: `Falha ao atualizar as configurações gerais. Erro: ${error.message}`,
+            target_type: 'settings',
+            details: { error: error.message }
+        });
+
         console.error('Erro ao atualizar configurações gerais:', error);
         // Devolve o erro para o frontend
         res.status(500).json({ message: error.message || 'Erro interno do servidor ao atualizar configurações.' });
@@ -184,6 +203,15 @@ const updateBackgroundImage = async (req, res) => {
             }
 
             console.log("updateBackgroundImage: Configurações atualizadas no DB:", updatedSettings.rows[0]);
+
+            await logAction({
+                req,
+                action: 'SETTINGS_UPDATE_BACKGROUND',
+                status: 'SUCCESS',
+                description: `Utilizador "${req.user.email}" atualizou a imagem de fundo.`,
+                target_type: 'settings'
+            });
+
             res.status(200).json({
                 message: "Imagem de fundo atualizada com sucesso!",
                 settings: updatedSettings.rows[0]
@@ -195,6 +223,15 @@ const updateBackgroundImage = async (req, res) => {
             });
         }
     } catch (error) {
+        await logAction({
+            req,
+            action: 'SETTINGS_UPDATE_BACKGROUND_FAILURE',
+            status: 'FAILURE',
+            description: `Falha ao atualizar a imagem de fundo. Erro: ${error.message}`,
+            target_type: 'settings',
+            details: { error: error.message }
+        });
+
         console.error('Erro ao atualizar imagem de fundo:', error);
         res.status(500).json({ message: error.message || 'Erro interno do servidor ao atualizar imagem de fundo.' });
     }
@@ -276,11 +313,29 @@ const updateHotspotSettings = async (req, res) => {
         }
 
         console.log("updateHotspotSettings: Configs do Hotspot atualizadas no DB:", updatedSettings.rows[0]);
+
+        await logAction({
+            req,
+            action: 'SETTINGS_UPDATE_HOTSPOT',
+            status: 'SUCCESS',
+            description: `Utilizador "${req.user.email}" atualizou as configurações do hotspot.`,
+            target_type: 'settings'
+        });
+
         res.status(200).json({
             message: "Configurações do Hotspot atualizadas com sucesso!",
             settings: updatedSettings.rows[0] // Retorna os dados atualizados
         });
     } catch (error) {
+        await logAction({
+            req,
+            action: 'SETTINGS_UPDATE_HOTSPOT_FAILURE',
+            status: 'FAILURE',
+            description: `Falha ao atualizar as configurações do hotspot. Erro: ${error.message}`,
+            target_type: 'settings',
+            details: { error: error.message }
+        });
+
         console.error('Erro ao atualizar configs do hotspot:', error);
     }
 };
@@ -320,6 +375,14 @@ const updateLoginAppearanceSettings = async (req, res) => {
                 throw new Error("Falha ao encontrar o registo de configurações para atualizar.");
             }
 
+            await logAction({
+                req,
+                action: 'SETTINGS_UPDATE_LOGIN_APPEARANCE',
+                status: 'SUCCESS',
+                description: `Utilizador "${req.user.email}" atualizou a aparência da página de login.`,
+                target_type: 'settings'
+            });
+
             res.status(200).json({
                 message: "Configurações de aparência da página de login atualizadas com sucesso!",
                 settings: updatedSettings.rows[0]
@@ -330,6 +393,15 @@ const updateLoginAppearanceSettings = async (req, res) => {
             });
         }
     } catch (error) {
+        await logAction({
+            req,
+            action: 'SETTINGS_UPDATE_LOGIN_APPEARANCE_FAILURE',
+            status: 'FAILURE',
+            description: `Falha ao atualizar a aparência da página de login. Erro: ${error.message}`,
+            target_type: 'settings',
+            details: { error: error.message }
+        });
+
         console.error('Erro ao atualizar configurações de aparência da página de login:', error);
         res.status(500).json({ message: error.message || 'Erro interno do servidor ao atualizar configurações.' });
     }
@@ -355,6 +427,15 @@ const updateLoginLogo = async (req, res) => {
             }
 
             console.log("updateLoginLogo: Configurações atualizadas no DB:", updatedSettings.rows[0]);
+
+            await logAction({
+                req,
+                action: 'SETTINGS_UPDATE_LOGIN_LOGO',
+                status: 'SUCCESS',
+                description: `Utilizador "${req.user.email}" atualizou o logo da página de login.`,
+                target_type: 'settings'
+            });
+
             res.status(200).json({
                 message: "Logo da página de login atualizado com sucesso!",
                 settings: updatedSettings.rows[0]
@@ -366,6 +447,15 @@ const updateLoginLogo = async (req, res) => {
             });
         }
     } catch (error) {
+        await logAction({
+            req,
+            action: 'SETTINGS_UPDATE_LOGIN_LOGO_FAILURE',
+            status: 'FAILURE',
+            description: `Falha ao atualizar o logo da página de login. Erro: ${error.message}`,
+            target_type: 'settings',
+            details: { error: error.message }
+        });
+
         console.error('Erro ao atualizar o logo da página de login:', error);
         res.status(500).json({ message: error.message || 'Erro interno do servidor ao atualizar o logo.' });
     }

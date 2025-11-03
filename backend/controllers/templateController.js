@@ -2,6 +2,7 @@
 // Descrição: Contém a lógica de negócio para a gestão de templates.
 
 const pool = require('../connection'); // Caminho atualizado
+const { logAction } = require('../services/auditLogService');
 
 /**
  * @description Cria um novo template.
@@ -36,8 +37,27 @@ const createTemplate = async (req, res) => {
     `;
     const values = [name, base_model, login_background_url, logo_url, primary_color, font_size, font_color, promo_video_url, login_type, prelogin_banner_id];
     const result = await pool.query(query, values);
+
+    await logAction({
+      req,
+      action: 'TEMPLATE_CREATE',
+      status: 'SUCCESS',
+      description: `Utilizador "${req.user.email}" criou o template "${result.rows[0].name}".`,
+      target_type: 'template',
+      target_id: result.rows[0].id
+    });
+
     res.status(201).json({ message: 'Template criado com sucesso!', template: result.rows[0] });
   } catch (error) {
+    await logAction({
+      req,
+      action: 'TEMPLATE_CREATE_FAILURE',
+      status: 'FAILURE',
+      description: `Falha ao criar template com nome "${name}". Erro: ${error.message}`,
+      target_type: 'template',
+      details: { error: error.message }
+    });
+
     console.error('Erro ao criar template:', error);
     res.status(500).json({ message: 'Erro interno do servidor.' });
   }
@@ -89,8 +109,28 @@ const updateTemplate = async (req, res) => {
     if (result.rowCount === 0) {
       return res.status(404).json({ message: 'Template não encontrado.' });
     }
+
+    await logAction({
+      req,
+      action: 'TEMPLATE_UPDATE',
+      status: 'SUCCESS',
+      description: `Utilizador "${req.user.email}" atualizou o template "${result.rows[0].name}".`,
+      target_type: 'template',
+      target_id: id
+    });
+
     res.json({ message: 'Template atualizado com sucesso!', template: result.rows[0] });
   } catch (error) {
+    await logAction({
+      req,
+      action: 'TEMPLATE_UPDATE_FAILURE',
+      status: 'FAILURE',
+      description: `Falha ao atualizar template com ID "${id}". Erro: ${error.message}`,
+      target_type: 'template',
+      target_id: id,
+      details: { error: error.message }
+    });
+
     console.error('Erro ao atualizar template:', error);
     res.status(500).json({ message: 'Erro interno do servidor.' });
   }
@@ -111,8 +151,28 @@ const deleteTemplate = async (req, res) => {
     if (result.rowCount === 0) {
       return res.status(404).json({ message: 'Template não encontrado.' });
     }
+
+    await logAction({
+      req,
+      action: 'TEMPLATE_DELETE',
+      status: 'SUCCESS',
+      description: `Utilizador "${req.user.email}" eliminou o template com ID ${id}.`,
+      target_type: 'template',
+      target_id: id
+    });
+
     res.json({ message: 'Template eliminado com sucesso.' });
   } catch (error) {
+    await logAction({
+      req,
+      action: 'TEMPLATE_DELETE_FAILURE',
+      status: 'FAILURE',
+      description: `Falha ao eliminar template com ID "${id}". Erro: ${error.message}`,
+      target_type: 'template',
+      target_id: id,
+      details: { error: error.message }
+    });
+
     console.error('Erro ao eliminar template:', error);
     res.status(500).json({ message: 'Erro interno do servidor.' });
   }

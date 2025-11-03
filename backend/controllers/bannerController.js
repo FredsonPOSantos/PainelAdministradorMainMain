@@ -1,5 +1,6 @@
 // Ficheiro: controllers/bannerController.js
 const pool = require('../connection');
+const { logAction } = require('../services/auditLogService');
 
 // ... (as suas funções createBanner, getAllBanners, updateBanner, deleteBanner devem permanecer aqui) ...
 /**
@@ -22,8 +23,26 @@ const createBanner = async (req, res) => {
     const values = [name, image_url, target_url, display_time_seconds || 5, type, is_active || false];
     const result = await pool.query(query, values);
 
+    await logAction({
+      req,
+      action: 'BANNER_CREATE',
+      status: 'SUCCESS',
+      description: `Utilizador "${req.user.email}" criou o banner "${result.rows[0].name}".`,
+      target_type: 'banner',
+      target_id: result.rows[0].id
+    });
+
     res.status(201).json({ message: 'Banner criado com sucesso!', banner: result.rows[0] });
   } catch (error) {
+    await logAction({
+      req,
+      action: 'BANNER_CREATE_FAILURE',
+      status: 'FAILURE',
+      description: `Falha ao criar banner com nome "${name}". Erro: ${error.message}`,
+      target_type: 'banner',
+      details: { error: error.message }
+    });
+
     console.error('Erro ao criar banner:', error);
     res.status(500).json({ message: 'Erro interno do servidor.' });
   }
@@ -65,8 +84,27 @@ const updateBanner = async (req, res) => {
       return res.status(404).json({ message: 'Banner não encontrado.' });
     }
 
+    await logAction({
+      req,
+      action: 'BANNER_UPDATE',
+      status: 'SUCCESS',
+      description: `Utilizador "${req.user.email}" atualizou o banner "${result.rows[0].name}".`,
+      target_type: 'banner',
+      target_id: id
+    });
+
     res.json({ message: 'Banner atualizado com sucesso!', banner: result.rows[0] });
   } catch (error) {
+    await logAction({
+      req,
+      action: 'BANNER_UPDATE_FAILURE',
+      status: 'FAILURE',
+      description: `Falha ao atualizar banner com ID "${id}". Erro: ${error.message}`,
+      target_type: 'banner',
+      target_id: id,
+      details: { error: error.message }
+    });
+
     console.error('Erro ao atualizar banner:', error);
     res.status(500).json({ message: 'Erro interno do servidor.' });
   }
@@ -83,8 +121,28 @@ const deleteBanner = async (req, res) => {
     if (result.rowCount === 0) {
       return res.status(404).json({ message: 'Banner não encontrado.' });
     }
+
+    await logAction({
+      req,
+      action: 'BANNER_DELETE',
+      status: 'SUCCESS',
+      description: `Utilizador "${req.user.email}" eliminou o banner com ID ${id}.`,
+      target_type: 'banner',
+      target_id: id
+    });
+
     res.json({ message: 'Banner eliminado com sucesso.' });
   } catch (error) {
+    await logAction({
+      req,
+      action: 'BANNER_DELETE_FAILURE',
+      status: 'FAILURE',
+      description: `Falha ao eliminar banner com ID "${id}". Erro: ${error.message}`,
+      target_type: 'banner',
+      target_id: id,
+      details: { error: error.message }
+    });
+
     console.error('Erro ao eliminar banner:', error);
     res.status(500).json({ message: 'Erro interno do servidor.' });
   }

@@ -13,8 +13,8 @@
     <button class="tab-link admin-only" data-tab="tab-aparencia">Aparência</button>
     <!-- [ATUALIZADO V13.5.2] Removido master-only daqui para o JS controlar (permite DPO) -->
     <button class="tab-link admin-only" data-tab="tab-permissoes">Funções e Permissões</button>
-    <button class="tab-link admin-only master-only" data-tab="tab-logs">Logs de Atividade</button>
-    <button class="tab-link admin-only master-only" data-tab="tab-lgpd">Gestão LGPD</button>
+    <button class="tab-link admin-only" data-tab="tab-logs">Logs de Atividade</button>
+    <button class="tab-link admin-only" data-tab="tab-lgpd">Gestão LGPD</button>
 </nav>
 
 <!-- Conteúdo das Abas -->
@@ -290,17 +290,60 @@
     </div>
 
     <!-- Aba 5: Logs de Atividade (Fase 3.2) -->
-    <div id="tab-logs" class="tab-content admin-only master-only">
+    <div id="tab-logs" class="tab-content admin-only">
         <div class="content-section">
             <div class="section-header">
                 <h4>Logs de Atividade do Painel</h4>
+                <p class="input-hint">Exibe as últimas 200 ações registadas no sistema.</p>
+                <div class="header-actions">
+                    <button id="exportCsvBtn" class="btn-secondary">Exportar para CSV</button>
+                    <button id="exportExcelBtn" class="btn-primary">Exportar para Excel</button>
+                </div>
             </div>
-             <p style="margin-top: 10px;">(Fase 3.2) - O visualizador de logs de auditoria será implementado aqui.</p>
+
+            <div class="filters-container" style="margin-top: 20px; display: flex; gap: 15px; align-items: flex-end;">
+                <div class="input-group">
+                    <label for="logKeyword">Palavra-chave</label>
+                    <input type="text" id="logKeyword" placeholder="Ex: login, user_update, ...">
+                </div>
+                <div class="input-group">
+                    <label for="logStartDate">Data Início</label>
+                    <input type="date" id="logStartDate">
+                </div>
+                <div class="input-group">
+                    <label for="logEndDate">Data Fim</label>
+                    <input type="date" id="logEndDate">
+                </div>
+                <div class="form-actions">
+                    <button id="filterLogsBtn" class="btn-primary">Filtrar</button>
+                    <button id="clearFiltersBtn" class="btn-secondary">Limpar</button>
+                </div>
+            </div>
+            
+            <!-- TODO: Adicionar filtros de pesquisa no futuro (data, utilizador, ação) -->
+
+            <div class="table-container" style="margin-top: 20px;">
+                <table id="auditLogsTable" class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Data/Hora</th>
+                            <th>Utilizador</th>
+                            <th>IP</th>
+                            <th>Ação</th>
+                            <th>Status</th>
+                            <th>Descrição</th>
+                        </tr>
+                    </thead>
+                    <tbody id="auditLogsTableBody">
+                        <!-- As linhas de log serão inseridas aqui pelo JavaScript -->
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 
     <!-- Aba 6: Gestão LGPD (Fase 3.3) -->
-    <div id="tab-lgpd" class="tab-content admin-only master-only">
+    <div id="tab-lgpd" class="tab-content admin-only">
         <div class="content-section">
              <div class="section-header">
                 <h4>Gestão LGPD</h4>
@@ -310,4 +353,3 @@
     </div>
 
 </div>
-

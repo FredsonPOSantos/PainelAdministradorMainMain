@@ -23,7 +23,10 @@ if (window.initSettingsPage) {
         const hotspotSettingsForm = document.getElementById('hotspotSettingsForm');
         const backgroundSettingsForm = document.getElementById('backgroundSettingsForm');
         const loginLogoSettingsForm = document.getElementById('loginLogoSettingsForm');
-        
+        const filterLogsBtn = document.getElementById('filterLogsBtn');
+        const clearFiltersBtn = document.getElementById('clearFiltersBtn');
+        let auditLogs = []; // Variável para armazenar os logs carregados
+
         // --- Elementos da Aba de Permissões (NOVO LAYOUT) ---
         const permissionsGridContainer = document.getElementById('permissionsGridContainer');
         const permissionsError = document.getElementById('permissionsError');
@@ -42,6 +45,10 @@ if (window.initSettingsPage) {
             const targetLink = tabNav.querySelector(`.tab-link[data-tab="${targetTabId}"]`);
             if (targetContent) targetContent.classList.add('active');
             if (targetLink) targetLink.classList.add('active');
+
+            if (targetTabId === 'tab-logs') {
+                loadAuditLogs();
+            }
         };
 
         // --- Lógica Formulários (estável, omitida para brevidade) ---
@@ -499,6 +506,137 @@ if (window.initSettingsPage) {
             }
         };
 
+        const loadAuditLogs = async (filters = {}) => {
+            const tableBody = document.getElementById('auditLogsTableBody');
+            if (!tableBody) return;
+
+            tableBody.innerHTML = `<tr><td colspan="6" style="text-align:center;">A carregar logs...</td></tr>`;
+
+            try {
+                let endpoint = '/api/logs';
+                const queryParams = new URLSearchParams();
+                if (filters.keyword) {
+                    queryParams.append('keyword', filters.keyword);
+                }
+                if (filters.startDate) {
+                    queryParams.append('startDate', filters.startDate);
+                }
+                if (filters.endDate) {
+                    queryParams.append('endDate', filters.endDate);
+                }
+
+                const queryString = queryParams.toString();
+                if (queryString) {
+                    endpoint += `?${queryString}`;
+                }
+
+                const response = await apiRequest(endpoint);
+
+                if (!response.success || !Array.isArray(response.data)) {
+                    throw new Error(response.message || 'Resposta inválida da API de logs.');
+                }
+
+                auditLogs = response.data; // Armazena os logs na variável
+                tableBody.innerHTML = ''; // Limpa a tabela
+
+                if (auditLogs.length === 0) {
+                    tableBody.innerHTML = `<tr><td colspan="6" style="text-align:center;">Nenhum log de atividade encontrado.</td></tr>`;
+                    return;
+                }
+
+                auditLogs.forEach(log => {
+                    const row = document.createElement('tr');
+
+                    // Formata a data para ser mais legível
+                    const timestamp = new Date(log.timestamp).toLocaleString('pt-BR', {
+                        day: '2-digit',
+                        month: '2-digit',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        second: '2-digit'
+                    });
+
+                    // Adiciona uma classe CSS com base no status para colorir
+                    const statusClass = log.status === 'SUCCESS' ? 'status-success' : 'status-failure';
+
+                    row.innerHTML = `
+                        <td>${timestamp}</td>
+                        <td>${log.user_email || 'N/A'}</td>
+                        <td>${log.ip_address || 'N/A'}</td>
+                        <td>${log.action}</td>
+                        <td class="status-cell"><span class="${statusClass}">${log.status}</span></td>
+                        <td>${log.description || ''}</td>
+                    `;
+                    tableBody.appendChild(row);
+                });
+
+            } catch (error) {
+                console.error("Erro ao carregar logs de auditoria:", error);
+                tableBody.innerHTML = `<tr><td colspan="6" style="text-align:center; color: var(--color-danger);">Falha ao carregar logs. Tente novamente.</td></tr>`;
+            }
+        };
+
+        if (filterLogsBtn) {
+            filterLogsBtn.addEventListener('click', () => {
+                const keyword = document.getElementById('logKeyword').value;
+                const startDate = document.getElementById('logStartDate').value;
+                const endDate = document.getElementById('logEndDate').value;
+                loadAuditLogs({ keyword, startDate, endDate });
+            });
+        }
+
+        if (clearFiltersBtn) {
+            clearFiltersBtn.addEventListener('click', () => {
+                document.getElementById('logKeyword').value = '';
+                document.getElementById('logStartDate').value = '';
+                document.getElementById('logEndDate').value = '';
+                loadAuditLogs();
+            });
+        }
+
+        const exportToCSV = () => {
+            const header = ["Data/Hora", "Utilizador", "IP", "Ação", "Status", "Descrição"];
+            const csv = [
+                header.join(','),
+                ...auditLogs.map(log => [
+                    `"${new Date(log.timestamp).toLocaleString('pt-BR')}"`,
+                    `"${log.user_email || 'N/A'}"`,
+                    `"${log.ip_address || 'N/A'}"`,
+                    `"${log.action}"`,
+                    `"${log.status}"`,
+                    `"${(log.description || '').replace(/"/g, '""')}"`
+                ].join(','))
+            ].join('\n');
+
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            link.setAttribute('download', 'logs_de_auditoria.csv');
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        };
+
+        const exportToExcel = () => {
+            const worksheet = XLSX.utils.json_to_sheet(auditLogs.map(log => ({
+                "Data/Hora": new Date(log.timestamp).toLocaleString('pt-BR'),
+                "Utilizador": log.user_email || 'N/A',
+                "IP": log.ip_address || 'N/A',
+                "Ação": log.action,
+                "Status": log.status,
+                "Descrição": log.description || ''
+            })));
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "Logs de Auditoria");
+            XLSX.writeFile(workbook, "logs_de_auditoria.xlsx");
+        };
+
+        document.getElementById('exportCsvBtn')?.addEventListener('click', exportToCSV);
+        document.getElementById('exportExcelBtn')?.addEventListener('click', exportToExcel);
+
         // --- INICIALIZAÇÃO DA PÁGINA ---
         const initializeSettingsPage = async () => {
             if (!window.currentUserProfile?.role) {
@@ -518,6 +656,8 @@ if (window.initSettingsPage) {
                 if (tabId === 'tab-permissoes' && !isMaster && role !== 'DPO') { show = false; }
                 if (tabId === 'tab-empresa' && !isMaster && !permissions['settings.general.read']) { show = false; }
                 if (tabId === 'tab-aparencia' && !isMaster && !permissions['settings.general.read']) { show = false; }
+                if (tabId === 'tab-logs' && !isMaster && role !== 'DPO') { show = false; }
+                if (tabId === 'tab-logs' && !isMaster && role !== 'DPO') { show = false; }
                 
                 link.style.display = show ? '' : 'none';
                 document.getElementById(tabId).style.display = show ? '' : 'none';
@@ -532,6 +672,9 @@ if (window.initSettingsPage) {
             }
             if (document.getElementById('tab-permissoes').style.display !== 'none') {
                 loadPermissionsMatrix();
+            }
+            if (document.getElementById('tab-logs').style.display !== 'none') {
+                loadAuditLogs();
             }
 
             // Controla a visibilidade das configurações de aparência

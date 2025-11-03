@@ -8,12 +8,21 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const pool = require('../connection');
 const crypto = require('crypto');
+const { logAction } = require('../services/auditLogService'); // [NOVO] Importa o serviço de log
 
 // --- ROTA DE LOGIN (Existente) ---
 router.post('/login', async (req, res) => {
   const { email, password } = req.body;
 
   if (!email || !password) {
+    // [NOVO] Log de tentativa de login falhada (dados em falta)
+    await logAction({
+        req,
+        action: 'LOGIN_FAILURE',
+        status: 'FAILURE',
+        description: `Tentativa de login falhou para o email "${email || 'não fornecido'}": campos em falta.`,
+        user_email: email
+    });
     return res.status(400).json({ message: "Email e senha são obrigatórios." });
   }
 
@@ -24,6 +33,14 @@ router.post('/login', async (req, res) => {
     );
 
     if (userQuery.rows.length === 0) {
+      // [NOVO] Log de utilizador não encontrado
+      await logAction({
+          req,
+          action: 'LOGIN_FAILURE',
+          status: 'FAILURE',
+          description: `Tentativa de login falhou: utilizador "${email}" não encontrado.`,
+          user_email: email
+      });
       return res.status(401).json({ message: "Credenciais inválidas." });
     }
 
@@ -31,14 +48,42 @@ router.post('/login', async (req, res) => {
 
     // Verifica se o utilizador está ativo
     if (!user.is_active) {
+        // [NOVO] Log de conta inativa
+        await logAction({
+            req,
+            action: 'LOGIN_FAILURE',
+            status: 'FAILURE',
+            description: `Tentativa de login falhou para "${email}": conta inativa.`,
+            user_id: user.id,
+            user_email: user.email
+        });
         return res.status(403).json({ message: "Esta conta de utilizador está desativada." });
     }
 
     const isPasswordValid = await bcrypt.compare(password, user.password_hash);
 
     if (!isPasswordValid) {
+      // [NOVO] Log de senha incorreta
+      await logAction({
+          req,
+          action: 'LOGIN_FAILURE',
+          status: 'FAILURE',
+          description: `Tentativa de login falhou para "${email}": senha incorreta.`,
+          user_id: user.id,
+          user_email: user.email
+      });
       return res.status(401).json({ message: "Credenciais inválidas." });
     }
+
+    // [NOVO] Log de login bem-sucedido
+    await logAction({
+        req,
+        action: 'LOGIN_SUCCESS',
+        status: 'SUCCESS',
+        description: `Utilizador "${user.email}" autenticado com sucesso.`,
+        user_id: user.id,
+        user_email: user.email
+    });
 
     // Adiciona a flag 'must_change_password' ao payload
     const payload = {
@@ -160,4 +205,3 @@ router.post('/reset-password', async (req, res) => {
 
 
 module.exports = router;
-

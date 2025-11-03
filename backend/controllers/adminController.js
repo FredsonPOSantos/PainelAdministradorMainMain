@@ -2,9 +2,9 @@
 // [VERSÃO 4 - ESTÁVEL]
 // Esta é a versão original do seu controller, ANTES da implementação do menu inteligente.
 // Ela NÃO envia 'profile.permissions' para o frontend.
-
 const pool = require('../connection');
 const bcrypt = require('bcrypt');
+const { logAction } = require('../services/auditLogService');
 
 // Função para obter o perfil do utilizador logado
 const getUserProfile = async (req, res) => {
@@ -86,6 +86,16 @@ const createAdminUser = async (req, res) => {
       [email, passwordHash, role, setor || null, matricula || null, cpf || null, nome_completo || null]
     );
 
+    // Log de auditoria
+    await logAction({
+      req,
+      action: 'USER_CREATE',
+      status: 'SUCCESS',
+      description: `Utilizador "${req.user.email}" criou o novo utilizador "${newUser.rows[0].email}" (ID: ${newUser.rows[0].id}).`,
+      target_type: 'user',
+      target_id: newUser.rows[0].id
+    });
+
     res.status(201).json({
       message: "Utilizador criado com sucesso!",
       user: newUser.rows[0],
@@ -94,6 +104,15 @@ const createAdminUser = async (req, res) => {
     if (error.code === '23505') {
       return res.status(409).json({ message: "O e-mail fornecido já está em uso." });
     }
+    // Log de falha
+    await logAction({
+      req,
+      action: 'USER_CREATE_FAILURE',
+      status: 'FAILURE',
+      description: `Falha ao criar utilizador com email "${email}". Erro: ${error.message}`,
+      target_type: 'user',
+      details: { error: error.message }
+    });
     console.error('Erro ao criar utilizador:', error);
     res.status(500).json({ message: "Erro interno do servidor." });
   }
@@ -178,11 +197,32 @@ const updateUser = async (req, res) => {
       delete updatedUser.rows[0].cpf;
     }
 
+    // Log de auditoria
+    await logAction({
+      req,
+      action: 'USER_UPDATE',
+      status: 'SUCCESS',
+      description: `Utilizador "${req.user.email}" atualizou o utilizador "${updatedUser.rows[0].email}" (ID: ${id}).`,
+      target_type: 'user',
+      target_id: id
+    });
+
     res.status(200).json({
       message: "Utilizador atualizado com sucesso!",
       user: updatedUser.rows[0],
     });
   } catch (error) {
+    // Log de falha
+    await logAction({
+      req,
+      action: 'USER_UPDATE_FAILURE',
+      status: 'FAILURE',
+      description: `Falha ao atualizar utilizador com ID ${id}. Erro: ${error.message}`,
+      target_type: 'user',
+      target_id: id,
+      details: { error: error.message }
+    });
+
     console.error('Erro ao atualizar utilizador:', error);
     res.status(500).json({ message: "Erro interno do servidor." });
   }
@@ -219,6 +259,16 @@ const resetUserPassword = async (req, res) => {
       return res.status(404).json({ message: "Utilizador não encontrado." });
     }
     
+    // Log de auditoria
+    await logAction({
+      req,
+      action: 'USER_PASSWORD_RESET',
+      status: 'SUCCESS',
+      description: `Utilizador "${req.user.email}" resetou a senha do utilizador com ID ${id}.`,
+      target_type: 'user',
+      target_id: id
+    });
+
     res.status(200).json({ message: "Senha do utilizador resetada com sucesso." });
     
   } catch (error) {
@@ -260,6 +310,16 @@ const changeOwnPassword = async (req, res) => {
       [newPasswordHash, userId]
     );
 
+    // Log de auditoria
+    await logAction({
+      req,
+      action: 'USER_PASSWORD_CHANGE',
+      status: 'SUCCESS',
+      description: `Utilizador "${req.user.email}" alterou a sua própria senha com sucesso.`,
+      target_type: 'user',
+      target_id: userId
+    });
+
     res.status(200).json({ message: "Senha alterada com sucesso." });
 
   } catch (error) {
@@ -277,12 +337,32 @@ const deleteUser = async (req, res) => {
     return res.status(403).json({ message: "O utilizador master principal não pode ser eliminado." });
   }
 
+  // Para o log, buscamos os dados do utilizador ANTES de o eliminar
+  const userToDeleteQuery = await pool.query('SELECT email FROM admin_users WHERE id = $1', [id]);
+  if (userToDeleteQuery.rowCount === 0) {
+    return res.status(404).json({ message: "Utilizador não encontrado." });
+  }
+  const userEmailToDelete = userToDeleteQuery.rows[0].email;
+
   try {
+    // Agora, eliminamos o utilizador
     const result = await pool.query('DELETE FROM admin_users WHERE id = $1', [id]);
 
     if (result.rowCount === 0) {
+      // Este caso é raro, pois já verificámos acima, mas é uma boa prática
       return res.status(404).json({ message: "Utilizador não encontrado." });
     }
+
+    // Log de auditoria
+    await logAction({
+      req,
+      action: 'USER_DELETE',
+      status: 'SUCCESS',
+      description: `Utilizador "${req.user.email}" eliminou o utilizador "${userEmailToDelete}" (ID: ${id}).`,
+      target_type: 'user',
+      target_id: id,
+      details: { deleted_user_email: userEmailToDelete }
+    });
 
     res.status(200).json({ message: "Utilizador eliminado com sucesso." });
   } catch (error) {
@@ -302,4 +382,3 @@ module.exports = {
   resetUserPassword,
   changeOwnPassword 
 };
-

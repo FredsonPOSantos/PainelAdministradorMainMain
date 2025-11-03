@@ -3,6 +3,7 @@
 // Lógica para buscar matriz completa e salvar em lote (Batch).
 
 const pool = require('../connection');
+const { logAction } = require('../services/auditLogService');
 
 /**
  * [ATUALIZADO V13.5.3]
@@ -121,6 +122,16 @@ const updatePermissionsBatch = async (req, res) => {
         // Se tudo correu bem, 'commita' as alterações
         await client.query('COMMIT');
         
+        // [NOVO] Log de auditoria
+        await logAction({
+            req,
+            action: 'PERMISSIONS_UPDATE',
+            status: 'SUCCESS',
+            description: `O utilizador "${req.user.email}" atualizou as permissões. ${changes.length} alterações processadas.`,
+            target_type: 'permissions',
+            details: { changes } // Guarda todas as alterações no log
+        });
+
         console.log("updatePermissionsBatch (V13.5.3): Transação concluída com sucesso.");
         res.status(200).json({ message: 'Permissões atualizadas com sucesso!' });
 

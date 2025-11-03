@@ -16,7 +16,6 @@ const hotspotRoutes = require('./routes/hotspot');
 const settingsRoutes = require('./routes/settings'); // Rota de configurações
 const permissionsRoutes = require('./routes/permissions'); // [NOVO] Importa as rotas de permissões
 
-
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -42,7 +41,10 @@ app.use('/api/hotspot', hotspotRoutes);    // Rotas do portal hotspot (pesquisa,
 app.use('/api/settings', settingsRoutes);  // [NOVO] Rotas de configurações
 app.use('/api/permissions', permissionsRoutes); // [NOVO] Regista as rotas de permissões
 
-
+// --- [NOVO] Rotas de Logs ---
+const logRoutes = require('./routes/logRoutes');
+app.use('/api/logs', logRoutes);
+ 
 
 // --- Rota de Teste Principal ---
 // Responde a GET / para verificar se o servidor está online
