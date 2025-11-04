@@ -44,6 +44,7 @@ const verifyToken = async (req, res, next) => {
             // Em seguida, remove as permissões que o master não deve ter
             delete permissions['lgpd.read'];
             delete permissions['lgpd.update'];
+            delete permissions['lgpd.delete'];
         } else {
             // Para as outras funções, busca as permissões da tabela 'role_permissions'
             const permissionsResult = await pool.query(
@@ -58,6 +59,9 @@ const verifyToken = async (req, res, next) => {
         // Garante que DPO sempre tenha a permissão de logs
         if (user.role === 'DPO') {
             permissions['logs.read'] = true;
+            permissions['lgpd.read'] = true;
+            permissions['lgpd.update'] = true;
+            permissions['lgpd.delete'] = true;
         }
 
         // 4. Adicionar todos os dados ao objeto req.user

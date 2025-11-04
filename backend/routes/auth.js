@@ -9,6 +9,42 @@ const jwt = require('jsonwebtoken');
 const pool = require('../connection');
 const crypto = require('crypto');
 const { logAction } = require('../services/auditLogService'); // [NOVO] Importa o serviço de log
+const authMiddleware = require('../middlewares/authMiddleware');
+
+const reauthenticate = async (req, res) => {
+    const { email, password } = req.body;
+    const userId = req.user.userId;
+
+    if (!email || !password) {
+        return res.status(400).json({ success: false, message: "Email e senha são obrigatórios." });
+    }
+
+    try {
+        const userQuery = await pool.query('SELECT * FROM admin_users WHERE id = $1', [userId]);
+
+        if (userQuery.rows.length === 0) {
+            return res.status(404).json({ success: false, message: "Utilizador não encontrado." });
+        }
+
+        const user = userQuery.rows[0];
+
+        if (user.email !== email) {
+            return res.status(401).json({ success: false, message: "Credenciais inválidas." });
+        }
+
+        const isPasswordValid = await bcrypt.compare(password, user.password_hash);
+
+        if (!isPasswordValid) {
+            return res.status(401).json({ success: false, message: "Credenciais inválidas." });
+        }
+
+        res.json({ success: true, message: "Autenticação confirmada com sucesso." });
+
+    } catch (error) {
+        console.error('Erro na re-autenticação:', error);
+        res.status(500).json({ success: false, message: "Erro interno do servidor." });
+    }
+};
 
 // --- ROTA DE LOGIN (Existente) ---
 router.post('/login', async (req, res) => {
@@ -202,6 +238,8 @@ router.post('/reset-password', async (req, res) => {
         res.status(500).json({ message: "Erro interno do servidor." });
     }
 });
+
+router.post('/re-authenticate', authMiddleware, reauthenticate);
 
 
 module.exports = router;

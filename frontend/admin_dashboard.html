@@ -132,28 +132,45 @@
         </div>
     </div>
 
-    <!-- Scripts das páginas individuais (carregados pelo dashboard.js) -->
-    <script src="js/admin_home.js"></script>
-    <script src="js/admin_hotspot.js"></script>
-    <script src="js/admin_users.js"></script>
-    <script>
-        // Garante que o script da página específica seja chamado após o carregamento do conteúdo
-        if (window.initUsersPage) {
-            window.initUsersPage();
-        }
-    </script>
-    <script src="js/admin_templates.js"></script>
-    <script src="js/admin_banners.js"></script>
-    <script src="js/admin_campaigns.js"></script>
-    <script src="js/admin_routers.js"></script>
-    <script src="js/admin_settings.js"></script>
+    <div id="reauthLgpdModal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <h3>Confirmação de Acesso</h3>
+            <p style="margin: 10px 0; color: var(--text-secondary); font-size: 0.9rem;">
+                Para aceder à área de Gestão LGPD, por favor, confirme a sua identidade inserindo a sua senha.
+            </p>
+            <form id="reauthLgpdForm" style="margin-top: 20px;">
+                <div class="input-group">
+                    <label for="reauthEmail">E-mail</label>
+                    <input type="email" id="reauthEmail" required readonly>
+                </div>
+                <div class="input-group">
+                    <label for="reauthPassword">Senha</label>
+                    <input type="password" id="reauthPassword" required>
+                </div>
+                <div id="reauthError" class="form-error-message" style="display: none; margin-top: 15px;"></div>
+                <div class="modal-actions" style="margin-top: 20px;">
+                    <button type="button" id="cancelReauthBtn" class="btn-secondary">Cancelar</button>
+                    <button type="submit" class="btn-primary">Confirmar e Aceder</button>
+                </div>
+            </form>
+        </div>
+    </div>
 
-    <!-- Script "Maestro" - Carregado por último -->
+    <!-- Scripts das páginas individuais (com defer para garantir a ordem) -->
+    <script src="js/admin_home.js" defer></script>
+    <script src="js/admin_hotspot.js" defer></script>
+    <script src="js/admin_users.js" defer></script>
+    <script src="js/admin_templates.js" defer></script>
+    <script src="js/admin_banners.js" defer></script>
+    <script src="js/admin_campaigns.js" defer></script>
+    <script src="js/admin_routers.js" defer></script>
+    <script src="js/admin_settings.js" defer></script>
+
+    <!-- Scripts de UI e o "Maestro" (com defer) -->
     <div id="notification-container"></div>
-        <script src="js/notifications.js"></script>
-        <script src="js/confirmation_modal.js"></script>
-
-    <script src="js/admin_dashboard.js"></script> 
+    <script src="js/notifications.js" defer></script>
+    <script src="js/confirmation_modal.js" defer></script>
+    <script src="js/admin_dashboard.js" defer></script> 
 </body>
 </html>
 

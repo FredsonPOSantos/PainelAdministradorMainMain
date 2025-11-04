@@ -243,6 +243,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     const pageTitleElement = document.getElementById('pageTitle');
     const changePasswordModal = document.getElementById('forceChangePasswordModal');
     const changePasswordForm = document.getElementById('forceChangePasswordForm');
+    const reauthLgpdModal = document.getElementById('reauthLgpdModal');
+    const reauthLgpdForm = document.getElementById('reauthLgpdForm');
+    const cancelReauthBtn = document.getElementById('cancelReauthBtn');
+    const reauthError = document.getElementById('reauthError');
 
     // Mapeamento de inicializadores de página
     const pageInitializers = {
@@ -301,7 +305,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (pageTitleElement) pageTitleElement.textContent = currentTitle;
 
         try {
-            const response = await fetch(`pages/${pageName}.html?_=${Date.now()}`);
+            const response = await fetch(`/pages/${pageName}.html?_=${Date.now()}`);
             if (!response.ok) {
                 throw new Error(`Página ${pageName}.html não encontrada (${response.status})`);
             }
@@ -519,51 +523,89 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // --- Modal Troca Senha ---
-    if (changePasswordForm) {
-        changePasswordForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            console.log("Form troca senha submetido (V13.1.3).");
-            const btn = changePasswordForm.querySelector('button[type="submit"]');
-            const currIn = document.getElementById('currentTemporaryPassword');
-            const newIn = document.getElementById('newPassword');
-            
-            if(!currIn || !newIn) {
-                 showNotification("Erro interno (campos não encontrados).", 'error');
-                 if(btn) { btn.disabled = false; btn.textContent = 'Alterar'; }
-                 return;
-            }
-
-            const curr = currIn.value;
-            const nv = newIn.value;
-
-            if (nv.length < 6) {
-                showNotification('A nova senha deve ter pelo menos 6 caracteres.', 'error');
-                if(btn) { btn.disabled = false; btn.textContent = 'Alterar'; }
-                return;
-            }
-
-            try {
-                const result = await apiRequest('/api/admin/profile/change-own-password', 'POST', {
-                    currentPassword: curr,
-                    newPassword: nv
+            if (changePasswordForm) {
+                changePasswordForm.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    console.log("Form troca senha submetido (V13.1.3).");
+                    const btn = changePasswordForm.querySelector('button[type="submit"]');
+                    const currIn = document.getElementById('currentTemporaryPassword');
+                    const newIn = document.getElementById('newPassword');
+                    
+                    if(!currIn || !newIn) {
+                         showNotification("Erro interno (campos não encontrados).", 'error');
+                         if(btn) { btn.disabled = false; btn.textContent = 'Alterar'; }
+                         return;
+                    }
+    
+                    const curr = currIn.value;
+                    const nv = newIn.value;
+    
+                    if (nv.length < 6) {
+                        showNotification('A nova senha deve ter pelo menos 6 caracteres.', 'error');
+                        if(btn) { btn.disabled = false; btn.textContent = 'Alterar'; }
+                        return;
+                    }
+    
+                    try {
+                        const result = await apiRequest('/api/admin/profile/change-own-password', 'POST', {
+                            currentPassword: curr,
+                            newPassword: nv
+                        });
+                        
+                        showNotification((result.message || "Senha alterada com sucesso!") + " A redirecionar para o login...", 'success');
+                        
+                        // Redireciona para o login após o sucesso
+                        setTimeout(() => {
+                            localStorage.removeItem('adminToken');
+                            window.currentUserProfile = null; isProfileLoaded = false; window.systemSettings = null;
+                            window.location.href = 'admin_login.html';
+                        }, 4000);
+    
+                    } catch (error) {
+                        showNotification(`Erro: ${error.message || 'Falha ao alterar a senha.'}`, 'error');
+                        if(btn) { btn.disabled = false; btn.textContent = 'Alterar'; }
+                    }
                 });
-                
-                showNotification((result.message || "Senha alterada com sucesso!") + " A redirecionar para o login...", 'success');
-                
-                // Redireciona para o login após o sucesso
-                setTimeout(() => {
-                    localStorage.removeItem('adminToken');
-                    window.currentUserProfile = null; isProfileLoaded = false; window.systemSettings = null;
-                    window.location.href = 'admin_login.html';
-                }, 4000);
-
-            } catch (error) {
-                showNotification(`Erro: ${error.message || 'Falha ao alterar a senha.'}`, 'error');
-                if(btn) { btn.disabled = false; btn.textContent = 'Alterar'; }
             }
-        });
-    }
-
+    
+            if (reauthLgpdForm) {
+                reauthLgpdForm.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    const email = document.getElementById('reauthEmail').value;
+                    const password = document.getElementById('reauthPassword').value;
+                    const submitButton = reauthLgpdForm.querySelector('button[type="submit"]');
+    
+                    submitButton.disabled = true;
+                    submitButton.textContent = 'A verificar...';
+                    if (reauthError) reauthError.style.display = 'none';
+    
+                    try {
+                        const response = await apiRequest('/api/auth/re-authenticate', 'POST', { email, password });
+    
+                        if (response.success) {
+                            window.location.href = 'pages/lgpd_management.html';
+                        } else {
+                            throw new Error(response.message || 'Falha na autenticação.');
+                        }
+                    } catch (error) {
+                        if (reauthError) {
+                            reauthError.textContent = error.message;
+                            reauthError.style.display = 'block';
+                        }
+                    } finally {
+                        submitButton.disabled = false;
+                        submitButton.textContent = 'Confirmar e Aceder';
+                    }
+                });
+            }
+    
+            if (cancelReauthBtn) {
+                cancelReauthBtn.addEventListener('click', () => {
+                    if (reauthLgpdModal) reauthLgpdModal.classList.add('hidden');
+                    if (reauthLgpdForm) reauthLgpdForm.reset();
+                    if (reauthError) reauthError.style.display = 'none';
+                });
+            }
     // --- [REESTRUTURADO V13] INICIALIZAÇÃO ---
     console.log("Dashboard (V13.1.3): Iniciando sequência...");
     

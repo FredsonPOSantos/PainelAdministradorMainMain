@@ -12,7 +12,7 @@ const checkPermission = (permissionKey) => {
     // Bypass para 'master', exceto para LGPD e LOGS
     const role = req.user.role;
     if (role === 'master') {
-      const deniedForMaster = new Set(['lgpd.read', 'lgpd.update']);
+      const deniedForMaster = new Set(['lgpd.read', 'lgpd.update', 'lgpd.delete']);
       if (!deniedForMaster.has(permissionKey)) {
         return next();
       }

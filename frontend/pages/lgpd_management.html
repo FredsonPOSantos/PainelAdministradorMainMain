@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestão LGPD - Rota Hotspot Admin</title>
+    <link rel="stylesheet" href="../css/admin_style.css">
+    <link rel="stylesheet" href="../css/notifications.css">
+</head>
+<body class="dashboard-body">
+    <aside class="sidebar">
+        <nav class="sidebar-nav">
+            <div class="nav-title">Principal</div>
+            <a href="../admin_dashboard.html" class="nav-item">
+                <span>🏠</span> Voltar ao Dashboard
+            </a>
+        </nav>
+    </aside>
+
+    <main class="main-content">
+        <header class="main-header">
+            <div class="header-left">
+                <h1 id="pageTitle">Gestão LGPD</h1>
+            </div>
+        </header>
+
+        <section class="content-area">
+            <div class="content-section">
+                <div class="section-header">
+                    <h4>Pedidos de Exclusão de Dados</h4>
+                    <p class="input-hint">Lista de todos os pedidos de exclusão de dados feitos pelos utilizadores.</p>
+                </div>
+                <div class="table-container" style="margin-top: 20px;">
+                    <table id="lgpdRequestsTable" class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Email do Utilizador</th>
+                                <th>Data do Pedido</th>
+                                <th>Status</th>
+                                <th>Data de Conclusão</th>
+                                <th>Concluído Por</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="lgpdRequestsTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="content-section" style="margin-top: 40px;">
+                <div class="section-header">
+                    <h4>Pesquisar e Eliminar Utilizador do Hotspot</h4>
+                    <p class="input-hint">Permite pesquisar por um utilizador e eliminá-lo permanentemente.</p>
+                </div>
+                <form id="searchUserLgpdForm" class="filters-container" style="margin-top: 20px; display: flex; gap: 15px; align-items: flex-end;">
+                    <div class="input-group">
+                        <label for="lgpdSearchTerm">Termo de Pesquisa</label>
+                        <input type="text" id="lgpdSearchTerm" placeholder="Nome, e-mail, telefone...">
+                    </div>
+                    <div class="input-group">
+                        <label for="lgpdSearchType">Pesquisar por</label>
+                        <select id="lgpdSearchType">
+                            <option value="todos">Todos</option>
+                            <option value="nome">Nome</option>
+                            <option value="email">E-mail</option>
+                            <option value="telefone">Telefone</option>
+                        </select>
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="btn-primary">Pesquisar</button>
+                    </div>
+                </form>
+
+                <div class="table-container" style="margin-top: 20px;">
+                    <table id="lgpdUserSearchResultsTable" class="data-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Nome Completo</th>
+                                <th>E-mail</th>
+                                <th>Telefone</th>
+                                <th>MAC Address</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="lgpdUserSearchResultsBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <div id="notification-container"></div>
+
+    <script>
+        // Script de segurança e API request embutido para autonomia da página
+        const token = localStorage.getItem('adminToken');
+        if (!token) {
+            window.location.href = '../admin_login.html';
+        }
+
+        const apiRequest = async (endpoint, method = 'GET', body = null) => {
+            const API_ADMIN_URL = `http://${window.location.hostname}:3000`;
+            const options = {
+                method,
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Cache-Control': 'no-cache'
+                }
+            };
+            let url = `${API_ADMIN_URL}${endpoint}`;
+            if (method === 'GET') {
+                url += (url.includes('?') ? '&' : '?') + `_=${Date.now()}`;
+            }
+            if (body) {
+                options.headers['Content-Type'] = 'application/json';
+                options.body = JSON.stringify(body);
+            }
+            const response = await fetch(url, options);
+            if (!response.ok) {
+                if (response.status === 401) {
+                    localStorage.removeItem('adminToken');
+                    window.location.href = '../admin_login.html';
+                }
+                const errorData = await response.json().catch(() => ({ message: response.statusText }));
+                throw new Error(errorData.message || `Erro HTTP ${response.status}`);
+            }
+            if (response.status === 204) return { success: true, data: null };
+            const data = await response.json();
+            return { success: true, data: data, message: data.message };
+        };
+    </script>
+    <script src="../js/notifications.js"></script>
+    <script src="../js/lgpd_management.js"></script>
+</body>
+</html>

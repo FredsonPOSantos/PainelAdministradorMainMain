@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Solicitação de Exclusão de Dados - Rota Hotspot</title>
+    <link rel="stylesheet" href="css/admin_login_style.css">
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-box">
+            <div id="requestView">
+                <h1>Solicitar Exclusão de Dados</h1>
+                <p>Para solicitar a exclusão dos seus dados, por favor, insira o e-mail que utilizou no seu registo no Rota Hotspot.</p>
+                <form id="lgpdRequestForm">
+                    <div class="input-group">
+                        <label for="userEmail">E-mail</label>
+                        <input type="email" id="userEmail" required>
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="btn-primary">Enviar Pedido</button>
+                    </div>
+                </form>
+                <div class="links">
+                    <a href="admin_login.html">Voltar para o Login</a>
+                </div>
+            </div>
+            <div id="resultView" class="hidden">
+                <h2>Pedido Enviado</h2>
+                <p id="resultMessage"></p>
+                <div class="links">
+                    <a href="admin_login.html">Voltar para o Login</a>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="js/lgpd_request.js"></script>
+</body>
+</html>

@@ -416,6 +416,10 @@ if (window.initSettingsPage) {
                         checkbox.dataset.role = selectedRole;
                         checkbox.dataset.permission = permissionKey;
 
+                        if (permissionKey.startsWith('lgpd.')) {
+                            checkbox.disabled = true;
+                        }
+
                         const label = document.createElement('label');
                         label.htmlFor = checkbox.id;
                         label.textContent = permission.action_name;
@@ -637,6 +641,11 @@ if (window.initSettingsPage) {
         document.getElementById('exportCsvBtn')?.addEventListener('click', exportToCSV);
         document.getElementById('exportExcelBtn')?.addEventListener('click', exportToExcel);
 
+        const searchUserLgpdForm = document.getElementById('searchUserLgpdForm');
+        if (searchUserLgpdForm) {
+            searchUserLgpdForm.addEventListener('submit', searchLgpdUsers);
+        }
+
         // --- INICIALIZAÇÃO DA PÁGINA ---
         const initializeSettingsPage = async () => {
             if (!window.currentUserProfile?.role) {
@@ -657,44 +666,64 @@ if (window.initSettingsPage) {
                 if (tabId === 'tab-empresa' && !isMaster && !permissions['settings.general.read']) { show = false; }
                 if (tabId === 'tab-aparencia' && !isMaster && !permissions['settings.general.read']) { show = false; }
                 if (tabId === 'tab-logs' && !isMaster && role !== 'DPO') { show = false; }
-                if (tabId === 'tab-logs' && !isMaster && role !== 'DPO') { show = false; }
                 
                 link.style.display = show ? '' : 'none';
-                document.getElementById(tabId).style.display = show ? '' : 'none';
+                const tabContentEl = document.getElementById(tabId);
+                if(tabContentEl) tabContentEl.style.display = show ? '' : 'none';
             });
 
             // Carrega dados das abas visíveis
-            if (document.getElementById('tab-empresa').style.display !== 'none') {
+            if (document.getElementById('tab-empresa')?.style.display !== 'none') {
                 loadGeneralSettings();
             }
-            if (document.getElementById('tab-aparencia').style.display !== 'none') {
+            if (document.getElementById('tab-aparencia')?.style.display !== 'none') {
                 loadGeneralSettings();
             }
-            if (document.getElementById('tab-permissoes').style.display !== 'none') {
+            if (document.getElementById('tab-permissoes')?.style.display !== 'none') {
                 loadPermissionsMatrix();
             }
-            if (document.getElementById('tab-logs').style.display !== 'none') {
+            if (document.getElementById('tab-logs')?.style.display !== 'none') {
                 loadAuditLogs();
             }
 
-            // Controla a visibilidade das configurações de aparência
             const appearanceSettings = document.querySelectorAll('.appearance-setting');
             const canChangeAppearance = isMaster || window.currentUserProfile?.permissions['settings.appearance'] === true;
             appearanceSettings.forEach(el => {
                 el.style.display = canChangeAppearance ? '' : 'none';
             });
 
-            // Controla a visibilidade das configurações de aparência da página de login
             const loginAppearanceSettings = document.querySelectorAll('.login-appearance-setting');
             const canChangeLoginAppearance = isMaster || window.currentUserProfile?.permissions['settings.login_page'] === true;
             loginAppearanceSettings.forEach(el => {
                 el.style.display = canChangeLoginAppearance ? '' : 'none';
             });
 
+            const firstVisibleLink = Array.from(tabLinks).find(link => link.style.display !== 'none');
+            if (firstVisibleLink) {
+                firstVisibleTabId = firstVisibleLink.dataset.tab;
+            }
             switchTab(firstVisibleTabId);
         };
 
-        if (tabLinks.length > 0) { tabLinks.forEach(link => link.addEventListener('click', (e) => switchTab(e.currentTarget.dataset.tab))); }
+        if (tabLinks.length > 0) { 
+            tabLinks.forEach(link => link.addEventListener('click', (e) => {
+                e.preventDefault();
+                switchTab(e.currentTarget.dataset.tab);
+            })); 
+        }
+        
+        const goToLgpdPageBtn = document.getElementById('goToLgpdPageBtn');
+        if (goToLgpdPageBtn) {
+            goToLgpdPageBtn.addEventListener('click', () => {
+                const reauthModal = document.getElementById('reauthLgpdModal');
+                const reauthEmail = document.getElementById('reauthEmail');
+                if (reauthModal && reauthEmail && window.currentUserProfile) {
+                    reauthEmail.value = window.currentUserProfile.email;
+                    reauthModal.classList.remove('hidden');
+                }
+            });
+        }
+
         initializeSettingsPage();
     };
 }
