@@ -1,0 +1,48 @@
+<!-- Ficheiro: frontend/pages/support.html -->
+<div id="support-page-container" class="support-container">
+
+    <!-- Coluna da Lista de Tickets -->
+    <div id="ticket-list-panel" class="ticket-list-panel">
+        <div class="panel-header">
+            <h4>Tickets de Suporte</h4>
+            <button id="newTicketBtn" class="btn-primary">Novo Ticket</button>
+        </div>
+        <div class="ticket-filters">
+            <!-- Filtros podem ser adicionados aqui no futuro -->
+        </div>
+        <div id="ticket-list" class="ticket-list"> 
+            <!-- A lista de tickets será renderizada aqui pelo JS -->
+            <p>A carregar tickets...</p>
+        </div>
+    </div>
+
+    <!-- Coluna de Detalhes do Ticket -->
+    <div id="ticket-detail-panel" class="ticket-detail-panel">
+        <!-- O conteúdo do ticket selecionado aparecerá aqui -->
+        <div class="ticket-placeholder">
+            <p>Selecione um ticket para ver os detalhes.</p>
+        </div>
+    </div>
+
+</div>
+
+<!-- Modal para Novo Ticket -->
+<div id="newTicketModal" class="modal-overlay hidden">
+    <div class="modal-content">
+        <h3>Criar Novo Ticket de Suporte</h3>
+        <form id="newTicketForm">
+            <div class="input-group">
+                <label for="ticketTitle">Título</label>
+                <input type="text" id="ticketTitle" required>
+            </div>
+            <div class="input-group">
+                <label for="ticketMessage">Mensagem</label>
+                <textarea id="ticketMessage" rows="5" required></textarea>
+            </div>
+            <div class="modal-actions">
+                <button type="button" id="cancelNewTicketBtn" class="btn-secondary">Cancelar</button>
+                <button type="submit" class="btn-primary">Criar Ticket</button>
+            </div>
+        </form>
+    </div>
+</div>

@@ -1,0 +1,199 @@
+/* Ficheiro: frontend/css/support.css */
+
+/* Layout Principal */
+.support-container {
+    display: flex;
+    height: 100%;
+    gap: 20px;
+}
+
+.ticket-list-panel {
+    flex: 0 0 350px; /* Largura fixa para a lista de tickets */
+    background-color: var(--background-medium);
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.ticket-detail-panel {
+    flex: 1; /* Ocupa o espaço restante */
+    background-color: var(--background-medium);
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.panel-header {
+    padding: 15px;
+    border-bottom: 1px solid var(--background-dark);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.panel-header h4, .panel-header h3 {
+    margin: 0;
+    color: var(--text-primary);
+}
+
+/* Lista de Tickets */
+.ticket-list {
+    overflow-y: auto;
+    padding: 10px;
+}
+
+.ticket-item {
+    padding: 15px;
+    border-bottom: 1px solid var(--background-dark);
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.ticket-item:hover {
+    background-color: var(--background-light);
+}
+
+.ticket-item.active {
+    background-color: var(--primary-color);
+    color: white;
+}
+
+.ticket-item-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.ticket-number {
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.ticket-status {
+    font-size: 0.8rem;
+    padding: 3px 8px;
+    border-radius: 12px;
+    text-transform: uppercase;
+    font-weight: 700;
+}
+
+.ticket-item-title {
+    font-weight: 500;
+    margin-bottom: 10px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.ticket-item.active .ticket-item-title {
+    color: white;
+}
+
+.ticket-item-meta {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    display: flex;
+    justify-content: space-between;
+}
+
+.ticket-item.active .ticket-item-meta span {
+    color: rgba(255, 255, 255, 0.8);
+}
+
+/* Painel de Detalhes */
+.ticket-placeholder {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100%;
+    color: var(--text-secondary);
+}
+
+.ticket-details-meta {
+    padding: 10px 15px;
+    border-bottom: 1px solid var(--background-dark);
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    display: flex;
+    gap: 20px;
+}
+
+.ticket-conversation-panel {
+    flex: 1;
+    padding: 15px;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+}
+
+.message-list {
+    flex-grow: 1;
+}
+
+.message-item {
+    margin-bottom: 15px;
+    max-width: 80%;
+}
+
+.message-item .message-content {
+    padding: 10px 15px;
+    border-radius: 12px;
+    background-color: var(--background-light);
+}
+
+.message-item .message-meta {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    margin-top: 5px;
+    padding: 0 5px;
+}
+
+/* Mensagens enviadas pelo utilizador atual */
+.message-item.sent {
+    align-self: flex-end;
+    margin-left: auto; /* Alinha à direita */
+}
+
+.message-item.sent .message-content {
+    background-color: var(--primary-color);
+    color: white;
+}
+
+.message-item.sent .message-meta {
+    text-align: right;
+}
+
+.new-message-form {
+    display: flex;
+    padding-top: 15px;
+    border-top: 1px solid var(--background-dark);
+}
+
+.new-message-form textarea {
+    flex: 1;
+    margin-right: 10px;
+}
+
+.ticket-actions {
+    padding: 15px;
+    border-top: 1px solid var(--background-dark);
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 10px;
+}
+
+.ticket-actions .input-group {
+    margin-right: auto; /* Empurra o resto para a direita */
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+/* Statuses */
+.status-open { background-color: #4299e1; color: white; }
+.status-in_progress { background-color: #f6ad55; color: white; }
+.status-closed { background-color: #a0aec0; color: #4a5568; }

@@ -16,6 +16,7 @@ const hotspotRoutes = require('./routes/hotspot');
 const settingsRoutes = require('./routes/settings'); // Rota de configurações
 const permissionsRoutes = require('./routes/permissions'); // [NOVO] Importa as rotas de permissões
 const lgpdRoutes = require('./routes/lgpd');
+const ticketRoutes = require('./routes/tickets');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -42,6 +43,7 @@ app.use('/api/hotspot', hotspotRoutes);    // Rotas do portal hotspot (pesquisa,
 app.use('/api/settings', settingsRoutes);  // [NOVO] Rotas de configurações
 app.use('/api/permissions', permissionsRoutes); // [NOVO] Regista as rotas de permissões
 app.use('/api/lgpd', lgpdRoutes);
+app.use('/api/tickets', ticketRoutes);
 
 // --- [NOVO] Rotas de Logs ---
 const logRoutes = require('./routes/logRoutes');
