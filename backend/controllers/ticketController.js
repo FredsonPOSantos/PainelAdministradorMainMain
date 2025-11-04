@@ -46,7 +46,7 @@ const createTicket = async (req, res) => {
         );
 
         // 4. [NOVO] Cria notificações para todos os utilizadores da função 'Gestão'
-        const gestaoUsers = await client.query("SELECT id FROM admin_users WHERE role = 'Gestão'");
+        const gestaoUsers = await client.query("SELECT id FROM admin_users WHERE role = 'gestao'");
         const notificationMessage = `Novo ticket #${ticketNumber} criado por ${req.user.email}`;
         for (const user of gestaoUsers.rows) {
             await client.query(
@@ -171,11 +171,14 @@ const addMessageToTicket = async (req, res) => {
             [id, user_id, message]
         );
 
+        // [NOVO] Atualiza o timestamp do ticket pai manualmente
+        await pool.query('UPDATE tickets SET updated_at = NOW() WHERE id = $1', [id]);
+
         // [NOVO] Lógica de notificação para novas mensagens
         const ticketInfo = await pool.query('SELECT created_by_user_id, assigned_to_user_id, ticket_number FROM tickets WHERE id = $1', [id]);
         const { created_by_user_id, assigned_to_user_id, ticket_number } = ticketInfo.rows[0];
 
-        const gestaoUsersResult = await pool.query("SELECT id FROM admin_users WHERE role = 'Gestão'");
+        const gestaoUsersResult = await pool.query("SELECT id FROM admin_users WHERE role = 'gestao'");
         const gestaoUserIds = gestaoUsersResult.rows.map(u => u.id);
 
         // Junta todos os IDs relevantes num Set para garantir que são únicos
@@ -229,7 +232,7 @@ const assignTicket = async (req, res) => {
 
     try {
         const result = await pool.query(
-            'UPDATE tickets SET assigned_to_user_id = $1 WHERE id = $2 RETURNING id',
+            'UPDATE tickets SET assigned_to_user_id = $1, updated_at = NOW() WHERE id = $2 RETURNING ticket_number',
             [assignee_id, id]
         );
 
@@ -272,7 +275,7 @@ const updateTicketStatus = async (req, res) => {
 
     try {
         const result = await pool.query(
-            'UPDATE tickets SET status = $1 WHERE id = $2 RETURNING id',
+            'UPDATE tickets SET status = $1, updated_at = NOW() WHERE id = $2 RETURNING id',
             [status, id]
         );
 

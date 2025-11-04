@@ -248,6 +248,46 @@ document.addEventListener('DOMContentLoaded', async () => {
     const cancelReauthBtn = document.getElementById('cancelReauthBtn');
     const reauthError = document.getElementById('reauthError');
 
+    // [NOVO] Lógica de Notificações
+    const notificationIcon = document.getElementById('notification-icon-wrapper');
+    const notificationBadge = document.getElementById('notification-badge');
+    let notificationInterval;
+
+    const fetchUnreadCount = async () => {
+        try {
+            const response = await apiRequest('/api/notifications/unread-count');
+            if (response.success) {
+                const count = response.data.data.count;
+                if (count > 0) {
+                    notificationBadge.textContent = count;
+                    notificationBadge.classList.remove('hidden');
+                } else {
+                    notificationBadge.classList.add('hidden');
+                }
+            }
+        } catch (error) {
+            console.error('Erro ao buscar contagem de notificações:', error);
+        }
+    };
+
+    const startNotificationPolling = () => {
+        if (notificationInterval) clearInterval(notificationInterval);
+        fetchUnreadCount(); // Busca imediatamente ao iniciar
+        notificationInterval = setInterval(fetchUnreadCount, 30000); // E depois a cada 30 segundos
+    };
+
+    notificationIcon?.addEventListener('click', async () => {
+        // Por agora, apenas marca como lido e esconde o badge.
+        // A Fase 2 incluirá um dropdown com as notificações.
+        notificationBadge.classList.add('hidden');
+        try {
+            await apiRequest('/api/notifications/mark-as-read', 'PUT');
+        } catch (error) {
+            console.error('Erro ao marcar notificações como lidas:', error);
+        }
+    });
+
+
     // Mapeamento de inicializadores de página
     const pageInitializers = {
         'admin_home': window.initHomePage,
@@ -642,6 +682,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     // 3. [LÓGICA V13.6.1] Aplica permissões ao menu
     console.log("Dashboard (V13.6.1): Permissões do usuário:", window.currentUserProfile.permissions);
     applyMenuPermissions(window.currentUserProfile.permissions);
+
+    // [NOVO] Inicia a verificação de notificações
+    startNotificationPolling();
 
 
     // 4. Carrega a página inicial

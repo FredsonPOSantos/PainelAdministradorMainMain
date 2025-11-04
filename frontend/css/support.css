@@ -194,6 +194,6 @@
 }
 
 /* Statuses */
-.status-open { background-color: #4299e1; color: white; }
-.status-in_progress { background-color: #f6ad55; color: white; }
-.status-closed { background-color: #a0aec0; color: #4a5568; }
+.status-open { background-color: #e53e3e; color: white; } /* Vermelho */
+.status-in_progress { background-color: #dd6b20; color: white; } /* Amarelo/Laranja */
+.status-closed { background-color: #38a169; color: white; } /* Verde */

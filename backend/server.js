@@ -1,3 +1,5 @@
+console.log("--- [GEMINI] EXECUTANDO A VERSÃO MAIS RECENTE DO SERVIDOR ---");
+
 // Ficheiro: backend/server.js
 const path = require('path');
 require('dotenv').config();
@@ -17,6 +19,7 @@ const settingsRoutes = require('./routes/settings'); // Rota de configurações
 const permissionsRoutes = require('./routes/permissions'); // [NOVO] Importa as rotas de permissões
 const lgpdRoutes = require('./routes/lgpd');
 const ticketRoutes = require('./routes/tickets');
+const notificationRoutes = require('./routes/notificationRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -44,6 +47,7 @@ app.use('/api/settings', settingsRoutes);  // [NOVO] Rotas de configurações
 app.use('/api/permissions', permissionsRoutes); // [NOVO] Regista as rotas de permissões
 app.use('/api/lgpd', lgpdRoutes);
 app.use('/api/tickets', ticketRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 // --- [NOVO] Rotas de Logs ---
 const logRoutes = require('./routes/logRoutes');
@@ -86,14 +90,19 @@ app.use((err, req, res, next) => {
 // Começa a escutar por conexões na porta definida
 app.listen(PORT, async () => {
   console.log(`✅ [SRV-ADM] Servidor iniciado na porta ${PORT}`);
-  // Tenta conectar ao DB ao iniciar e loga o resultado
+  // Tenta conectar ao DB e inicializar o esquema ao iniciar
   try {
     const client = await pool.connect();
     console.log("✅ [SRV-ADM] Ligação com o PostgreSQL estabelecida com sucesso!");
     client.release(); // Libera o cliente de volta para o pool
+
+    // [NOVO] Roda o script de inicialização do banco de dados
+    console.log("Verificando e inicializando o esquema do banco de dados...");
+    const initializeDatabase = require('./db_init');
+    await initializeDatabase();
+    console.log("✅ [SRV-ADM] Esquema do banco de dados verificado com sucesso.");
+
   } catch (error) {
-    console.error("❌ [SRV-ADM] ERRO CRÍTICO ao conectar ao PostgreSQL:", error);
-    // Poderia encerrar o processo aqui se a conexão for essencial
-    // process.exit(1);
+    console.error("❌ [SRV-ADM] ERRO CRÍTICO ao conectar ou inicializar o PostgreSQL:", error);
   }
 });

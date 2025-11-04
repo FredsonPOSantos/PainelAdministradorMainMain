@@ -16,7 +16,12 @@ const getUnreadCount = async (req, res) => {
         res.json({ success: true, data: { count } });
     } catch (error) {
         console.error('Erro ao buscar contagem de notificações não lidas:', error);
-        res.status(500).json({ success: false, message: 'Erro interno do servidor.' });
+        res.status(500).json({ 
+            success: false, 
+            message: 'Erro de banco de dados ao buscar contagem de notificações.',
+            db_error: error.message, // Passa a mensagem de erro real do DB
+            db_code: error.code      // Passa o código de erro real do DB
+        });
     }
 };
 
@@ -32,7 +37,12 @@ const markAllAsRead = async (req, res) => {
         res.json({ success: true, message: 'Notificações marcadas como lidas.' });
     } catch (error) {
         console.error('Erro ao marcar notificações como lidas:', error);
-        res.status(500).json({ success: false, message: 'Erro interno do servidor.' });
+        res.status(500).json({ 
+            success: false, 
+            message: 'Erro de banco de dados ao marcar notificações como lidas.',
+            db_error: error.message,
+            db_code: error.code
+        });
     }
 };
 

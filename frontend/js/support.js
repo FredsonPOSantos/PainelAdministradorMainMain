@@ -107,6 +107,9 @@ if (window.initSupportPage) {
                     </div>
                 `;
             }
+            if (ticket.status === 'open') {
+                actionsHtml += `<button id="progressTicketBtn" class="btn-secondary">Marcar como Em Andamento</button>`;
+            }
             if (ticket.status !== 'closed') {
                 actionsHtml += `<button id="closeTicketBtn" class="btn-danger">Fechar Ticket</button>`;
             } else {
@@ -163,9 +166,8 @@ if (window.initSupportPage) {
                 loadTicketDetails(ticketId);
             });
 
-            document.getElementById('reopenTicketBtn')?.addEventListener('click', async () => {
-                await apiRequest(`/api/tickets/${ticketId}/status`, 'PUT', { status: 'open' });
-                loadTickets(); // Recarrega a lista principal
+            document.getElementById('progressTicketBtn')?.addEventListener('click', async () => {
+                await apiRequest(`/api/tickets/${ticketId}/status`, 'PUT', { status: 'in_progress' });
                 loadTicketDetails(ticketId);
             });
         };
@@ -188,7 +190,7 @@ if (window.initSupportPage) {
                 newTicketForm.reset();
                 showNotification('Ticket criado com sucesso!', 'success');
                 loadTickets(); // Recarrega a lista de tickets
-                loadTicketDetails(response.data.ticketId); // Carrega o novo ticket
+                loadTicketDetails(response.data.data.ticketId); // Carrega o novo ticket
             } catch (error) {
                 showNotification(`Erro ao criar ticket: ${error.message}`, 'error');
             }

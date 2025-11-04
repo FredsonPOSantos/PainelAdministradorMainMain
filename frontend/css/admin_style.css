@@ -221,7 +221,52 @@ input[type="color"]::-webkit-color-swatch { border: none; border-radius: 6px; }
     display: flex;
     justify-content: space-between;
     align-items: center;
-    gap: 20px;
+    padding: 15px 30px;
+    background-color: var(--background-medium);
+    border-bottom: 1px solid var(--background-dark);
+    color: var(--text-primary);
+}
+
+/* [NOVO] Estilos para o ícone de notificação */
+.notification-icon-wrapper {
+    position: relative;
+    cursor: pointer;
+    margin-right: 20px;
+}
+
+.notification-icon-wrapper svg {
+    color: var(--text-secondary);
+    transition: color 0.2s ease;
+}
+
+.notification-icon-wrapper:hover svg {
+    color: var(--text-primary);
+}
+
+.badge {
+    position: absolute;
+    top: -5px;
+    right: -8px;
+    background-color: #e53e3e; /* Vermelho */
+    color: white;
+    border-radius: 50%;
+    padding: 2px 6px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    border: 2px solid var(--background-medium);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.badge.hidden {
+    display: none;
+}
+
+.header-left, .header-right {
+    display: flex;
+    align-items: center;
+    gap: 15px;
 }
 
 .header-left {
