@@ -496,6 +496,31 @@ if (window.initSettingsPage) {
                     renderPermissionsGrid(matrixData, e.target.value, isMaster);
                 });
 
+                // [NOVO] Adiciona listener para dependências de permissão
+                grid.addEventListener('change', (event) => {
+                    const checkbox = event.target;
+                    if (checkbox.type !== 'checkbox' || !checkbox.checked) {
+                        return; // Só age ao marcar a caixa
+                    }
+
+                    const permissionKey = checkbox.dataset.permission;
+                    const parts = permissionKey.split('.');
+
+                    if (parts.length > 1) {
+                        const feature = parts[0];
+                        const action = parts[1];
+
+                        // Se a ação for criar, atualizar ou apagar, garante que a leitura também está marcada
+                        if (['create', 'update', 'delete'].includes(action)) {
+                            const readPermissionKey = `${feature}.read`;
+                            const readCheckbox = grid.querySelector(`input[data-permission="${readPermissionKey}"]`);
+                            if (readCheckbox && !readCheckbox.checked) {
+                                readCheckbox.checked = true;
+                            }
+                        }
+                    }
+                });
+
                 if (isMaster) {
                     if (permSaveChangesContainer) permSaveChangesContainer.style.display = 'block';
                     if (permSaveChangesBtn) {
