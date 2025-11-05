@@ -126,11 +126,13 @@
     padding: 15px;
     display: flex;
     flex-direction: column;
-    overflow-y: auto;
+    min-height: 0; /* Garante que o flexbox funcione corretamente em layouts complexos */
 }
 
 .message-list {
     flex-grow: 1;
+    overflow-y: auto; /* Apenas a lista de mensagens deve ter scroll */
+    padding-right: 10px; /* Espaço para a barra de scroll */
 }
 
 .message-item {
@@ -170,6 +172,7 @@
     display: flex;
     padding-top: 15px;
     border-top: 1px solid var(--background-dark);
+    flex-shrink: 0; /* Impede que o formulário encolha */
 }
 
 .new-message-form textarea {

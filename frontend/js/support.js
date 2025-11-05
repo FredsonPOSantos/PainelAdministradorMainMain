@@ -224,7 +224,7 @@ if (window.initSupportPage) {
 
             document.getElementById('closeTicketBtn')?.addEventListener('click', async () => {
                 await apiRequest(`/api/tickets/${ticketId}/status`, 'PUT', { status: 'closed' });
-                loadTickets(); // Recarrega a lista principal
+                loadTickets(ticketSearch.value, statusFilter.value, currentPage); // Recarrega a lista principal
                 loadTicketDetails(ticketId);
             });
 
