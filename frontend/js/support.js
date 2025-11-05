@@ -95,7 +95,7 @@ if (window.initSupportPage) {
 
             // Lógica de ações (atribuir, fechar, etc.)
             let actionsHtml = '<div class="ticket-actions">';
-            if (window.currentUserProfile.role === 'master') {
+            if (['master', 'gestao'].includes(window.currentUserProfile.role)) {
                 actionsHtml += `
                     <div class="input-group">
                         <label for="assignUserSelect">Atribuir a:</label>
@@ -199,7 +199,7 @@ if (window.initSupportPage) {
         // Função inicial que carrega os dados necessários
         const initialize = async () => {
             // Carrega a lista de utilizadores para o dropdown de atribuição
-            if (window.currentUserProfile.role === 'master') {
+            if (['master', 'gestao'].includes(window.currentUserProfile.role)) {
                 try {
                     const usersResponse = await apiRequest('/api/admin/users');
                     if(usersResponse.success) allUsers = usersResponse.data;
@@ -208,7 +208,15 @@ if (window.initSupportPage) {
                 }
             }
             // Carrega a lista inicial de tickets
-            loadTickets();
+            await loadTickets();
+
+            // [NOVO] Verifica se um ticketId foi passado via parâmetros da página
+            if (window.pageParams && window.pageParams.ticketId) {
+                console.log(`A carregar ticket ${window.pageParams.ticketId} a partir da notificação...`);
+                loadTicketDetails(window.pageParams.ticketId);
+                // Limpa os parâmetros para não recarregar na próxima navegação
+                window.pageParams = {}; 
+            }
         };
 
         initialize();

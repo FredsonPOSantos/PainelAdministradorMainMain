@@ -252,6 +252,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const notificationIcon = document.getElementById('notification-icon-wrapper');
     const notificationBadge = document.getElementById('notification-badge');
     let notificationInterval;
+    let isDropdownVisible = false;
 
     const fetchUnreadCount = async () => {
         try {
@@ -276,16 +277,78 @@ document.addEventListener('DOMContentLoaded', async () => {
         notificationInterval = setInterval(fetchUnreadCount, 30000); // E depois a cada 30 segundos
     };
 
-    notificationIcon?.addEventListener('click', async () => {
-        // Por agora, apenas marca como lido e esconde o badge.
-        // A Fase 2 incluirá um dropdown com as notificações.
-        notificationBadge.classList.add('hidden');
+    const handleNotificationClick = async (notification) => {
         try {
-            await apiRequest('/api/notifications/mark-as-read', 'PUT');
+            await apiRequest(`/api/notifications/${notification.id}/read`, 'PUT');
+            // Remove a notificação da lista
+            const notificationElement = document.querySelector(`.notification-item[data-id="${notification.id}"]`);
+            if (notificationElement) {
+                notificationElement.remove();
+            }
+            // Atualiza a contagem
+            fetchUnreadCount();
+            // Redireciona para a página de suporte
+            const supportLink = document.querySelector('.sidebar-nav .nav-item[data-page="support"]');
+            loadPage('support', supportLink, { ticketId: notification.related_ticket_id });
         } catch (error) {
-            console.error('Erro ao marcar notificações como lidas:', error);
+            console.error('Erro ao marcar notificação como lida:', error);
         }
-    });
+    };
+
+    const toggleNotificationDropdown = async () => {
+        const existingDropdown = document.getElementById('notification-dropdown');
+        if (existingDropdown) {
+            existingDropdown.remove();
+            isDropdownVisible = false;
+            return;
+        }
+
+        try {
+            const response = await apiRequest('/api/notifications/unread');
+            if (response.success) {
+                const notifications = response.data.data;
+                const dropdown = document.createElement('div');
+                dropdown.id = 'notification-dropdown';
+                dropdown.classList.add('notification-dropdown');
+
+                if (notifications.length === 0) {
+                    dropdown.innerHTML = '<p>Nenhuma notificação nova.</p>';
+                } else {
+                    notifications.forEach(notification => {
+                        const item = document.createElement('div');
+                        item.classList.add('notification-item');
+                        item.dataset.id = notification.id;
+                        item.innerHTML = `
+                            <p>${notification.message}</p>
+                            <span class="notification-time">${new Date(notification.created_at).toLocaleString()}</span>
+                        `;
+                        item.addEventListener('click', () => handleNotificationClick(notification));
+                        dropdown.appendChild(item);
+                    });
+                    const markAllButton = document.createElement('button');
+                    markAllButton.id = 'mark-all-as-read';
+                    markAllButton.textContent = 'Marcar todas como lidas';
+                    markAllButton.addEventListener('click', async () => {
+                        try {
+                            await apiRequest('/api/notifications/mark-as-read', 'PUT');
+                            fetchUnreadCount();
+                            toggleNotificationDropdown();
+                        } catch (error) {
+                            console.error('Erro ao marcar todas as notificações como lidas:', error);
+                        }
+                    });
+                    dropdown.appendChild(markAllButton);
+                }
+
+                notificationIcon.appendChild(dropdown);
+                isDropdownVisible = true;
+            }
+        } catch (error) {
+            console.error('Erro ao buscar notificações:', error);
+        }
+    };
+
+    notificationIcon?.addEventListener('click', toggleNotificationDropdown);
 
 
     // Mapeamento de inicializadores de página
@@ -317,7 +380,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 
     // --- PAGE NAVIGATION (Atualizado V13.1) ---
-    const loadPage = async (pageName, linkElement) => {
+    const loadPage = async (pageName, linkElement, params = {}) => {
         if (!isProfileLoaded) {
             console.warn(`loadPage (${pageName}) chamado antes do perfil (V13.1.3).`);
         }
@@ -329,6 +392,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         console.log(`loadPage (V13.1.3): Carregando ${pageName}...`);
         
+        window.pageParams = params; // Store params globally
+
         navLinks.forEach(link => link.classList.remove('active'));
         let currentTitle = pageName; 
         if (linkElement) {

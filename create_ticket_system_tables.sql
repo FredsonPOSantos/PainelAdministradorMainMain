@@ -60,3 +60,17 @@ CREATE TRIGGER update_ticket_on_new_message_trigger
 COMMENT ON TABLE tickets IS 'Armazena os tickets de suporte.';
 COMMENT ON COLUMN tickets.status IS 'Status atual do ticket (ex: open, in_progress, closed).';
 COMMENT ON TABLE ticket_messages IS 'Armazena a trilha de conversa para cada ticket.';
+
+-- Tabela para avaliações dos tickets
+CREATE TABLE IF NOT EXISTS ticket_ratings (
+    id SERIAL PRIMARY KEY,
+    ticket_id INTEGER NOT NULL REFERENCES tickets(id) ON DELETE CASCADE,
+    user_id INTEGER NOT NULL REFERENCES admin_users(id),
+    rating INTEGER NOT NULL CHECK (rating >= 1 AND rating <= 5),
+    comment TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE(ticket_id) -- Garante que cada ticket só pode ser avaliado uma vez
+);
+
+COMMENT ON TABLE ticket_ratings IS 'Armazena as avaliações dos tickets de suporte.';
+COMMENT ON COLUMN ticket_ratings.rating IS 'A avaliação dada pelo utilizador, de 1 a 5 estrelas.';

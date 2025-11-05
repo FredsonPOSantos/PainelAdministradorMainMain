@@ -27,4 +27,7 @@ router.put('/:id/assign', ticketController.assignTicket);
 // Mudar o status de um ticket
 router.put('/:id/status', ticketController.updateTicketStatus);
 
+// Avaliar um ticket
+router.post('/:id/rate', ticketController.addTicketRating);
+
 module.exports = router;

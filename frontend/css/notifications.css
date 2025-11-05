@@ -78,3 +78,66 @@
 .notification-info .notification-icon {
     color: #17a2b8;
 }
+
+/* Notification Dropdown */
+.notification-icon-wrapper {
+    position: relative;
+}
+
+#notification-dropdown {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    width: 350px;
+    max-height: 400px;
+    overflow-y: auto;
+    background-color: #fff;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    z-index: 1000;
+}
+
+#notification-dropdown p {
+    padding: 10px;
+    margin: 0;
+    color: #333;
+}
+
+.notification-item {
+    padding: 10px;
+    border-bottom: 1px solid #eee;
+    cursor: pointer;
+}
+
+.notification-item:hover {
+    background-color: #f9f9f9;
+}
+
+.notification-item p {
+    margin: 0;
+    font-size: 14px;
+    color: #333;
+}
+
+.notification-time {
+    font-size: 12px;
+    color: #999;
+}
+
+#mark-all-as-read {
+    display: block;
+    width: 100%;
+    padding: 10px;
+    background-color: #f0f0f0;
+    border: none;
+    border-top: 1px solid #ddd;
+    cursor: pointer;
+    text-align: center;
+    font-weight: bold;
+    color: #333;
+}
+
+#mark-all-as-read:hover {
+    background-color: #e0e0e0;
+}
