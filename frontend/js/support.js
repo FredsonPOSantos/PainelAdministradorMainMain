@@ -311,6 +311,34 @@ if (window.initSupportPage) {
             }
         });
 
+        const openImageLightbox = (src) => {
+            const lightbox = document.createElement('div');
+            lightbox.id = 'image-lightbox-overlay';
+            lightbox.className = 'image-lightbox-overlay';
+            lightbox.innerHTML = `
+                <span class="image-lightbox-close">&times;</span>
+                <img src="${src}" class="image-lightbox-img">
+            `;
+            
+            const close = () => lightbox.remove();
+            
+            lightbox.querySelector('.image-lightbox-close').addEventListener('click', close);
+            lightbox.addEventListener('click', (e) => {
+                if (e.target === lightbox) {
+                    close();
+                }
+            });
+
+            document.body.appendChild(lightbox);
+        };
+
+        ticketDetailPanel.addEventListener('click', (e) => {
+            if (e.target.tagName === 'IMG' && e.target.closest('.message-content')) {
+                e.preventDefault();
+                openImageLightbox(e.target.src);
+            }
+        });
+
         // Função inicial que carrega os dados necessários
         const initialize = async () => {
             // Carrega a lista de utilizadores para o dropdown de atribuição
