@@ -97,8 +97,30 @@ const createTicket = async (req, res) => {
 // Obter todos os tickets
 const getAllTickets = async (req, res) => {
     const { userId, role } = req.user;
+    const { status, search, page = 1, limit = 10 } = req.query;
 
     try {
+        const params = [];
+        const whereClauses = [];
+
+        if (!['master', 'gestao'].includes(role)) {
+            whereClauses.push(`(t.created_by_user_id = $${params.length + 1} OR t.assigned_to_user_id = $${params.length + 1})`);
+            params.push(userId);
+        }
+
+        if (status) {
+            whereClauses.push(`t.status = $${params.length + 1}`);
+            params.push(status);
+        }
+
+        if (search) {
+            whereClauses.push(`(t.title ILIKE $${params.length + 1} OR t.ticket_number ILIKE $${params.length + 1})`);
+            params.push(`%${search}%`);
+        }
+
+        const whereString = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
+
+        // Query para obter os tickets da página atual
         let query = `
             SELECT 
                 t.id, t.ticket_number, t.title, t.status, t.created_at, t.updated_at,
@@ -108,19 +130,29 @@ const getAllTickets = async (req, res) => {
             FROM tickets t
             JOIN admin_users u_creator ON t.created_by_user_id = u_creator.id
             LEFT JOIN admin_users u_assignee ON t.assigned_to_user_id = u_assignee.id
+            ${whereString}
+            ORDER BY t.updated_at DESC
+            LIMIT $${params.length + 1} OFFSET $${params.length + 2}
         `;
+        const offset = (page - 1) * limit;
+        const pageParams = [...params, limit, offset];
+        
+        const result = await pool.query(query, pageParams);
 
-        const params = [];
+        // Query para obter a contagem total de tickets com os mesmos filtros
+        const countQuery = `SELECT COUNT(t.id) FROM tickets t ${whereString}`;
+        const countResult = await pool.query(countQuery, params);
+        const totalTickets = parseInt(countResult.rows[0].count, 10);
 
-        if (!['master', 'gestao'].includes(role)) {
-            query += ` WHERE t.created_by_user_id = $1 OR t.assigned_to_user_id = $1`;
-            params.push(userId);
-        }
-
-        query += ' ORDER BY t.updated_at DESC';
-
-        const result = await pool.query(query, params);
-        res.json({ success: true, data: result.rows });
+        res.json({ 
+            success: true, 
+            data: {
+                tickets: result.rows,
+                totalTickets,
+                totalPages: Math.ceil(totalTickets / limit),
+                currentPage: parseInt(page, 10)
+            }
+        });
 
     } catch (error) {
         console.error('Erro ao buscar tickets:', error);

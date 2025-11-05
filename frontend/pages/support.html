@@ -8,12 +8,23 @@
             <button id="newTicketBtn" class="btn-primary">Novo Ticket</button>
         </div>
         <div class="ticket-filters">
-            <!-- Filtros podem ser adicionados aqui no futuro -->
+            <div class="filter-group">
+                <input type="text" id="ticketSearch" placeholder="Pesquisar por título ou número...">
+            </div>
+            <div class="filter-group">
+                <select id="statusFilter">
+                    <option value="">Todos os Status</option>
+                    <option value="open">Aberto</option>
+                    <option value="in_progress">Em Andamento</option>
+                    <option value="closed">Fechado</option>
+                </select>
+            </div>
         </div>
         <div id="ticket-list" class="ticket-list"> 
             <!-- A lista de tickets será renderizada aqui pelo JS -->
             <p>A carregar tickets...</p>
         </div>
+        <div id="pagination-container" class="pagination-container"></div>
     </div>
 
     <!-- Coluna de Detalhes do Ticket -->

@@ -12,22 +12,46 @@ if (window.initSupportPage) {
         const newTicketModal = document.getElementById('newTicketModal');
         const newTicketForm = document.getElementById('newTicketForm');
         const cancelNewTicketBtn = document.getElementById('cancelNewTicketBtn');
+        const ticketSearch = document.getElementById('ticketSearch');
+        const statusFilter = document.getElementById('statusFilter');
+        const paginationContainer = document.getElementById('pagination-container');
+        let searchTimeout;
+        let currentPage = 1;
 
         let allUsers = []; // Cache para a lista de utilizadores
 
+        const applyFilters = () => {
+            const searchTerm = ticketSearch.value;
+            const status = statusFilter.value;
+            loadTickets(searchTerm, status, 1); // Sempre volta para a página 1 ao aplicar filtros
+        };
+
+        ticketSearch.addEventListener('input', () => {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(applyFilters, 500); // Debounce de 500ms
+        });
+
+        statusFilter.addEventListener('change', applyFilters);
+
         // Carrega todos os tickets e os exibe na lista
-        const loadTickets = async () => {
+        const loadTickets = async (search = '', status = '', page = 1) => {
             if (!ticketListDiv) return;
             ticketListDiv.innerHTML = '<p>A carregar tickets...</p>';
             try {
-                const response = await apiRequest('/api/tickets');
+                const params = new URLSearchParams();
+                if (search) params.append('search', search);
+                if (status) params.append('status', status);
+                if (page) params.append('page', page);
+
+                const response = await apiRequest(`/api/tickets?${params.toString()}`);
                 if (!response.success) throw new Error(response.message);
 
-                const tickets = response.data.data;
+                const { tickets, totalPages, currentPage } = response.data.data;
                 ticketListDiv.innerHTML = '';
 
                 if (tickets.length === 0) {
                     ticketListDiv.innerHTML = '<p>Nenhum ticket encontrado.</p>';
+                    renderPagination(0, 1); // Limpa a paginação
                     return;
                 }
 
@@ -49,10 +73,46 @@ if (window.initSupportPage) {
                     ticketElement.addEventListener('click', () => loadTicketDetails(ticket.id));
                     ticketListDiv.appendChild(ticketElement);
                 });
+
+                renderPagination(totalPages, currentPage);
+
             } catch (error) {
                 ticketListDiv.innerHTML = '<p style="color: red;">Erro ao carregar tickets.</p>';
                 console.error(error);
             }
+        };
+
+        const renderPagination = (totalPages, currentPage) => {
+            if (!paginationContainer) return;
+            paginationContainer.innerHTML = '';
+
+            if (totalPages <= 1) return;
+
+            const createButton = (text, page, isDisabled = false, isActive = false) => {
+                const button = document.createElement('button');
+                button.textContent = text;
+                button.disabled = isDisabled;
+                if (isActive) {
+                    button.classList.add('active');
+                }
+                button.addEventListener('click', () => {
+                    const searchTerm = ticketSearch.value;
+                    const status = statusFilter.value;
+                    loadTickets(searchTerm, status, page);
+                });
+                return button;
+            };
+
+            // Botão "Anterior"
+            paginationContainer.appendChild(createButton('Anterior', currentPage - 1, currentPage === 1));
+
+            // Botões de página
+            for (let i = 1; i <= totalPages; i++) {
+                paginationContainer.appendChild(createButton(i, i, false, i === currentPage));
+            }
+
+            // Botão "Próximo"
+            paginationContainer.appendChild(createButton('Próximo', currentPage + 1, currentPage === totalPages));
         };
 
         // Carrega os detalhes de um ticket específico
@@ -115,6 +175,7 @@ if (window.initSupportPage) {
             } else {
                  actionsHtml += `<button id="reopenTicketBtn" class="btn-secondary">Reabrir Ticket</button>`;
             }
+            actionsHtml += `<button id="exportTicketBtn" class="btn-secondary">Exportar Conversa</button>`;
             actionsHtml += '</div>';
 
             ticketDetailPanel.innerHTML = `
@@ -140,11 +201,12 @@ if (window.initSupportPage) {
             `;
 
             // Adiciona event listeners para os novos elementos
-            addDetailEventListeners(ticket.id);
+            addDetailEventListeners(ticket);
         };
 
         // Adiciona os listeners para os botões e formulários no painel de detalhes
-        const addDetailEventListeners = (ticketId) => {
+        const addDetailEventListeners = (ticket) => {
+            const ticketId = ticket.id;
             document.getElementById('newMessageForm')?.addEventListener('submit', async (e) => {
                 e.preventDefault();
                 const messageText = document.getElementById('newMessageText').value;
@@ -170,6 +232,31 @@ if (window.initSupportPage) {
                 await apiRequest(`/api/tickets/${ticketId}/status`, 'PUT', { status: 'in_progress' });
                 loadTicketDetails(ticketId);
             });
+
+            document.getElementById('exportTicketBtn')?.addEventListener('click', () => {
+                exportTicketConversation(ticket);
+            });
+        };
+
+        const exportTicketConversation = (ticket) => {
+            let content = `Assunto: ${ticket.title}\n`;
+            content += `Número do Ticket: ${ticket.ticket_number}\n`;
+            content += `Status: ${ticket.status}\n`;
+            content += `Criado por: ${ticket.created_by_email} em ${new Date(ticket.created_at).toLocaleString('pt-BR')}\n`;
+            content += `Atribuído a: ${ticket.assigned_to_email || 'Ninguém'}\n\n`;
+            content += `--- CONVERSA ---\n\n`;
+
+            ticket.messages.forEach(msg => {
+                content += `${new Date(msg.created_at).toLocaleString('pt-BR')} - ${msg.user_email}:\n`;
+                content += `${msg.message}\n\n---\n`;
+            });
+
+            const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `ticket_${ticket.ticket_number}.txt`;
+            link.click();
+            URL.revokeObjectURL(link.href);
         };
 
         // Abre e fecha o modal de novo ticket
