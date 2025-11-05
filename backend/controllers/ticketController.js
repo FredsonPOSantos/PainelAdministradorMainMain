@@ -3,6 +3,7 @@
 
 const pool = require('../connection');
 const { logAction } = require('../services/auditLogService');
+const { sendEmail } = require('../emailService');
 
 // Função para gerar o número do ticket no formato DDMMAAAAHHMM-ID
 const generateTicketNumber = (ticketId) => {
@@ -70,6 +71,17 @@ const createTicket = async (req, res) => {
                 'INSERT INTO notifications (user_id, type, related_ticket_id, message) VALUES ($1, $2, $3, $4)',
                 [recipientId, 'new_ticket', ticketId, notificationMessage]
             );
+
+            // Enviar email
+            const creatorName = email;
+
+            const recipient = await client.query('SELECT email FROM admin_users WHERE id = $1', [recipientId]);
+            if (recipient.rows.length > 0) {
+                const recipientEmail = recipient.rows[0].email;
+                const emailSubject = `Novo Ticket Criado: #${ticketNumber}`;
+                const emailText = `Olá,\n\nUm novo ticket foi criado por ${creatorName}: #${ticketNumber}\n\nTítulo: ${title}\n\nPara ver o ticket, acesse o painel de administração.\n\nAtenciosamente,\nEquipe de Suporte`;
+                await sendEmail(recipientEmail, emailSubject, emailText);
+            }
         }
 
         await client.query('COMMIT');
@@ -268,6 +280,17 @@ const addMessageToTicket = async (req, res) => {
                 'INSERT INTO notifications (user_id, type, related_ticket_id, message) VALUES ($1, $2, $3, $4)',
                 [recipientId, 'new_message', id, notificationMessage]
             );
+
+            // Enviar email
+            const senderName = email;
+
+            const recipient = await client.query('SELECT email FROM admin_users WHERE id = $1', [recipientId]);
+            if (recipient.rows.length > 0) {
+                const recipientEmail = recipient.rows[0].email;
+                const emailSubject = `Nova Mensagem no Ticket: #${ticket_number}`;
+                const emailText = `Olá,\n\nUma nova mensagem foi adicionada ao ticket #${ticket_number} por ${senderName}.\n\nMensagem: ${message}\n\nPara ver o ticket, acesse o painel de administração.\n\nAtenciosamente,\nEquipe de Suporte`;
+                await sendEmail(recipientEmail, emailSubject, emailText);
+            }
         }
 
         await client.query('COMMIT');
@@ -367,9 +390,22 @@ const updateTicketStatus = async (req, res) => {
         }
 
         const result = await pool.query(
-            'UPDATE tickets SET status = $1, updated_at = NOW() WHERE id = $2 RETURNING id',
+            'UPDATE tickets SET status = $1, updated_at = NOW() WHERE id = $2 RETURNING id, ticket_number, title',
             [status, id]
         );
+
+        if (status === 'closed') {
+            const { ticket_number, title } = result.rows[0];
+            const creatorId = ticket.created_by_user_id;
+            const creator = await pool.query('SELECT email FROM admin_users WHERE id = $1', [creatorId]);
+
+            if (creator.rows.length > 0) {
+                const creatorEmail = creator.rows[0].email;
+                const emailSubject = `Ticket Fechado: #${ticket_number}`;
+                const emailText = `Olá,\n\nO seu ticket #${ticket_number} - \"${title}\" foi fechado.\n\nObrigado por usar o nosso sistema de suporte.\n\nAtenciosamente,\nEquipe de Suporte`;
+                await sendEmail(creatorEmail, emailSubject, emailText);
+            }
+        }
 
         logAction({
             req,
