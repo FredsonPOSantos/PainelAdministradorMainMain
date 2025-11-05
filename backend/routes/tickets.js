@@ -5,6 +5,7 @@ const express = require('express');
 const router = express.Router();
 const ticketController = require('../controllers/ticketController');
 const authMiddleware = require('../middlewares/authMiddleware');
+const ticketAttachmentUploadMiddleware = require('../middlewares/ticketAttachmentUploadMiddleware');
 
 // Todas as rotas de tickets requerem autenticação
 router.use(authMiddleware);
@@ -29,5 +30,8 @@ router.put('/:id/status', ticketController.updateTicketStatus);
 
 // Avaliar um ticket
 router.post('/:id/rate', ticketController.addTicketRating);
+
+// Upload de anexo
+router.post('/attachments', ticketAttachmentUploadMiddleware.single('file'), ticketController.uploadAttachment);
 
 module.exports = router;

@@ -48,7 +48,8 @@
             </div>
             <div class="input-group">
                 <label for="ticketMessage">Mensagem</label>
-                <textarea id="ticketMessage" rows="5" required></textarea>
+                <input id="ticketMessage" type="hidden" name="content">
+                <trix-editor input="ticketMessage"></trix-editor>
             </div>
             <div class="modal-actions">
                 <button type="button" id="cancelNewTicketBtn" class="btn-secondary">Cancelar</button>

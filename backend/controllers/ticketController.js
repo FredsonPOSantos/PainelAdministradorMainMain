@@ -437,6 +437,17 @@ const addTicketRating = async (req, res) => {
     }
 };
 
+const uploadAttachment = async (req, res) => {
+    if (!req.file) {
+        return res.status(400).json({ success: false, message: 'Nenhum ficheiro enviado.' });
+    }
+
+    // Constrói a URL completa do ficheiro
+    const fileUrl = `${req.protocol}://${req.get('host')}/uploads/ticket_attachments/${req.file.filename}`;
+
+    res.json({ success: true, url: fileUrl });
+};
+
 
 module.exports = {
     createTicket,
@@ -445,5 +456,6 @@ module.exports = {
     addMessageToTicket,
     assignTicket,
     updateTicketStatus,
-    addTicketRating
+    addTicketRating,
+    uploadAttachment
 };

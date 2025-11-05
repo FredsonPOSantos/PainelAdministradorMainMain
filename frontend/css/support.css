@@ -170,14 +170,17 @@
 
 .new-message-form {
     display: flex;
+    flex-direction: column; /* Empilha os elementos */
     padding-top: 15px;
     border-top: 1px solid var(--background-dark);
-    flex-shrink: 0; /* Impede que o formulário encolha */
+    flex-shrink: 0;
 }
 
-.new-message-form textarea {
-    flex: 1;
-    margin-right: 10px;
+.new-message-form button {
+    margin-top: 10px;
+    align-self: flex-end; /* Alinha o botão à direita */
+    width: auto; /* Largura automática */
+    padding: 8px 16px;
 }
 
 .ticket-actions {
@@ -251,4 +254,22 @@
     background-color: var(--primary-color);
     color: white;
     border-color: var(--primary-color);
+}
+
+/* Trix Editor Styles */
+.new-message-form trix-editor {
+    min-height: 100px;
+    background-color: var(--background-light);
+    color: var(--text-primary);
+    border: 1px solid var(--background-dark);
+    border-radius: 4px;
+}
+
+.modal-content trix-editor {
+    min-height: 150px;
+    background-color: var(--background-light);
+    color: var(--text-primary);
+    border: 1px solid var(--background-dark);
+    border-radius: 4px;
+    margin-bottom: 15px;
 }

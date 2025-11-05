@@ -1,11 +1,10 @@
-// Ficheiro: middlewares/uploadMiddleware.js
-// [FICHEIRO INALTERADO - Válido]
+// Ficheiro: middlewares/ticketAttachmentUploadMiddleware.js
 
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 
-const uploadDir = 'public/uploads/banners/';
+const uploadDir = 'public/uploads/ticket_attachments/';
 
 // Garante que o diretório de upload exista
 fs.mkdirSync(uploadDir, { recursive: true });
@@ -18,9 +17,8 @@ const storage = multer.diskStorage({
   },
   // Define como o ficheiro será nomeado
   filename: (req, file, cb) => {
-    // Para evitar conflitos, o nome do ficheiro será: prefixo-timestamp.extensao
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, 'banner-' + uniqueSuffix + path.extname(file.originalname));
+    cb(null, 'attachment-' + uniqueSuffix + path.extname(file.originalname));
   }
 });
 
@@ -49,8 +47,7 @@ const upload = multer({
   storage: storage,
   fileFilter: fileFilter,
   limits: {
-    // Limite de tamanho do ficheiro (ex: 10MB)
-    fileSize: 10 * 1024 * 1024
+    fileSize: 10 * 1024 * 1024 // 10MB
   }
 });
 

@@ -192,7 +192,8 @@ if (window.initSupportPage) {
                     <div id="message-list" class="message-list">${messagesHtml}</div>
                     ${ticket.status !== 'closed' ? `
                     <form id="newMessageForm" class="new-message-form">
-                        <textarea id="newMessageText" placeholder="Escreva a sua resposta..." required></textarea>
+                        <input id="newMessageText" type="hidden" name="content">
+                        <trix-editor input="newMessageText"></trix-editor>
                         <button type="submit">Enviar Mensagem</button>
                     </form>
                     ` : ''}
@@ -280,6 +281,33 @@ if (window.initSupportPage) {
                 loadTicketDetails(response.data.data.ticketId); // Carrega o novo ticket
             } catch (error) {
                 showNotification(`Erro ao criar ticket: ${error.message}`, 'error');
+            }
+        });
+
+        const uploadFile = async (attachment) => {
+            const file = attachment.file;
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                const response = await apiRequest('/api/tickets/attachments', 'POST', formData);
+                if (response.success) {
+                    const url = response.data.url;
+                    attachment.setAttributes({
+                        url: url,
+                        href: url
+                    });
+                }
+            } catch (error) {
+                console.error('Erro ao carregar anexo:', error);
+                attachment.remove();
+            }
+        };
+
+        document.addEventListener('trix-attachment-add', (event) => {
+            const attachment = event.attachment;
+            if (attachment.file) {
+                uploadFile(attachment);
             }
         });
 
