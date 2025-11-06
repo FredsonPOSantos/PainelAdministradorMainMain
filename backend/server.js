@@ -20,6 +20,7 @@ const permissionsRoutes = require('./routes/permissions'); // [NOVO] Importa as 
 const lgpdRoutes = require('./routes/lgpd');
 const ticketRoutes = require('./routes/tickets');
 const notificationRoutes = require('./routes/notificationRoutes');
+const raffleRoutes = require('./routes/raffles');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -48,6 +49,7 @@ app.use('/api/permissions', permissionsRoutes); // [NOVO] Regista as rotas de pe
 app.use('/api/lgpd', lgpdRoutes);
 app.use('/api/tickets', ticketRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/raffles', raffleRoutes);
 
 // --- [NOVO] Rotas de Logs ---
 const logRoutes = require('./routes/logRoutes');

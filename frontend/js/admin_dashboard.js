@@ -361,7 +361,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         'admin_campaigns': window.initCampaignsPage,
         'admin_routers': window.initRoutersPage,
         'admin_settings': window.initSettingsPage,
-        'support': window.initSupportPage
+        'support': window.initSupportPage,
+        'admin_raffles': window.initRafflesPage
     };
 
     // --- [ATUALIZADO V13.1.3] IDs de verificação para o waitForElement ---
@@ -374,7 +375,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         'admin_campaigns': '#campaignsTable',       
         'admin_routers': '#groupsTable',            
         'admin_settings': '#tab-perfil',
-        'support': '#support-page-container'             
+        'support': '#support-page-container',
+        'admin_raffles': '#createRaffleForm'
     };
     // --- FIM V13.1.3 ---
 

@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sorteios - Painel de Administração</title>
+    <link rel="stylesheet" href="../css/admin_style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Sorteios</h1>
+        
+        <div class="form-container">
+            <h2>Criar Novo Sorteio</h2>
+            <form id="createRaffleForm">
+                <div class="input-group">
+                    <label for="raffleTitle">Título</label>
+                    <input type="text" id="raffleTitle" required>
+                </div>
+                <div class="input-group">
+                    <label for="raffleObservation">Observação</label>
+                    <textarea id="raffleObservation"></textarea>
+                </div>
+                
+                <h3>Filtros para Participantes</h3>
+                <div class="input-group">
+                    <label for="filterCampaign">Campanha</label>
+                    <select id="filterCampaign">
+                        <option value="">Todas</option>
+                        <!-- Opções de campanha carregadas dinamicamente -->
+                    </select>
+                </div>
+                <div class="input-group">
+                    <label for="filterRouter">Roteador</label>
+                    <select id="filterRouter">
+                        <option value="">Todos</option>
+                        <!-- Opções de roteador carregadas dinamicamente -->
+                    </select>
+                </div>
+                <div class="input-group">
+                    <label for="filterStartDate">Período de Cadastro (Início)</label>
+                    <input type="date" id="filterStartDate">
+                </div>
+                <div class="input-group">
+                    <label for="filterEndDate">Período de Cadastro (Fim)</label>
+                    <input type="date" id="filterEndDate">
+                </div>
+                <div class="input-group">
+                    <input type="checkbox" id="filterConsent" checked>
+                    <label for="filterConsent">Incluir apenas participantes que aceitaram os termos de marketing</label>
+                </div>
+
+                <button type="submit" class="btn-primary">Criar Sorteio</button>
+            </form>
+        </div>
+
+        <div class="table-container">
+            <h2>Sorteios Realizados</h2>
+            <table id="rafflesTable">
+                <thead>
+                    <tr>
+                        <th>Número do Sorteio</th>
+                        <th>Título</th>
+                        <th>Data de Criação</th>
+                        <th>Vencedor</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Linhas da tabela carregadas dinamicamente -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Modal para Detalhes do Sorteio -->
+    <div id="raffleDetailsModal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <button class="modal-close-btn">&times;</button>
+            <div id="raffleDetailsContent"></div>
+        </div>
+    </div>
+
+    <script src="../js/admin_raffles.js"></script>
+</body>
+</html>

@@ -334,3 +334,35 @@ input[type="color"]::-webkit-color-swatch { border: none; border-radius: 6px; }
 .sidebar-header, .sidebar-footer {
     display: none;
 }
+
+/* Estilos para o Modal de Detalhes do Sorteio */
+#raffleDetailsModal .modal-content {
+    max-width: 600px;
+}
+
+#raffleDetailsContent h2 {
+    margin-bottom: 20px;
+    color: var(--primary-color);
+}
+
+#raffleDetailsContent p {
+    margin-bottom: 10px;
+}
+
+#raffleDetailsContent h3 {
+    margin-top: 20px;
+    margin-bottom: 10px;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 5px;
+}
+
+#raffleDetailsContent ul {
+    list-style: none;
+    padding: 0;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+#raffleDetailsContent li {
+    padding: 5px 0;
+}

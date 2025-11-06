@@ -103,7 +103,7 @@ body:not(.dashboard-body) {
     opacity: 0.05;
     pointer-events: none;
     z-index: 0;
-    background-image: url('/uploads/logos/img/LogoFull.svg');
+    background-image: url('/backend/public/uploads/logos/img/LogoFull.svg');
     background-repeat: no-repeat;
     background-position: center;
     background-size: contain;
