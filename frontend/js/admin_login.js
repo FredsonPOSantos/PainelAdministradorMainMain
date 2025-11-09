@@ -31,6 +31,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 const data = await response.json();
 
                 if (!response.ok) {
+                    // Se o backend enviar a mensagem específica, mostre-a.
+                    if (data.code === 'USER_NOT_FOUND') {
+                        showNotification(data.message, 'info', 10000); // Mostra por 10 segundos
+                        throw new Error(data.message); // Interrompe o fluxo, mas a notificação já foi mostrada
+                    }
                     throw new Error(data.message || 'Erro desconhecido');
                 }
 
@@ -39,7 +44,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 window.location.href = 'admin_dashboard.html';
 
             } catch (error) {
-                showNotification(`Erro: ${error.message}`, 'error');
+                // Evita mostrar a notificação de erro padrão se a notificação personalizada já foi exibida
+                if (error.message.includes('Usuário não cadastrado')) {
+                    // A notificação já foi mostrada, apenas logamos o erro no console.
+                    console.warn('Tentativa de login com usuário não cadastrado.');
+                } else {
+                    showNotification(`Erro: ${error.message}`, 'error');
+                }
                 submitButton.disabled = false;
                 submitButton.textContent = 'Entrar';
             }
@@ -107,4 +118,3 @@ document.addEventListener('DOMContentLoaded', () => {
 
     fetchAndApplySettings();
 });
-

@@ -1,3 +1,5 @@
+// Ficheiro: frontend/js/lgpd_request.js
+
 document.addEventListener('DOMContentLoaded', () => {
     const lgpdRequestForm = document.getElementById('lgpdRequestForm');
     const requestView = document.getElementById('requestView');
@@ -7,8 +9,16 @@ document.addEventListener('DOMContentLoaded', () => {
     if (lgpdRequestForm) {
         lgpdRequestForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-            const email = document.getElementById('userEmail').value;
+
             const submitButton = lgpdRequestForm.querySelector('button[type="submit"]');
+            const fullName = document.getElementById('fullName').value;
+            const email = document.getElementById('userEmail').value;
+            const termsCheckbox = document.getElementById('termsCheckbox');
+
+            if (!termsCheckbox.checked) {
+                showNotification('Deve declarar que está ciente dos termos para continuar.', 'warning');
+                return;
+            }
 
             submitButton.disabled = true;
             submitButton.textContent = 'A enviar...';
@@ -16,41 +26,26 @@ document.addEventListener('DOMContentLoaded', () => {
             try {
                 const response = await fetch(`http://${window.location.hostname}:3000/api/lgpd/request-exclusion`, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ email })
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ fullName, email })
                 });
 
-                const result = await response.json();
+                const data = await response.json();
 
-                if (response.ok) {
-                    requestView.classList.add('hidden');
-                    resultView.classList.remove('hidden');
-                    resultMessage.textContent = result.message || 'Pedido de exclusão enviado com sucesso.';
-                    resultMessage.style.color = 'var(--success-text)';
-                } else {
-                    throw new Error(result.message || 'Ocorreu um erro.');
+                if (!response.ok) {
+                    throw new Error(data.message || 'Ocorreu um erro ao enviar o seu pedido.');
                 }
+
+                // Sucesso
+                if (requestView) requestView.style.display = 'none';
+                if (resultView) resultView.style.display = 'block';
+                if (resultMessage) resultMessage.textContent = data.message;
 
             } catch (error) {
                 showNotification(`Erro: ${error.message}`, 'error');
-            } finally {
                 submitButton.disabled = false;
                 submitButton.textContent = 'Enviar Pedido';
             }
         });
     }
-
-    // Função showNotification (pode ser movida para um script global no futuro)
-    const showNotification = (message, type = 'info') => {
-        const container = document.getElementById('notification-container') || document.body;
-        const notification = document.createElement('div');
-        notification.className = `notification ${type}`;
-        notification.textContent = message;
-        container.appendChild(notification);
-        setTimeout(() => {
-            notification.remove();
-        }, 5000);
-    };
 });

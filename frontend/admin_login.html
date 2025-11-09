@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Login - Rota Hotspot</title>
     <link rel="stylesheet" href="css/admin_login_style.css">
+    <link rel="stylesheet" href="css/notifications.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -14,6 +15,25 @@
             background-size: cover;
             background-position: center;
             background-repeat: no-repeat;
+        }
+        /* [NOVO] Estilos para os botões do rodapé */
+        .form-footer {
+            display: flex;
+            flex-direction: column;
+            gap: 10px; /* Espaço entre os botões */
+            margin-top: 25px;
+        }
+        .footer-btn {
+            display: block;
+            width: 100%;
+            padding: 10px;
+            text-align: center;
+            text-decoration: none;
+            border-radius: 6px;
+            background-color: var(--background-light, #f0f2f5); /* Cor de fundo sutil */
+            color: var(--text-secondary, #555);
+            font-weight: 500;
+            transition: background-color 0.2s;
         }
     </style>
 </head>
@@ -42,8 +62,9 @@
             </form>
             
             <div class="form-footer">
-                <a href="admin_forgot_password.html">Esqueceu a sua senha?</a>
-                <a href="lgpd_request.html">Solicitar Exclusão de Dados</a>
+                <a href="admin_forgot_password.html" class="footer-btn">Esqueceu a sua senha?</a>
+                <a href="lgpd_request.html" class="footer-btn">Solicitar Exclusão de Dados</a>
+                <a href="support_request.html" class="footer-btn">Precisa de Suporte?</a>
             </div>
             
 
@@ -51,6 +72,9 @@
 
     </div>
 
-    <script src="js/admin_login.js"></script>
+    <!-- [NOVO] Contêiner e script para as notificações -->
+    <div id="notification-container"></div>
+    <script src="js/notifications.js" defer></script>
+    <script src="js/admin_login.js" defer></script>
 </body>
 </html>

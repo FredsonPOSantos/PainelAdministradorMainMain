@@ -10,6 +10,7 @@ const pool = require('../connection');
 const crypto = require('crypto');
 const { logAction } = require('../services/auditLogService'); // [NOVO] Importa o serviço de log
 const authMiddleware = require('../middlewares/authMiddleware');
+const { sendPasswordResetEmail } = require('../services/emailService'); // [NOVO] Importa o serviço de e-mail
 
 const reauthenticate = async (req, res) => {
     const { email, password } = req.body;
@@ -77,7 +78,10 @@ router.post('/login', async (req, res) => {
           description: `Tentativa de login falhou: utilizador "${email}" não encontrado.`,
           user_email: email
       });
-      return res.status(401).json({ message: "Credenciais inválidas." });
+      return res.status(401).json({ 
+          code: 'USER_NOT_FOUND', 
+          message: "Usuário não cadastrado. Para solicitar acesso, entre em contato com ti@rotatransportes.com.br ou solicite pelo suporte." 
+      });
     }
 
     const user = userQuery.rows[0];
@@ -176,11 +180,11 @@ router.post('/forgot-password', async (req, res) => {
             [token, expires, user.id]
         );
 
-        // 5. Enviar o e-mail (Simulação)
-        // (O seu serviço de e-mail enviaria o link: `http://SEU_FRONTEND/admin_reset_password.html?token=${token}`)
-        
+        // 5. Enviar o e-mail de recuperação
+        await sendPasswordResetEmail(user.email, token);
+
         res.status(200).json({
-            message: `[SIMULAÇÃO] E-mail enviado. O link de recuperação conteria este token (copie-o para testar): ${token}`
+            message: "Se um utilizador com este e-mail existir, um link de recuperação foi enviado."
         });
 
     } catch (error) {

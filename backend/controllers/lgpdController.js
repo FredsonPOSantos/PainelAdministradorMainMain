@@ -3,13 +3,14 @@
 
 const pool = require('../connection');
 const { logAction } = require('../services/auditLogService');
+const { sendExclusionRequestNotificationEmail } = require('../services/emailService');
 
 // Função para um utilizador do hotspot solicitar a exclusão dos seus dados
 const requestExclusion = async (req, res) => {
-    const { email } = req.body;
+    const { email, fullName } = req.body;
 
-    if (!email) {
-        return res.status(400).json({ success: false, message: 'O e-mail é obrigatório para solicitar a exclusão.' });
+    if (!email || !fullName) {
+        return res.status(400).json({ success: false, message: 'O nome completo e o e-mail são obrigatórios.' });
     }
 
     try {
@@ -29,7 +30,11 @@ const requestExclusion = async (req, res) => {
             [email]
         );
 
-        // [TODO - Fase 4.1] Idealmente, aqui seria gerado um alerta para os administradores
+        // Envia notificação por e-mail para a equipa de TI/DPO
+        await sendExclusionRequestNotificationEmail({
+            name: fullName,
+            email: email
+        });
 
         res.status(201).json({
             success: true,
