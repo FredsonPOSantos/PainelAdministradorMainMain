@@ -1,31 +1,26 @@
 // Ficheiro: frontend/js/admin_settings.js
-// [VERSÃO 14.0 - REFEITO O LAYOUT DE PERMISSÕES]
+// [VERSÃO 14.2 - INICIALIZAÇÃO ROBUSTA]
 
-if (window.initSettingsPage) {
-    console.warn("Tentativa de carregar admin_settings.js múltiplas vezes.");
-} else {
     let isInitializingSettings = false;
     let originalPermissionsState = {};
 
     window.initSettingsPage = () => {
         if (isInitializingSettings) { return; }
         isInitializingSettings = true;
-        console.log("A inicializar a página de Configurações (V14.0)...");
+        console.log("A inicializar a página de Configurações (V14.3 - Change Detection)...");
 
-        // --- Elementos ---
-        const tabNav = document.querySelector('.tab-nav');
+        let initialAppearanceSettings = {}; // Armazena o estado inicial das configurações de aparência
+
+        // --- Seletores de Elementos ---
+        const changeOwnPasswordForm = document.getElementById('changeOwnPasswordForm');
+        const unifiedAppearanceForm = document.getElementById('unifiedAppearanceForm');
+        const removeBackgroundBtn = document.getElementById('removeBackground');
+        const removeLoginLogoBtn = document.getElementById('removeLoginLogo');
+        const backgroundUploadInput = document.getElementById('backgroundUpload');
+        const loginBgColorInput = document.getElementById('loginBackgroundColor');
         const tabLinks = document.querySelectorAll('.tab-nav .tab-link');
         const tabContents = document.querySelectorAll('.tab-content-container .tab-content');
-        const changeOwnPasswordForm = document.getElementById('changeOwnPasswordForm');
-        const companySettingsForm = document.getElementById('companySettingsForm');
-        const appearanceSettingsForm = document.getElementById('appearanceSettingsForm');
-        const loginAppearanceSettingsForm = document.getElementById('loginAppearanceSettingsForm');
-        const hotspotSettingsForm = document.getElementById('hotspotSettingsForm');
-        const backgroundSettingsForm = document.getElementById('backgroundSettingsForm');
-        const loginLogoSettingsForm = document.getElementById('loginLogoSettingsForm');
-        const filterLogsBtn = document.getElementById('filterLogsBtn');
-        const clearFiltersBtn = document.getElementById('clearFiltersBtn');
-        let auditLogs = []; // Variável para armazenar os logs carregados
+        const resetAppearanceBtn = document.getElementById('resetAppearanceBtn');
 
         // --- Elementos da Aba de Permissões (NOVO LAYOUT) ---
         const permissionsGridContainer = document.getElementById('permissionsGridContainer');
@@ -35,299 +30,6 @@ if (window.initSettingsPage) {
         const permSaveChangesContainer = document.getElementById('permSaveChangesContainer');
         const permSaveChangesBtn = document.getElementById('permSaveChangesBtn');
         const permSaveStatus = document.getElementById('permSaveStatus');
-
-        // --- Lógica de Abas (estável) ---
-        const switchTab = (targetTabId) => {
-            if (!targetTabId) return;
-            tabContents.forEach(c => c.classList.remove('active'));
-            tabLinks.forEach(l => l.classList.remove('active'));
-            const targetContent = document.getElementById(targetTabId);
-            const targetLink = tabNav.querySelector(`.tab-link[data-tab="${targetTabId}"]`);
-            if (targetContent) targetContent.classList.add('active');
-            if (targetLink) targetLink.classList.add('active');
-
-            if (targetTabId === 'tab-logs') {
-                loadAuditLogs();
-            }
-        };
-
-        // --- Lógica Formulários (estável, omitida para brevidade) ---
-        if (changeOwnPasswordForm) {
-            changeOwnPasswordForm.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                const submitButton = changeOwnPasswordForm.querySelector('button[type="submit"]');
-                const currentPassword = document.getElementById('currentPassword').value;
-                const newVoluntaryPassword = document.getElementById('newVoluntaryPassword').value;
-                const confirmNewVoluntaryPassword = document.getElementById('confirmNewVoluntaryPassword').value;
-
-                if (newVoluntaryPassword !== confirmNewVoluntaryPassword) {
-                    showNotification('As novas senhas não coincidem.', 'error');
-                    return;
-                }
-
-                if (newVoluntaryPassword.length < 6) {
-                    showNotification('A nova senha deve ter no mínimo 6 caracteres.', 'error');
-                    return;
-                }
-
-                submitButton.disabled = true;
-                submitButton.textContent = 'A guardar...';
-
-                try {
-                    const result = await apiRequest('/api/user/change-password', 'POST', {
-                        currentPassword,
-                        newPassword: newVoluntaryPassword
-                    });
-
-                    if (result.success) {
-                        showNotification(result.message || 'Senha alterada com sucesso!', 'success');
-                        changeOwnPasswordForm.reset(); // Clear the form
-                    } else {
-                        showNotification(result.message || 'Erro ao alterar a senha.', 'error');
-                    }
-                } catch (error) {
-                    showNotification(`Erro ao alterar a senha: ${error.message}`, 'error');
-                } finally {
-                    submitButton.disabled = false;
-                    submitButton.textContent = 'Alterar Senha';
-                }
-            });
-        }
-        if (companySettingsForm) {
-            companySettingsForm.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                const submitButton = companySettingsForm.querySelector('button[type="submit"]');
-
-                submitButton.disabled = true;
-                submitButton.textContent = 'A guardar...';
-
-                const formData = new FormData();
-                formData.append('company_name', document.getElementById('companyName').value);
-                
-                const logoFile = document.getElementById('logoUpload').files[0];
-                if (logoFile) {
-                    formData.append('companyLogo', logoFile);
-                }
-
-                try {
-                    const result = await apiRequest('/api/settings/general', 'POST', formData);
-
-                    if (result.success) {
-                        window.systemSettings = result.data.settings;
-                        
-                        if (window.applyVisualSettings) {
-                            window.applyVisualSettings(result.data.settings);
-                        }
-                        
-                        showNotification(result.message || 'Configurações guardadas com sucesso!', 'success');
-                    } else {
-                        showNotification(result.message || 'Erro ao guardar configurações.', 'error');
-                    }
-
-                } catch (error) {
-                    showNotification(`Erro ao guardar configurações: ${error.message}`, 'error');
-                } finally {
-                    submitButton.disabled = false;
-                    submitButton.textContent = 'Guardar Configurações da Empresa';
-                }
-            });
-        }
-        if (appearanceSettingsForm) {
-            appearanceSettingsForm.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                const submitButton = appearanceSettingsForm.querySelector('button[type="submit"]');
-
-                submitButton.disabled = true;
-                submitButton.textContent = 'A guardar...';
-
-                const formData = new FormData();
-                formData.append('primary_color', document.getElementById('primaryColor').value);
-                formData.append('background_color', document.getElementById('backgroundColor').value);
-                formData.append('sidebar_color', document.getElementById('sidebarColor').value);
-                formData.append('font_color', document.getElementById('fontColor').value);
-                formData.append('font_family', document.getElementById('fontFamily').value);
-                formData.append('font_size', document.getElementById('fontSize').value);
-                formData.append('modal_background_color', document.getElementById('modalBackgroundColor').value);
-                formData.append('modal_font_color', document.getElementById('modalFontColor').value);
-                formData.append('modal_border_color', document.getElementById('modalBorderColor').value);
-
-                try {
-                    const result = await apiRequest('/api/settings/general', 'POST', formData);
-
-                    if (result.success) {
-                        window.systemSettings = result.data.settings;
-                        
-                        if (window.applyVisualSettings) {
-                            window.applyVisualSettings(result.data.settings);
-                        }
-                        
-                        showNotification(result.message || 'Configurações guardadas com sucesso!', 'success');
-                    } else {
-                        showNotification(result.message || 'Erro ao guardar configurações.', 'error');
-                    }
-
-                } catch (error) {
-                    showNotification(`Erro ao guardar configurações: ${error.message}`, 'error');
-                } finally {
-                    submitButton.disabled = false;
-                    submitButton.textContent = 'Guardar Alterações de Aparência';
-                }
-            });
-        }
-
-        if (loginAppearanceSettingsForm) {
-            loginAppearanceSettingsForm.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                const submitButton = loginAppearanceSettingsForm.querySelector('button[type="submit"]');
-
-                submitButton.disabled = true;
-                submitButton.textContent = 'A guardar...';
-
-                const data = {
-                    login_background_color: document.getElementById('loginBackgroundColor').value,
-                    login_form_background_color: document.getElementById('loginFormBackgroundColor').value,
-                    login_font_color: document.getElementById('loginFontColor').value,
-                    login_button_color: document.getElementById('loginButtonColor').value
-                };
-
-                try {
-                    const result = await apiRequest('/api/settings/login-appearance', 'POST', data);
-
-                    if (result.success) {
-                        window.systemSettings = result.data.settings;
-                        
-                        showNotification(result.message || 'Configurações guardadas com sucesso!', 'success');
-                    } else {
-                        showNotification(result.message || 'Erro ao guardar configurações.', 'error');
-                    }
-
-                } catch (error) {
-                    showNotification(`Erro ao guardar configurações: ${error.message}`, 'error');
-                } finally {
-                    submitButton.disabled = false;
-                    submitButton.textContent = 'Guardar Cores do Login';
-                }
-            });
-        }
-        if (hotspotSettingsForm) { /* ... listener ... */ }
-        if (backgroundSettingsForm) {
-            backgroundSettingsForm.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                const submitButton = backgroundSettingsForm.querySelector('button[type="submit"]');
-
-                submitButton.disabled = true;
-                submitButton.textContent = 'A guardar...';
-
-                const formData = new FormData();
-                const backgroundImageFile = document.getElementById('backgroundUpload').files[0];
-                if (backgroundImageFile) {
-                    formData.append('backgroundImage', backgroundImageFile);
-                }
-
-                try {
-                    const result = await apiRequest('/api/settings/background', 'POST', formData);
-                    if (result.success) {
-                        window.systemSettings = result.data.settings;
-                        showNotification(result.message || 'Imagem de fundo guardada com sucesso!', 'success');
-                        loadGeneralSettings(); // Recarrega as configurações para mostrar a nova imagem
-                    } else {
-                        showNotification(result.message || 'Erro ao guardar imagem de fundo.', 'error');
-                    }
-                } catch (error) {
-                    showNotification(`Erro ao guardar imagem de fundo: ${error.message}`, 'error');
-                } finally {
-                    submitButton.disabled = false;
-                    submitButton.textContent = 'Guardar Imagem de Fundo';
-                }
-            });
-        }
-
-        if (loginLogoSettingsForm) {
-            loginLogoSettingsForm.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                const successMsg = document.getElementById('loginLogoSettingsSuccess');
-                const errorMsg = document.getElementById('loginLogoSettingsError');
-                const submitButton = loginLogoSettingsForm.querySelector('button[type="submit"]');
-
-                successMsg.textContent = '';
-                errorMsg.textContent = '';
-                submitButton.disabled = true;
-                submitButton.textContent = 'A guardar...';
-
-                const formData = new FormData();
-                const loginLogoFile = document.getElementById('loginLogoUpload').files[0];
-                if (loginLogoFile) {
-                    formData.append('loginLogo', loginLogoFile);
-                } else {
-                    errorMsg.textContent = 'Nenhum ficheiro selecionado.';
-                    submitButton.disabled = false;
-                    submitButton.textContent = 'Guardar Logo do Login';
-                    return;
-                }
-
-                try {
-                    const response = await apiRequest('/api/settings/login-logo', 'POST', formData);
-                    if (response && response.settings) {
-                        window.systemSettings = response.settings;
-                        successMsg.textContent = response.message || 'Logo guardado com sucesso!';
-                        loadGeneralSettings(); // Recarrega as configurações para mostrar a nova imagem
-                    } else {
-                        throw new Error('A API não retornou as novas configurações.');
-                    }
-                } catch (error) {
-                    errorMsg.textContent = `Erro ao guardar o logo: ${error.message}`;
-                } finally {
-                    submitButton.disabled = false;
-                    submitButton.textContent = 'Guardar Logo do Login';
-                }
-            });
-        }
-
-        const loadGeneralSettings = async () => {
-            try {
-                const settings = await apiRequest('/api/settings/general');
-                if (settings) {
-                    document.getElementById('companyName').value = settings.company_name || '';
-                    document.getElementById('primaryColor').value = settings.primary_color || '#4299e1';
-                    document.getElementById('backgroundColor').value = settings.background_color || '#1a202c';
-                    document.getElementById('sidebarColor').value = settings.sidebar_color || '#2d3748';
-                    document.getElementById('fontColor').value = settings.font_color || '#edf2f7';
-                    document.getElementById('fontFamily').value = settings.font_family || '\'Inter\', sans-serif';
-                    document.getElementById('fontSize').value = settings.font_size || '16';
-                    document.getElementById('modalBackgroundColor').value = settings.modal_background_color || '#2d3748';
-                    document.getElementById('modalFontColor').value = settings.modal_font_color || '#edf2f7';
-                    document.getElementById('modalBorderColor').value = settings.modal_border_color || '#4a5568';
-                    document.getElementById('loginBackgroundColor').value = settings.login_background_color || '#1a202c';
-                    document.getElementById('loginFormBackgroundColor').value = settings.login_form_background_color || '#2d3748';
-                    document.getElementById('loginFontColor').value = settings.login_font_color || '#edf2f7';
-                    document.getElementById('loginButtonColor').value = settings.login_button_color || '#062f51';
-                    const logoPreview = document.getElementById('currentLogoPreview');
-                    if (settings.logo_url) {
-                        logoPreview.src = `http://${window.location.hostname}:3000${settings.logo_url}`;
-                        logoPreview.style.display = 'block';
-                    } else {
-                        logoPreview.style.display = 'none';
-                    }
-                    const backgroundPreview = document.getElementById('currentBackgroundPreview');
-                    if (settings.background_image_url) {
-                        backgroundPreview.src = `http://${window.location.hostname}:3000${settings.background_image_url}`;
-                        backgroundPreview.style.display = 'block';
-                    } else {
-                        backgroundPreview.style.display = 'none';
-                    }
-
-                    const loginLogoPreview = document.getElementById('currentLoginLogoPreview');
-                    if (settings.login_logo_url) {
-                        loginLogoPreview.src = `http://${window.location.hostname}:3000${settings.login_logo_url}`;
-                        loginLogoPreview.style.display = 'block';
-                    } else {
-                        loginLogoPreview.style.display = 'none';
-                    }
-                }
-            } catch (error) {
-                console.error('Erro ao carregar configurações gerais:', error);
-            }
-        };
 
         // --- LÓGICA DA ABA DE PERMISSÕES (REFEITA) ---
 
@@ -377,6 +79,46 @@ if (window.initSettingsPage) {
                 setTimeout(() => { if (permSaveStatus) { permSaveStatus.textContent = ''; permSaveStatus.style.color = ''; } }, 4000);
             }
         };
+
+
+
+        // --- Lógica de Abas ---
+        const switchTab = (targetTabId) => {
+            if (!targetTabId) return;
+            tabContents.forEach(c => c.classList.remove('active'));
+            tabLinks.forEach(l => l.classList.remove('active'));
+            const targetContent = document.getElementById(targetTabId);
+            const targetLink = document.querySelector(`.tab-nav .tab-link[data-tab="${targetTabId}"]`);
+            if (targetContent) targetContent.classList.add('active');
+            if (targetLink) targetLink.classList.add('active');
+        };
+
+        // --- Lógica de Reset ---
+        const handleResetAppearance = async () => {
+            const confirmed = await showConfirmationModal(
+                'Tem a certeza de que deseja repor TODAS as configurações de aparência para os valores predefinidos? Esta ação não pode ser desfeita.',
+                'Repor Predefinições de Aparência'
+            );
+
+            if (!confirmed) {
+                showNotification('A operação foi cancelada.', 'info');
+                return;
+            }
+
+            try {
+                const result = await apiRequest('/api/settings/appearance/reset', 'PUT');
+                if (result.success) {
+                    showNotification('As configurações de aparência foram repostas com sucesso.', 'success');
+                    // Recarrega as configurações para atualizar o formulário e aplicar os estilos
+                    await loadGeneralSettings();
+                } else {
+                    showNotification(result.message || 'Não foi possível repor as configurações.', 'error');
+                }
+            } catch (error) {
+                showNotification(`Erro ao repor as configurações: ${error.message}`, 'error');
+            }
+        };
+
 
         const renderPermissionsGrid = (matrixData, selectedRole, isMaster) => {
             const grid = permissionsGridContainer.querySelector('.permissions-grid');
@@ -535,6 +277,223 @@ if (window.initSettingsPage) {
             }
         };
 
+        // --- Lógica de Formulários ---
+        const handleChangeOwnPassword = async (e) => {
+            e.preventDefault();
+            const form = e.currentTarget;
+            const submitButton = form.querySelector('button[type="submit"]');
+            const currentPassword = document.getElementById('currentPassword').value;
+            const newVoluntaryPassword = document.getElementById('newVoluntaryPassword').value;
+            const confirmNewVoluntaryPassword = document.getElementById('confirmNewVoluntaryPassword').value;
+
+            if (newVoluntaryPassword !== confirmNewVoluntaryPassword) {
+                showNotification('As novas senhas não coincidem.', 'error');
+                return;
+            }
+            if (newVoluntaryPassword.length < 6) {
+                showNotification('A nova senha deve ter no mínimo 6 caracteres.', 'error');
+                return;
+            }
+
+            submitButton.disabled = true;
+            submitButton.textContent = 'A guardar...';
+
+            try {
+                const result = await apiRequest('/api/user/change-password', 'POST', {
+                    currentPassword,
+                    newPassword: newVoluntaryPassword
+                });
+                showNotification(result.message || 'Operação concluída.', result.success ? 'success' : 'error');
+                if (result.success) form.reset();
+            } catch (error) {
+                showNotification(`Erro ao alterar a senha: ${error.message}`, 'error');
+            } finally {
+                submitButton.disabled = false;
+                submitButton.textContent = 'Alterar Senha';
+            }
+        };
+
+        const handleUnifiedAppearance = async (e) => {
+            e.preventDefault();
+            const submitButton = document.getElementById('saveAppearanceBtn');
+            if (!submitButton) return;
+
+            const formData = new FormData();
+            let hasChanges = false;
+
+            // Mapeia IDs do formulário para chaves no objeto de configurações
+            // [ADICIONADO] 'companyName' ao mapeamento
+            const fieldMapping = {
+                'primaryColor': 'primary_color',
+                'backgroundColor': 'background_color',
+                'sidebarColor': 'sidebar_color',
+                'fontColor': 'font_color',
+                'fontFamily': 'font_family',
+                'fontSize': 'font_size',
+                'modalBackgroundColor': 'modal_background_color',
+                'modalFontColor': 'modal_font_color',
+                'modalBorderColor': 'modal_border_color',
+                'loginBackgroundColor': 'login_background_color',
+                'loginFormBackgroundColor': 'login_form_background_color',
+                'loginFontColor': 'login_font_color',
+                'loginButtonColor': 'login_button_color',
+                'companyName': 'company_name'
+            };
+
+            // 1. Compara campos de texto e cor
+            for (const id in fieldMapping) {
+                const element = document.getElementById(id);
+                if (element) {
+                    const initialValue = initialAppearanceSettings[fieldMapping[id]];
+                    const currentValue = element.value;
+                    // Compara valores, tratando `null` e `undefined` de forma similar a string vazia para inputs
+                    if (String(initialValue || '') !== String(currentValue)) {
+                        formData.append(fieldMapping[id], currentValue);
+                        hasChanges = true;
+                    }
+                }
+            }
+
+            // 2. Verifica upload de ficheiros
+            const loginLogoInput = document.getElementById('loginLogoUpload');
+            if (loginLogoInput && loginLogoInput.files[0]) {
+                const loginLogoFile = loginLogoInput.files[0];
+                formData.append('loginLogo', loginLogoFile);
+                hasChanges = true;
+            }
+
+            const backgroundImageInput = document.getElementById('backgroundUpload');
+            if (backgroundImageInput && backgroundImageInput.files[0]) {
+                const backgroundImageFile = backgroundImageInput.files[0];
+                formData.append('backgroundImage', backgroundImageFile);
+                hasChanges = true;
+            }
+
+            const companyLogoFile = document.getElementById('logoUpload')?.files[0]; // Este pode ficar como está, pois é o principal
+            if (companyLogoFile) { 
+                formData.append('companyLogo', companyLogoFile);
+                hasChanges = true;
+            }
+
+            // 3. Verifica remoção de imagens
+            if (unifiedAppearanceForm.dataset.removeBackground === 'true') {
+                formData.append('removeBackgroundImage', 'true');
+                hasChanges = true;
+            }
+            if (unifiedAppearanceForm.dataset.removeLoginLogo === 'true') {
+                formData.append('removeLoginLogo', 'true');
+                hasChanges = true;
+            }
+
+            // 4. Se não houver alterações, notifica e pára
+            if (!hasChanges) {
+                showNotification("Nenhuma alteração detectada.", "info");
+                return;
+            }
+
+            submitButton.disabled = true;
+            submitButton.textContent = 'A guardar...';
+
+            try {
+                const result = await apiRequest('/api/settings/appearance', 'POST', formData);
+                // LOG ADICIONADO: Mostra a resposta completa ao guardar
+                console.log('%c[handleUnifiedAppearance] Resposta da API após guardar:', 'color: orange;', result);
+
+                if (result.success && result.data && result.data.settings) {
+                    window.systemSettings = result.data.settings;
+                    if (window.applyVisualSettings) window.applyVisualSettings(result.data.settings);
+                    // Recarrega as configurações para atualizar o estado inicial (`initialAppearanceSettings`)
+                    await loadGeneralSettings(); 
+                }
+                showNotification(result.message || 'Configurações de aparência guardadas.', result.success ? 'success' : 'error');
+            } catch (error) {
+                showNotification(`Erro: ${error.message}`, 'error');
+            } finally {
+                submitButton.disabled = false;
+                submitButton.textContent = 'Guardar Todas as Alterações de Aparência';
+                delete unifiedAppearanceForm.dataset.removeBackground;
+                delete unifiedAppearanceForm.dataset.removeLoginLogo;
+            }
+        };
+
+        // --- Lógica de Carregamento de Dados ---
+        const loadGeneralSettings = async () => {
+            try {
+                const response = await apiRequest('/api/settings/general');
+                if (!response || !response.data) {
+                    showNotification('Não foi possível carregar as configurações de aparência.', 'error');
+                    return;
+                }
+                const settings = response.data;
+                
+                // LOG ADICIONADO: Mostra os dados que serão usados para preencher o formulário
+                console.log('%c[loadGeneralSettings] Configurações recebidas para preencher o formulário:', 'color: orange;', settings);
+
+                // Guarda o estado inicial para detecção de alterações
+                initialAppearanceSettings = { ...settings };
+
+                const fields = {
+                    'companyName': settings.company_name,
+                    'primaryColor': settings.primary_color,
+                    'backgroundColor': settings.background_color,
+                    'sidebarColor': settings.sidebar_color,
+                    'fontColor': settings.font_color,
+                    'fontFamily': settings.font_family,
+                    'fontSize': settings.font_size,
+                    'modalBackgroundColor': settings.modal_background_color,
+                    'modalFontColor': settings.modal_font_color,
+                    'modalBorderColor': settings.modal_border_color,
+                    'loginBackgroundColor': settings.login_background_color,
+                    'loginFormBackgroundColor': settings.login_form_background_color,
+                    'loginFontColor': settings.login_font_color,
+                    'loginButtonColor': settings.login_button_color,
+                };
+                
+                for (const id in fields) {
+                    const el = document.getElementById(id);
+                    if (el) {
+                        // Se o valor for nulo ou indefinido, o campo ficará vazio,
+                        // permitindo que o CSS ou o browser definam o valor visual padrão.
+                        el.value = fields[id] || '';
+                    }
+                }
+
+                const updatePreview = (previewId, removeBtnId, url) => {
+                    const preview = document.getElementById(previewId);
+                    const removeBtn = document.getElementById(removeBtnId);
+                    if (!preview) {
+                        console.warn(`Elemento de preview não encontrado: ${previewId}`);
+                        return;
+                    }
+                    const hasUrl = !!url;
+                    preview.style.display = hasUrl ? 'block' : 'none';
+                    if (hasUrl) preview.src = `http://${window.location.hostname}:3000${url}?v=${Date.now()}`;
+                    
+                    if (removeBtn) {
+                        removeBtn.style.display = hasUrl ? 'inline-block' : 'none';
+                    } else if (hasUrl) {
+                        // Se há uma URL mas nenhum botão de remover, é bom estar ciente disso.
+                        // Pode ser intencional (como no logo da empresa).
+                        console.log(`Preview '${previewId}' atualizado, mas nenhum botão de remoção '${removeBtnId}' foi encontrado.`);
+                    }
+                };
+
+                updatePreview('currentLogoPreview', 'removeLogo', settings.logo_url);
+                updatePreview('currentBackgroundPreview', 'removeBackground', settings.background_image_url);
+                updatePreview('currentLoginLogoPreview', 'removeLoginLogo', settings.login_logo_url);
+
+                const loginBgColorInput = document.getElementById('loginBackgroundColor');
+                if (loginBgColorInput) loginBgColorInput.disabled = !!settings.background_image_url;
+
+            } catch (error) {
+                console.error('Erro ao carregar configurações gerais:', error);
+                showNotification('Falha ao carregar as configurações de aparência.', 'error');
+            }
+        };
+
+
+        let auditLogs = []; // Variável para armazenar os logs carregados
+
         const loadAuditLogs = async (filters = {}) => {
             const tableBody = document.getElementById('auditLogsTableBody');
             if (!tableBody) return;
@@ -606,24 +565,6 @@ if (window.initSettingsPage) {
             }
         };
 
-        if (filterLogsBtn) {
-            filterLogsBtn.addEventListener('click', () => {
-                const keyword = document.getElementById('logKeyword').value;
-                const startDate = document.getElementById('logStartDate').value;
-                const endDate = document.getElementById('logEndDate').value;
-                loadAuditLogs({ keyword, startDate, endDate });
-            });
-        }
-
-        if (clearFiltersBtn) {
-            clearFiltersBtn.addEventListener('click', () => {
-                document.getElementById('logKeyword').value = '';
-                document.getElementById('logStartDate').value = '';
-                document.getElementById('logEndDate').value = '';
-                loadAuditLogs();
-            });
-        }
-
         const exportToCSV = () => {
             const header = ["Data/Hora", "Utilizador", "IP", "Ação", "Status", "Descrição"];
             const csv = [
@@ -663,13 +604,29 @@ if (window.initSettingsPage) {
             XLSX.writeFile(workbook, "logs_de_auditoria.xlsx");
         };
 
+        const filterLogsBtn = document.getElementById('filterLogsBtn');
+        const clearFiltersBtn = document.getElementById('clearFiltersBtn');
+
+        if (filterLogsBtn) {
+            filterLogsBtn.addEventListener('click', () => {
+                const keyword = document.getElementById('logKeyword').value;
+                const startDate = document.getElementById('logStartDate').value;
+                const endDate = document.getElementById('logEndDate').value;
+                loadAuditLogs({ keyword, startDate, endDate });
+            });
+        }
+
+        if (clearFiltersBtn) {
+            clearFiltersBtn.addEventListener('click', () => {
+                document.getElementById('logKeyword').value = '';
+                document.getElementById('logStartDate').value = '';
+                document.getElementById('logEndDate').value = '';
+                loadAuditLogs();
+            });
+        }
+
         document.getElementById('exportCsvBtn')?.addEventListener('click', exportToCSV);
         document.getElementById('exportExcelBtn')?.addEventListener('click', exportToExcel);
-
-        const searchUserLgpdForm = document.getElementById('searchUserLgpdForm');
-        if (searchUserLgpdForm) {
-            searchUserLgpdForm.addEventListener('submit', searchLgpdUsers);
-        }
 
         // --- INICIALIZAÇÃO DA PÁGINA ---
         const initializeSettingsPage = async () => {
@@ -749,6 +706,10 @@ if (window.initSettingsPage) {
             });
         }
 
+        // [ADICIONADO] Listener para o formulário de aparência unificado
+        if (unifiedAppearanceForm) {
+            unifiedAppearanceForm.addEventListener('submit', handleUnifiedAppearance);
+        }
+
         initializeSettingsPage();
-    };
-}
+    }; // <-- Esta chave fecha a função window.initSettingsPage

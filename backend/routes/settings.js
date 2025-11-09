@@ -7,8 +7,9 @@ const router = express.Router();
 const verifyToken = require('../middlewares/authMiddleware');
 const checkPermission = require('../middlewares/roleMiddleware');
 const logoUploadMiddleware = require('../middlewares/logoUploadMiddleware');
-const backgroundUploadMiddleware = require('../middlewares/backgroundUploadMiddleware');
-const loginLogoUploadMiddleware = require('../middlewares/loginLogoUploadMiddleware');
+// const backgroundUploadMiddleware = require('../middlewares/backgroundUploadMiddleware');
+// const loginLogoUploadMiddleware = require('../middlewares/loginLogoUploadMiddleware');
+const appearanceUploadMiddleware = require('../middlewares/appearanceUploadMiddleware'); // NOVO
 const settingsController = require('../controllers/settingsController');
 
 // --- ROTAS DE CONFIGURAÇÕES GERAIS ---
@@ -19,13 +20,23 @@ router.get(
     settingsController.getGeneralSettings
 );
 
-// Atualização das configurações gerais
+// ROTA UNIFICADA DE APARÊNCIA
 router.post(
-    '/general',
-    [verifyToken, checkPermission('settings.general.update'), logoUploadMiddleware],
-    settingsController.updateGeneralSettings
+    '/appearance',
+    [verifyToken, checkPermission('settings.appearance'), appearanceUploadMiddleware],
+    settingsController.updateAppearanceSettings // NOVA FUNÇÃO DO CONTROLLER
 );
 
+// ROTA PARA REPOR AS CONFIGURAÇÕES DE APARÊNCIA
+router.put(
+    '/appearance/reset',
+    [verifyToken, checkPermission('settings.appearance')],
+    settingsController.resetAppearanceSettings
+);
+
+
+
+/* ROTAS ANTIGAS - AGORA UNIFICADAS EM /appearance
 // Atualização da imagem de fundo
 router.post(
     '/background',
@@ -46,6 +57,7 @@ router.post(
     [verifyToken, checkPermission('settings.login_page'), loginLogoUploadMiddleware],
     settingsController.updateLoginLogo
 );
+*/
 
 // --- ROTAS DE CONFIGURAÇÕES DO PORTAL HOTSPOT ---
 
@@ -66,4 +78,3 @@ router.post(
 );
 
 module.exports = router;
-

@@ -51,185 +51,158 @@
     </div>
 
     <!-- Aba 2: Geral (Fase 2.3) -->
-    <div id="tab-empresa" class="tab-content admin-only master-only">
-        <div class="content-section">
-            <div class="section-header">
-                <h4>Configurações Gerais da Empresa</h4>
-            </div>
-            <form id="companySettingsForm" enctype="multipart/form-data">
-                <div class="input-group">
-                    <!-- [CORRIGIDO] Adicionado for="companyName" -->
-                    <label for="companyName">Nome da Empresa</label>
-                    <input type="text" id="companyName" placeholder="O nome que aparece no painel">
-                </div>
-                
-                <div class="input-group">
-                    <!-- [CORRIGIDO] Adicionado for="logoUpload" -->
-                    <label for="logoUpload">Logótipo (.png, .jpg, .svg)</label>
-                    <input type="file" id="logoUpload" accept="image/png, image/jpeg, image/svg+xml">
-                    <div class="logo-preview-container">
-                        <p>Pré-visualização do Logo Atual:</p>
-                        <img id="currentLogoPreview" src="#" alt="Logo Atual" style="display: none; max-height: 50px; background-color: #fff; border-radius: 4px; padding: 5px; margin-top: 10px;">
-                    </div>
-                </div>
-                
+    <div id="tab-empresa" class="tab-content admin-only master-only"></div>
 
-                <div class="form-actions">
-                    <button type="submit" class="btn-primary">Guardar Configurações da Empresa</button>
-                </div>
-            </form>
-        </div>
-    </div>
 
-    <!-- Aba Aparência -->
+    <!-- Aba Aparência (REESTRUTURADA) -->
     <div id="tab-aparencia" class="tab-content admin-only">
-        <div class="content-section">
-            <div class="section-header">
-                <h4>Configurações de Aparência</h4>
+        <style>
+            .settings-grid-container {
+                display: flex;
+                gap: 40px;
+                flex-wrap: wrap;
+            }
+            .settings-column {
+                flex: 1;
+                min-width: 300px; /* Garante que a coluna não fique muito estreita */
+            }
+            .column-title {
+                font-weight: bold;
+                margin-bottom: 15px;
+                border-bottom: 1px solid var(--border-color, #e76005);
+                padding-bottom: 10px;
+                font-size: 1.1em;
+            }
+        </style>
+        <form id="unifiedAppearanceForm" enctype="multipart/form-data">
+            
+            <div class="content-section">
+                <div class="section-header">
+                    <h4>Aparência Geral do Painel</h4>
+                </div>
+
+                <div class="settings-grid-container">
+                    <!-- Coluna 0: Nome e Logo da Empresa -->
+                    <div class="settings-column">
+                        <p class="column-title">Identidade da Empresa</p>
+                        <div class="input-group">
+                            <label for="companyName">Nome da Empresa</label>
+                            <input type="text" id="companyName" placeholder="O nome que aparece no painel">
+                        </div>
+                        <div class="input-group">
+                            <label for="logoUpload">Logótipo do Painel (.png, .jpg, .svg)</label>
+                            <input type="file" id="logoUpload" name="companyLogo" accept="image/png, image/jpeg, image/svg+xml">
+                            <div class="logo-preview-container" style="margin-top: 10px;">
+                                <img id="currentLogoPreview" src="#" alt="Logo Atual" style="display: none; max-height: 50px; background-color: #fff; border-radius: 4px; padding: 5px;">
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Coluna 1 -->
+                    <div class="settings-column">
+                        <p class="column-title">Cores Principais</p>
+                        <div class="input-group">
+                            <label for="primaryColor">Cor Primária (destaques)</label>
+                            <input type="color" id="primaryColor" class="color-picker">
+                        </div>
+                        <div class="input-group">
+                            <label for="backgroundColor">Cor do Fundo do Painel</label>
+                            <input type="color" id="backgroundColor" class="color-picker">
+                        </div>
+                        <div class="input-group">
+                            <label for="sidebarColor">Cor do Menu Lateral</label>
+                            <input type="color" id="sidebarColor" class="color-picker">
+                        </div>
+                        <div class="input-group">
+                            <label for="fontColor">Cor da Fonte do Painel</label>
+                            <input type="color" id="fontColor" class="color-picker">
+                        </div>
+                    </div>
+                    <!-- Coluna 2 -->
+                    <div class="settings-column">
+                        <p class="column-title">Fontes e Modais</p>
+                        <div class="input-group">
+                            <label for="fontFamily">Fonte Principal</label>
+                            <select id="fontFamily">
+                                <option value="'Inter', sans-serif" style="font-family: 'Inter', sans-serif;">Inter (Padrão)</option>
+                                <option value="'Arial', sans-serif" style="font-family: 'Arial', sans-serif;">Arial</option>
+                                <option value="'Verdana', sans-serif" style="font-family: 'Verdana', sans-serif;">Verdana</option>
+                            </select>
+                        </div>
+                        <div class="input-group">
+                            <label for="fontSize">Tamanho da Fonte (px)</label>
+                            <input type="number" id="fontSize" min="10" max="24">
+                        </div>
+                        <div class="input-group">
+                            <label for="modalBackgroundColor">Fundo do Modal</label>
+                            <input type="color" id="modalBackgroundColor" class="color-picker">
+                        </div>
+                        <div class="input-group">
+                            <label for="modalFontColor">Fonte do Modal</label>
+                            <input type="color" id="modalFontColor" class="color-picker">
+                        </div>
+                        <div class="input-group">
+                            <label for="modalBorderColor">Borda do Modal</label>
+                            <input type="color" id="modalBorderColor" class="color-picker">
+                        </div>
+                    </div>
+                </div>
             </div>
-            <form id="appearanceSettingsForm">
-                <div class="input-group">
-                    <!-- [CORRIGIDO] Adicionado for="primaryColor" -->
-                    <label for="primaryColor">Cor Primária</label>
-                    <input type="color" id="primaryColor" value="#4299e1" class="color-picker">
-                    <p class="input-hint">Define a cor dos botões e destaques do painel.</p>
-                </div>
 
-                <div class="input-group appearance-setting">
-                    <label for="backgroundColor">Cor do Plano de Fundo</label>
-                    <input type="color" id="backgroundColor" value="#1a202c" class="color-picker">
-                    <p class="input-hint">Define a cor de fundo principal do painel.</p>
-                </div>
-
-                <div class="input-group appearance-setting">
-                    <label for="sidebarColor">Cor do Menu Lateral</label>
-                    <input type="color" id="sidebarColor" value="#2d3748" class="color-picker">
-                    <p class="input-hint">Define a cor de fundo do menu lateral e do cabeçalho.</p>
-                </div>
-
-                <div class="input-group appearance-setting">
-                    <label for="fontColor">Cor da Fonte</label>
-                    <input type="color" id="fontColor" value="#edf2f7" class="color-picker">
-                    <p class="input-hint">Define a cor do texto principal do painel.</p>
-                </div>
-
-                <div class="input-group appearance-setting">
-                    <label for="modalBackgroundColor">Cor de Fundo do Modal</label>
-                    <input type="color" id="modalBackgroundColor" value="#2d3748" class="color-picker">
-                    <p class="input-hint">Define a cor de fundo dos modais.</p>
-                </div>
-
-                <div class="input-group appearance-setting">
-                    <label for="modalFontColor">Cor da Fonte do Modal</label>
-                    <input type="color" id="modalFontColor" value="#edf2f7" class="color-picker">
-                    <p class="input-hint">Define a cor do texto dos modais.</p>
-                </div>
-
-                <div class="input-group appearance-setting">
-                    <label for="modalBorderColor">Cor da Borda do Modal</label>
-                    <input type="color" id="modalBorderColor" value="#4a5568" class="color-picker">
-                    <p class="input-hint">Define a cor da borda dos modais.</p>
-                </div>
-
-                <div class="input-group appearance-setting">
-                    <label for="fontFamily">Família da Fonte</label>
-                    <select id="fontFamily">
-                        <option value="'Inter', sans-serif" style="font-family: 'Inter', sans-serif;">Inter (Padrão)</option>
-                        <option value="'Arial', sans-serif" style="font-family: 'Arial', sans-serif;">Arial</option>
-                        <option value="'Verdana', sans-serif" style="font-family: 'Verdana', sans-serif;">Verdana</option>
-                        <option value="'Georgia', serif" style="font-family: 'Georgia', serif;">Georgia</option>
-                        <option value="'Times New Roman', serif" style="font-family: 'Times New Roman', serif;">Times New Roman</option>
-                        <option value="'Courier New', monospace" style="font-family: 'Courier New', monospace;">Courier New</option>
-                    </select>
-                    <p class="input-hint">Escolha a fonte para o painel. A pré-visualização é mostrada na lista.</p>
-                </div>
-
-                <div class="input-group appearance-setting">
-                    <label for="fontSize">Tamanho da Fonte (px)</label>
-                    <input type="number" id="fontSize" value="16" min="10" max="24">
-                    <p class="input-hint">Define o tamanho da fonte base do painel (em pixels).</p>
+            <div class="content-section">
+                <div class="section-header">
+                    <h4>Aparência da Página de Login</h4>
                 </div>
                 
+                <div class="settings-grid-container">
+                    <!-- Coluna 1: Cores e Fundo -->
+                    <div class="settings-column">
+                        <p class="column-title">Fundo e Cores</p>
+                        <div class="input-group">
+                            <label for="backgroundUpload">Imagem de Fundo</label>
+                            <input type="file" id="backgroundUpload" name="backgroundImage" accept="image/png, image/jpeg">
+                            <div class="image-preview-container" style="margin-top: 10px;">
+                                <img id="currentBackgroundPreview" src="#" alt="Imagem de Fundo Atual" style="display: none; max-width: 100%; max-height: 100px; object-fit: cover;">
+                                <button type="button" id="removeBackground" class="btn-danger btn-small" style="display: none; margin-top: 10px;">Remover Imagem</button>
+                            </div>
+                        </div>
+                        <div class="input-group">
+                            <label for="loginBackgroundColor">Cor de Fundo da Página de Login (se não usar imagem)</label>
+                            <input type="color" id="loginBackgroundColor" class="color-picker">
+                        </div>
+                        <div class="input-group">
+                            <label for="loginFormBackgroundColor">Cor do Formulário</label>
+                            <input type="color" id="loginFormBackgroundColor" class="color-picker">
+                        </div>
+                        <div class="input-group">
+                            <label for="loginFontColor">Cor da Fonte</label>
+                            <input type="color" id="loginFontColor" class="color-picker">
+                        </div>
+                        <div class="input-group">
+                            <label for="loginButtonColor">Cor do Botão</label>
+                            <input type="color" id="loginButtonColor" class="color-picker">
+                        </div>
+                    </div>
 
-                <div class="form-actions">
-                    <button type="submit" class="btn-primary">Guardar Alterações de Aparência</button>
-                </div>
-            </form>
-        </div>
-
-        <div class="content-section login-appearance-setting">
-            <div class="section-header">
-                <h4>Imagem de Fundo do Login</h4>
-            </div>
-            <form id="backgroundSettingsForm" enctype="multipart/form-data">
-                <div class="input-group">
-                    <label for="backgroundUpload">Imagem de Fundo (.png, .jpg)</label>
-                    <input type="file" id="backgroundUpload" accept="image/png, image/jpeg">
-                    <p class="input-hint">Recomendado: 1920x1080px, máx 2MB.</p>
-                    <div class="image-preview-container" style="margin-top: 15px;">
-                        <p>Pré-visualização da Imagem Atual:</p>
-                        <img id="currentBackgroundPreview" src="#" alt="Imagem de Fundo Atual" style="display: none; max-width: 100%; max-height: 150px;">
+                    <!-- Coluna 2: Logo -->
+                    <div class="settings-column">
+                        <p class="column-title">Logo</p>
+                        <div class="input-group">
+                            <label for="loginLogoUpload">Logo da Página de Login</label>
+                            <input type="file" id="loginLogoUpload" name="loginLogo" accept="image/png, image/jpeg, image/svg+xml">
+                            <div class="image-preview-container" style="margin-top: 10px;">
+                                <img id="currentLoginLogoPreview" src="#" alt="Logo de Login Atual" style="display: none; max-width: 180px; max-height: 60px; background-color: #fff; border-radius: 4px; padding: 5px;">
+                                <button type="button" id="removeLoginLogo" class="btn-danger btn-small" style="display: none; margin-top: 10px;">Remover Logo</button>
+                            </div>
+                        </div>
                     </div>
                 </div>
-
-                <div class="form-actions">
-                    <button type="submit" class="btn-primary">Guardar Imagem de Fundo</button>
-                </div>
-            </form>
-        </div>
-
-        <div class="content-section login-appearance-setting">
-            <div class="section-header">
-                <h4>Logo da Página de Login</h4>
             </div>
-            <form id="loginLogoSettingsForm" enctype="multipart/form-data">
-                <div class="input-group">
-                    <label for="loginLogoUpload">Logo da Página de Login (.png, .jpg, .svg)</label>
-                    <input type="file" id="loginLogoUpload" name="loginLogo" accept="image/png, image/jpeg, image/svg+xml">
-                    <p class="input-hint">Este logo aparecerá na página de login. Máx 5MB.</p>
-                    <div class="image-preview-container" style="margin-top: 15px;">
-                        <p>Pré-visualização do Logo de Login Atual:</p>
-                        <img id="currentLoginLogoPreview" src="#" alt="Logo de Login Atual" style="display: none; max-width: 100%; max-height: 150px; background-color: #fff; border-radius: 4px; padding: 5px;">
-                    </div>
-                </div>
 
-                <div class="form-actions">
-                    <button type="submit" class="btn-primary">Guardar Logo do Login</button>
-                </div>
-            </form>
-        </div>
-
-        <div class="content-section login-appearance-setting">
-            <div class="section-header">
-                <h4>Cores da Página de Login</h4>
+            <!-- Ações do Formulário -->
+            <div class="form-actions" style="margin-top: 20px; border-top: 1px solid var(--border-color); padding-top: 20px;">
+                <button type="submit" id="saveAppearanceBtn" class="btn-primary">Guardar Todas as Alterações de Aparência</button>
             </div>
-            <form id="loginAppearanceSettingsForm">
-                <div class="input-group">
-                    <label for="loginBackgroundColor">Cor de Fundo da Página de Login</label>
-                    <input type="color" id="loginBackgroundColor" value="#1a202c" class="color-picker">
-                    <p class="input-hint">Define a cor de fundo da página de login.</p>
-                </div>
-                <div class="input-group">
-                    <label for="loginFormBackgroundColor">Cor de Fundo do Formulário de Login</label>
-                    <input type="color" id="loginFormBackgroundColor" value="#2d3748" class="color-picker">
-                    <p class="input-hint">Define a cor de fundo do formulário de login.</p>
-                </div>
-                <div class="input-group">
-                    <label for="loginFontColor">Cor da Fonte do Formulário de Login</label>
-                    <input type="color" id="loginFontColor" value="#edf2f7" class="color-picker">
-                    <p class="input-hint">Define a cor da fonte do formulário de login.</p>
-                </div>
-                <div class="input-group">
-                    <label for="loginButtonColor">Cor do Botão de Login</label>
-                    <input type="color" id="loginButtonColor" value="#062f51" class="color-picker">
-                    <p class="input-hint">Define a cor do botão "Entrar" na página de login.</p>
-                </div>
-
-                <div class="form-actions">
-                    <button type="submit" class="btn-primary">Guardar Cores do Login</button>
-                </div>
-            </form>
-        </div>
+        </form>
     </div>
     
     <!-- Aba 3: Portal Hotspot (Fase 2.4) -->
@@ -262,7 +235,7 @@
     </div>
 
     <!-- Aba 4: Funções e Permissões (Fase 3.1 - V13.5.3) -->
-    <div id="tab-permissoes" class="tab-content admin-only"> <!-- JS V13.1 irá controlar a visibilidade disto -->
+    <div id="tab-permissoes" class="tab-content admin-only">
         <div class="content-section">
              <div class="section-header">
                 <h4>Funções e Permissões</h4>
@@ -290,7 +263,7 @@
     </div>
 
     <!-- Aba 5: Logs de Atividade (Fase 3.2) -->
-    <div id="tab-logs" class="tab-content admin-only">
+    <div id="tab-logs" class="tab-content admin-only"> 
         <div class="content-section">
             <div class="section-header">
                 <h4>Logs de Atividade do Painel</h4>
@@ -343,7 +316,7 @@
     </div>
 
         <!-- Aba 6: Gestão LGPD (Fase 3.3) -->
-        <div id="tab-lgpd" class="tab-content admin-only">
+        <div id="tab-lgpd" class="tab-content admin-only"> 
             <div class="content-section">
                  <div class="section-header">
                     <h4>Gestão de Pedidos de Exclusão de Dados (LGPD)</h4>

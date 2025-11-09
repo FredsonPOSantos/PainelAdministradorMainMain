@@ -111,82 +111,50 @@ window.applyVisualSettings = (settings) => {
         console.warn("applyVisualSettings: Configurações não fornecidas.");
         return;
     }
-    console.log("applyVisualSettings: Aplicando configurações...", settings);
+    console.log("%c[applyVisualSettings] Invocada com:", "color: lightblue; font-weight: bold;", settings);
 
-    // 1. Logótipo no novo cabeçalho
+    const root = document.documentElement;
+
+    // Mapeamento de configurações para variáveis CSS
+    const styleMap = {
+        'primary_color': '--primary-color',          // CORRIGIDO: Alinhado com o CSS em uso
+        'background_color': '--background-dark',      // CORRIGIDO: Alinhado com o CSS em uso
+        'sidebar_color': '--background-medium',      // CORRIGIDO: Alinhado com o CSS em uso
+        'font_color': '--text-primary',            // CORRIGIDO: Alinhado com o CSS em uso
+        'font_family': '--font-family',
+        'font_size': '--font-size', // Adicionado 'px' abaixo
+        'modal_background_color': '--modal-background-color',
+        'modal_font_color': '--modal-font-color',
+        'modal_border_color': '--modal-border-color'
+    };
+
+    for (const key in styleMap) {
+        if (settings[key] !== undefined && settings[key] !== null) {
+            let value = settings[key];
+            if (key === 'font_size') {
+                value = `${value}px`;
+            }
+            console.log(` -> Aplicando ${styleMap[key]} = ${value}`);
+            root.style.setProperty(styleMap[key], value);
+        } else {
+            console.log(` -> Chave '${key}' está nula ou indefinida. Pulando.`);
+        }
+    }
+
+    // Lógica do logótipo
     const headerLogo = document.getElementById('headerLogo');
     if (headerLogo) {
         if (settings.logo_url) {
             const API_ADMIN_URL = `http://${window.location.hostname}:3000`;
             const logoPath = settings.logo_url.startsWith('/') ? settings.logo_url : '/' + settings.logo_url;
             const newLogoSrc = `${API_ADMIN_URL}${logoPath}?t=${Date.now()}`;
-            console.log(`applyVisualSettings: Encontrado headerLogo. Alterando src para '${newLogoSrc}'`);
             headerLogo.src = newLogoSrc;
             headerLogo.alt = settings.company_name || "Logótipo";
             headerLogo.style.display = 'block';
         } else {
-            console.log('applyVisualSettings: logo_url está vazio. Escondendo o logo.');
             headerLogo.style.display = 'none';
             headerLogo.src = '#';
         }
-    } else {
-        console.error('applyVisualSettings: Elemento #headerLogo não encontrado.');
-    }
-
-    // 2. Cor Primária (Variável CSS)
-    if (settings.primary_color) {
-        console.log(`applyVisualSettings: Alterando --primary-color para '${settings.primary_color}'`);
-        document.documentElement.style.setProperty('--primary-color', settings.primary_color);
-        
-        try {
-             let darkerColor = settings.primary_color;
-             if (settings.primary_color.startsWith('#') && settings.primary_color.length === 7) {
-                 let r = parseInt(settings.primary_color.substring(1, 3), 16);
-                 let g = parseInt(settings.primary_color.substring(3, 5), 16);
-                 let b = parseInt(settings.primary_color.substring(5, 7), 16);
-                 r = Math.max(0, r - 30).toString(16).padStart(2, '0');
-                 g = Math.max(0, g - 30).toString(16).padStart(2, '0');
-                 b = Math.max(0, b - 30).toString(16).padStart(2, '0');
-                 darkerColor = `#${r}${g}${b}`;
-             }
-             document.documentElement.style.setProperty('--primary-color-dark', darkerColor);
-             console.log(`applyVisualSettings: Alterando --primary-color-dark para '${darkerColor}'`);
-        } catch (colorError) {
-             console.error("Erro ao calcular cor escura:", colorError);
-             document.documentElement.style.setProperty('--primary-color-dark', settings.primary_color);
-        }
-    }
-
-    // 3. Novas configurações de aparência
-    if (settings.background_color) {
-        console.log(`applyVisualSettings: Alterando --background-dark para '${settings.background_color}'`);
-        document.documentElement.style.setProperty('--background-dark', settings.background_color);
-    }
-    if (settings.sidebar_color) {
-        console.log(`applyVisualSettings: Alterando --background-medium para '${settings.sidebar_color}'`);
-        document.documentElement.style.setProperty('--background-medium', settings.sidebar_color);
-    }
-    if (settings.font_color) {
-        console.log(`applyVisualSettings: Alterando --text-primary para '${settings.font_color}'`);
-        document.documentElement.style.setProperty('--text-primary', settings.font_color);
-    }
-    if (settings.font_family) {
-        console.log(`applyVisualSettings: Alterando --font-family para '${settings.font_family}'`);
-        document.documentElement.style.setProperty('--font-family', settings.font_family);
-    }
-    if (settings.font_size) {
-        console.log(`applyVisualSettings: Alterando --font-size para '${settings.font_size}px'`);
-        document.documentElement.style.setProperty('--font-size', `${settings.font_size}px`);
-    }
-
-    if (settings.modal_background_color) {
-        document.documentElement.style.setProperty('--modal-background-color', settings.modal_background_color);
-    }
-    if (settings.modal_font_color) {
-        document.documentElement.style.setProperty('--modal-font-color', settings.modal_font_color);
-    }
-    if (settings.modal_border_color) {
-        document.documentElement.style.setProperty('--modal-border-color', settings.modal_border_color);
     }
 };
 
@@ -729,21 +697,24 @@ document.addEventListener('DOMContentLoaded', async () => {
         return;
     }
 
-    // 2. Busca as configurações gerais
+    // 2. Busca e aplica as configurações gerais para TODOS os utilizadores
     try {
         console.log("Dashboard (V13.1.3): Buscando configurações gerais...");
         const settingsResponse = await apiRequest('/api/settings/general');
-        if (settingsResponse.data) {
-             window.systemSettings = settingsResponse.data; 
-             applyVisualSettings(settingsResponse.data); // Aplica nome, logo e cor
-             console.log("Dashboard (V13.1.3): Configurações visuais aplicadas.");
+        // LOG ADICIONADO: Mostra a resposta completa da API
+        console.log('%c[Dashboard Init] Resposta da API /api/settings/general:', 'color: orange;', settingsResponse);
+
+        if (settingsResponse?.data) {
+            window.systemSettings = settingsResponse.data;
+            applyVisualSettings(window.systemSettings);
+            console.log("%c[Dashboard Init] Configurações visuais aplicadas com sucesso.", "color: green;");
         } else {
-             console.warn("Dashboard (V13.1.3): Configurações gerais não retornadas pela API.");
-             window.systemSettings = {}; 
+            console.warn("Dashboard (V13.1.3): Configurações gerais não retornadas pela API.");
+            window.systemSettings = {};
         }
     } catch (settingsError) {
         console.error("Dashboard (V13.1.3): Erro ao buscar/aplicar configurações gerais:", settingsError);
-        window.systemSettings = {}; 
+        window.systemSettings = {};
     }
 
     // 3. [LÓGICA V13.6.1] Aplica permissões ao menu

@@ -32,157 +32,6 @@ const getGeneralSettings = async (req, res) => {
     }
 };
 
-/**
- * Atualiza as configurações gerais (Nome, Cor, Logo)
- * Espera 'multipart/form-data'
- */
-const updateGeneralSettings = async (req, res) => {
-    console.log("updateGeneralSettings: Iniciando atualização...");
-    // Dados do formulário (multipart/form-data)
-    const { company_name, primary_color, background_color, font_color, font_family, font_size, modal_background_color, modal_font_color, modal_border_color, sidebar_color } = req.body;
-    console.log("updateGeneralSettings: Dados recebidos (body):", { company_name, primary_color, background_color, font_color, font_family, font_size, modal_background_color, modal_font_color, modal_border_color, sidebar_color });
-    // Dados do ficheiro (do logoUploadMiddleware)
-    const newLogoFile = req.file;
-    console.log("updateGeneralSettings: Ficheiro recebido (req.file):", newLogoFile ? newLogoFile.filename : "Nenhum");
-
-    // VERIFICAÇÃO DE PERMISSÃO PARA APARÊNCIA
-    const canChangeAppearance = req.user.permissions['settings.appearance'] === true;
-
-    try {
-        // --- Prepara a Query de Atualização ---
-        const params = [];
-        const fields = [];
-        let queryIndex = 1;
-        let logoUrlForDB = null; // Variável para guardar o URL do logo para o DB
-
-        // Adiciona os campos de texto à query, se fornecidos
-        if (company_name !== undefined) { // Permite string vazia
-            fields.push(`company_name = $${queryIndex++}`);
-            params.push(company_name);
-        }
-        if (primary_color) {
-            // TODO: Adicionar validação se a cor é um formato válido (ex: #RRGGBB)
-            fields.push(`primary_color = $${queryIndex++}`);
-            params.push(primary_color);
-        }
-
-        // Apenas atualiza campos de aparência se o usuário tiver permissão
-        if (canChangeAppearance) {
-            if (background_color) {
-                fields.push(`background_color = $${queryIndex++}`);
-                params.push(background_color);
-            }
-            if (sidebar_color) {
-                fields.push(`sidebar_color = $${queryIndex++}`);
-                params.push(sidebar_color);
-            }
-            if (font_color) {
-                fields.push(`font_color = $${queryIndex++}`);
-                params.push(font_color);
-            }
-            if (font_family) {
-                fields.push(`font_family = $${queryIndex++}`);
-                params.push(font_family);
-            }
-            if (font_size) {
-                fields.push(`font_size = $${queryIndex++}`);
-                params.push(font_size);
-            }
-        }
-
-        // Apenas atualiza campos de aparência do modal se o usuário tiver permissão
-        if (req.user.permissions['settings.modal_colors'] === true) {
-            if (modal_background_color) {
-                fields.push(`modal_background_color = $${queryIndex++}`);
-                params.push(modal_background_color);
-            }
-            if (modal_font_color) {
-                fields.push(`modal_font_color = $${queryIndex++}`);
-                params.push(modal_font_color);
-            }
-            if (modal_border_color) {
-                fields.push(`modal_border_color = $${queryIndex++}`);
-                params.push(modal_border_color);
-            }
-        }
-
-        // --- Lógica do Logo ---
-        // Se um NOVO ficheiro foi enviado com sucesso pelo middleware
-        if (newLogoFile) {
-            // O middleware salva em 'public/uploads/logos/company_logo.ext'
-            // O URL que o frontend precisa é '/uploads/logos/company_logo.ext'
-
-            // Converte o caminho completo do ficheiro salvo (newLogoFile.path)
-            // para um caminho relativo à pasta 'public'
-            const relativePath = path.relative('public', newLogoFile.path);
-            // Garante que o URL use barras '/' e comece com '/'
-            logoUrlForDB = '/' + relativePath.replace(/\\/g, '/');
-            console.log(`updateGeneralSettings: Novo logo URL para DB: ${logoUrlForDB}`);
-
-            fields.push(`logo_url = $${queryIndex++}`);
-            params.push(logoUrlForDB);
-
-            // TODO (Opcional): Poderia apagar o logo antigo se a extensão mudou?
-            // Isso exigiria buscar o logo_url antigo antes do UPDATE.
-        }
-        // NOTA: Não há opção de "remover" o logo nesta lógica, apenas substituir.
-        // Para remover, precisaríamos de um campo extra no form (ex: removeLogo=true)
-        // e definir logo_url = NULL no UPDATE.
-
-        // --- Executa a Atualização ---
-        // Só executa se houver campos para atualizar
-        if (fields.length > 0) {
-            const updateQuery = `UPDATE system_settings SET ${fields.join(', ')} WHERE id = 1 RETURNING *`;
-            console.log("updateGeneralSettings: Executando query:", updateQuery, "com params:", params);
-            const updatedSettings = await pool.query(updateQuery, params);
-
-            // Verifica se a atualização foi bem-sucedida
-            if (updatedSettings.rows.length === 0) {
-                console.error("updateGeneralSettings: Falha ao atualizar, linha ID 1 não encontrada?");
-                 // Isso seria muito estranho se a tabela foi criada corretamente
-                 throw new Error("Falha ao encontrar o registo de configurações para atualizar.");
-            }
-
-            console.log("updateGeneralSettings: Configurações atualizadas no DB:", updatedSettings.rows[0]);
-
-            await logAction({
-                req,
-                action: 'SETTINGS_UPDATE_GENERAL',
-                status: 'SUCCESS',
-                description: `Utilizador "${req.user.email}" atualizou as configurações gerais.`,
-                target_type: 'settings'
-            });
-
-            res.status(200).json({
-                message: "Configurações gerais atualizadas com sucesso!",
-                settings: updatedSettings.rows[0] // Retorna as configurações atualizadas
-            });
-
-        } else {
-            console.log("updateGeneralSettings: Nenhum campo fornecido para atualização.");
-            // Nenhum campo foi alterado, retorna sucesso mas sem mudança
-            res.status(200).json({
-                 message: "Nenhuma alteração detectada nas configurações gerais.",
-                 // Poderia buscar e retornar as configurações atuais aqui se necessário
-            });
-        }
-
-    } catch (error) {
-        await logAction({
-            req,
-            action: 'SETTINGS_UPDATE_GENERAL_FAILURE',
-            status: 'FAILURE',
-            description: `Falha ao atualizar as configurações gerais. Erro: ${error.message}`,
-            target_type: 'settings',
-            details: { error: error.message }
-        });
-
-        console.error('Erro ao atualizar configurações gerais:', error);
-        // Devolve o erro para o frontend
-        res.status(500).json({ message: error.message || 'Erro interno do servidor ao atualizar configurações.' });
-    }
-};
-
 const updateBackgroundImage = async (req, res) => {
     console.log("updateBackgroundImage: Iniciando atualização...");
     const newBackgroundImageFile = req.file;
@@ -461,14 +310,142 @@ const updateLoginLogo = async (req, res) => {
     }
 };
 
+const updateAppearanceSettings = async (req, res) => {
+    try {
+        console.log('Recebendo atualização de aparência:', req.body);
+        
+        const updates = {};
+        const files = req.files || {};
+
+        // Processar arquivos enviados
+        if (files.companyLogo) {
+            updates.logo_url = '/uploads/logos/' + files.companyLogo[0].filename;
+        }
+        if (files.loginLogo) {
+            updates.login_logo_url = '/uploads/logos/' + files.loginLogo[0].filename;
+        }
+        if (files.backgroundImage) {
+            updates.background_image_url = '/uploads/background/' + files.backgroundImage[0].filename;
+        }
+
+        // Processar demais campos
+        const fields = [
+            'primary_color',
+            'background_color',
+            'sidebar_color',
+            'font_color',
+            'font_family',
+            'font_size',
+            'modal_background_color',
+            'modal_font_color',
+            'modal_border_color',
+            'login_background_color',
+            'login_form_background_color',
+            'login_font_color',
+            'login_button_color',
+            'company_name'
+        ];
+
+        fields.forEach(field => {
+            if (req.body[field] !== undefined) {
+                updates[field] = req.body[field];
+            }
+        });
+
+        // Se não houver atualizações, retorne erro
+        if (Object.keys(updates).length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'Nenhuma atualização fornecida'
+            });
+        }
+
+        // Construir a query dinamicamente
+        const setClause = Object.keys(updates)
+            .map((key, i) => `${key} = $${i + 1}`)
+            .join(', ');
+        
+        const query = `
+            UPDATE system_settings 
+            SET ${setClause}
+            WHERE id = 1
+            RETURNING *
+        `;
+
+        const result = await pool.query(query, Object.values(updates));
+
+        if (result.rows.length === 0) {
+            throw new Error('Nenhuma configuração encontrada para atualizar');
+        }
+
+        res.json({
+            success: true,
+            message: 'Configurações de aparência atualizadas com sucesso',
+            settings: result.rows[0]
+        });
+
+    } catch (error) {
+        console.error('Erro ao atualizar configurações de aparência:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Erro ao atualizar configurações',
+            error: error.message
+        });
+    }
+};
+
+const resetAppearanceSettings = async (req, res) => {
+    console.log("resetAppearanceSettings: Iniciando a reposição das configurações de aparência...");
+
+    try {
+        // Lista de todos os campos de aparência para repor para NULL
+        const appearanceFields = [
+            'logo_url', 'primary_color', 'background_color', 'sidebar_color', 'font_color',
+            'font_family', 'font_size', 'modal_background_color', 'modal_font_color',
+            'modal_border_color', 'login_background_color', 'login_form_background_color',
+            'login_font_color', 'login_button_color', 'login_logo_url', 'background_image_url'
+        ];
+
+        // Constrói a parte SET da query dinamicamente
+        const setClauses = appearanceFields.map(field => `${field} = NULL`).join(', ');
+
+        const updateQuery = `UPDATE system_settings SET ${setClauses} WHERE id = 1 RETURNING *`;
+
+        const { rows } = await pool.query(updateQuery);
+
+        await logAction({
+            req,
+            action: 'SETTINGS_RESET_APPEARANCE',
+            status: 'SUCCESS',
+            description: `Utilizador "${req.user.email}" repôs as configurações de aparência para os valores predefinidos.`,
+        });
+
+        res.status(200).json({
+            message: "Configurações de aparência repostas com sucesso!",
+            settings: rows[0]
+        });
+
+    } catch (error) {
+        console.error('Erro ao repor as configurações de aparência:', error);
+        await logAction({
+            req,
+            action: 'SETTINGS_RESET_APPEARANCE_FAILURE',
+            status: 'FAILURE',
+            description: `Falha ao repor as configurações de aparência. Erro: ${error.message}`,
+        });
+        res.status(500).json({ message: 'Erro interno do servidor ao repor as configurações.' });
+    }
+};
+
+
 // Exporta todas as funções do controller
 module.exports = {
     getGeneralSettings,
-    updateGeneralSettings,
     getHotspotSettings,
     updateHotspotSettings,
     updateBackgroundImage,
     updateLoginAppearanceSettings,
-    updateLoginLogo
+    updateLoginLogo,
+    updateAppearanceSettings, // EXPORTA A NOVA FUNÇÃO
+    resetAppearanceSettings
 };
-

@@ -70,9 +70,16 @@ document.addEventListener('DOMContentLoaded', () => {
             companyNameElement.textContent = settings.company_name;
         }
 
-        if (settings.login_background_color) {
+        // Prioriza a imagem de fundo sobre a cor de fundo
+        if (settings.background_image_url) {
+            document.body.style.backgroundImage = `url('http://${window.location.hostname}:3000${settings.background_image_url}')`;
+            document.body.style.backgroundSize = 'cover';
+            document.body.style.backgroundPosition = 'center';
+            document.body.style.backgroundRepeat = 'no-repeat';
+        } else if (settings.login_background_color) {
             document.documentElement.style.setProperty('--background-dark', settings.login_background_color);
         }
+
         if (settings.login_form_background_color) {
             document.documentElement.style.setProperty('--background-medium', settings.login_form_background_color);
         }
