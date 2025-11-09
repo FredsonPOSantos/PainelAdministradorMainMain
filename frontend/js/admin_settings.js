@@ -358,6 +358,8 @@
             const loginLogoInput = document.getElementById('loginLogoUpload');
             if (loginLogoInput && loginLogoInput.files[0]) {
                 const loginLogoFile = loginLogoInput.files[0];
+                // FORÇA A ATUALIZAÇÃO: Mesmo que o nome do ficheiro seja o mesmo, o conteúdo é novo.
+                // O backend irá gerar o novo URL com a extensão correta (.svg).
                 formData.append('loginLogo', loginLogoFile);
                 hasChanges = true;
             }
@@ -694,6 +696,32 @@
             })); 
         }
         
+        // --- Lógica para os botões de remover imagem ---
+        if (removeBackgroundBtn) {
+            removeBackgroundBtn.addEventListener('click', () => {
+                const preview = document.getElementById('currentBackgroundPreview');
+                if (preview) preview.style.display = 'none';
+                removeBackgroundBtn.style.display = 'none';
+                if (loginBgColorInput) loginBgColorInput.disabled = false;
+                if (backgroundUploadInput) backgroundUploadInput.value = ''; // Limpa o seletor de ficheiro
+                if (unifiedAppearanceForm) unifiedAppearanceForm.dataset.removeBackground = 'true'; // Marca para remoção no submit
+                showNotification("A imagem de fundo será removida ao guardar.", "info");
+            });
+        }
+
+        if (removeLoginLogoBtn) {
+            removeLoginLogoBtn.addEventListener('click', () => {
+                const preview = document.getElementById('currentLoginLogoPreview');
+                const uploadInput = document.getElementById('loginLogoUpload');
+                if (preview) preview.style.display = 'none';
+                removeLoginLogoBtn.style.display = 'none';
+                if (uploadInput) uploadInput.value = ''; // Limpa o seletor de ficheiro
+                if (unifiedAppearanceForm) unifiedAppearanceForm.dataset.removeLoginLogo = 'true'; // Marca para remoção no submit
+                showNotification("O logo da página de login será removido ao guardar.", "info");
+            });
+        }
+
+
         const goToLgpdPageBtn = document.getElementById('goToLgpdPageBtn');
         if (goToLgpdPageBtn) {
             goToLgpdPageBtn.addEventListener('click', () => {

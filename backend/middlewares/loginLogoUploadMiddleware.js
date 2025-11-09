@@ -31,8 +31,8 @@ const storage = multer.diskStorage({
 });
 
 const fileFilter = (req, file, cb) => {
-    const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/svg+xml'];
-    const allowedExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.svg'];
+    const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/svg+xml']; // SVG já estava aqui, mas garantimos
+    const allowedExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.svg']; // SVG já estava aqui, mas garantimos
     const fileExt = path.extname(file.originalname).toLowerCase();
 
     if (allowedMimeTypes.includes(file.mimetype) && allowedExtensions.includes(fileExt)) {

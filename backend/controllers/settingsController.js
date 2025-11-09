@@ -352,6 +352,16 @@ const updateAppearanceSettings = async (req, res) => {
             }
         });
 
+        // Processar remoção de imagens
+        if (req.body.removeBackgroundImage === 'true') {
+            updates.background_image_url = null;
+            console.log("Marcação para remover imagem de fundo recebida.");
+        }
+        if (req.body.removeLoginLogo === 'true') {
+            updates.login_logo_url = null;
+            console.log("Marcação para remover logo de login recebida.");
+        }
+
         // Se não houver atualizações, retorne erro
         if (Object.keys(updates).length === 0) {
             return res.status(400).json({

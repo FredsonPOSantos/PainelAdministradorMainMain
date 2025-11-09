@@ -73,6 +73,11 @@
                 padding-bottom: 10px;
                 font-size: 1.1em;
             }
+            .color-picker-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+                gap: 20px;
+            }
         </style>
         <form id="unifiedAppearanceForm" enctype="multipart/form-data">
             
@@ -161,25 +166,27 @@
                             <label for="backgroundUpload">Imagem de Fundo</label>
                             <input type="file" id="backgroundUpload" name="backgroundImage" accept="image/png, image/jpeg">
                             <div class="image-preview-container" style="margin-top: 10px;">
-                                <img id="currentBackgroundPreview" src="#" alt="Imagem de Fundo Atual" style="display: none; max-width: 100%; max-height: 100px; object-fit: cover;">
-                                <button type="button" id="removeBackground" class="btn-danger btn-small" style="display: none; margin-top: 10px;">Remover Imagem</button>
+                                <img id="currentBackgroundPreview" src="#" alt="Imagem de Fundo Atual" style="display: none; max-width: 100%; max-height: 100px; object-fit: cover; border: 1px solid #ccc; border-radius: 4px;">
+                                <button type="button" id="removeBackground" class="btn-remove-img" style="display: none;" title="Remover Imagem">&times;</button>
                             </div>
                         </div>
-                        <div class="input-group">
-                            <label for="loginBackgroundColor">Cor de Fundo da Página de Login (se não usar imagem)</label>
-                            <input type="color" id="loginBackgroundColor" class="color-picker">
-                        </div>
-                        <div class="input-group">
-                            <label for="loginFormBackgroundColor">Cor do Formulário</label>
-                            <input type="color" id="loginFormBackgroundColor" class="color-picker">
-                        </div>
-                        <div class="input-group">
-                            <label for="loginFontColor">Cor da Fonte</label>
-                            <input type="color" id="loginFontColor" class="color-picker">
-                        </div>
-                        <div class="input-group">
-                            <label for="loginButtonColor">Cor do Botão</label>
-                            <input type="color" id="loginButtonColor" class="color-picker">
+                        <div class="color-picker-grid">
+                            <div class="input-group">
+                                <label for="loginBackgroundColor">Cor de Fundo (sem imagem)</label>
+                                <input type="color" id="loginBackgroundColor" class="color-picker">
+                            </div>
+                            <div class="input-group">
+                                <label for="loginFormBackgroundColor">Cor do Formulário</label>
+                                <input type="color" id="loginFormBackgroundColor" class="color-picker">
+                            </div>
+                            <div class="input-group">
+                                <label for="loginFontColor">Cor da Fonte</label>
+                                <input type="color" id="loginFontColor" class="color-picker">
+                            </div>
+                            <div class="input-group">
+                                <label for="loginButtonColor">Cor do Botão</label>
+                                <input type="color" id="loginButtonColor" class="color-picker">
+                            </div>
                         </div>
                     </div>
 
@@ -190,8 +197,8 @@
                             <label for="loginLogoUpload">Logo da Página de Login</label>
                             <input type="file" id="loginLogoUpload" name="loginLogo" accept="image/png, image/jpeg, image/svg+xml">
                             <div class="image-preview-container" style="margin-top: 10px;">
-                                <img id="currentLoginLogoPreview" src="#" alt="Logo de Login Atual" style="display: none; max-width: 180px; max-height: 60px; background-color: #fff; border-radius: 4px; padding: 5px;">
-                                <button type="button" id="removeLoginLogo" class="btn-danger btn-small" style="display: none; margin-top: 10px;">Remover Logo</button>
+                                <img id="currentLoginLogoPreview" src="#" alt="Logo de Login Atual" style="display: none; max-width: 180px; max-height: 60px; background-color: #fff; border-radius: 4px; padding: 5px; border: 1px solid #ccc;">
+                                <button type="button" id="removeLoginLogo" class="btn-remove-img" style="display: none;" title="Remover Logo">&times;</button>
                             </div>
                         </div>
                     </div>
