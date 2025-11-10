@@ -37,14 +37,14 @@ const verifyToken = async (req, res, next) => {
         const permissions = {};
         if (user.role === 'master') {
             // Se for master, concede todas as permissões da tabela 'permissions'
+            console.log("[authMiddleware] Função 'master' detectada. Concedendo acesso total...");
             const allPermissionsResult = await pool.query('SELECT permission_key FROM permissions');
             allPermissionsResult.rows.forEach(p => {
-                permissions[p.permission_key] = true;
+                // Garante que o master não tenha permissões de LGPD
+                if (!p.permission_key.startsWith('lgpd.')) {
+                    permissions[p.permission_key] = true;
+                }
             });
-            // Em seguida, remove as permissões que o master não deve ter
-            delete permissions['lgpd.read'];
-            delete permissions['lgpd.update'];
-            delete permissions['lgpd.delete'];
         } else {
             // Para as outras funções, busca as permissões da tabela 'role_permissions'
             const permissionsResult = await pool.query(
@@ -95,4 +95,3 @@ const verifyToken = async (req, res, next) => {
 };
 
 module.exports = verifyToken;
-

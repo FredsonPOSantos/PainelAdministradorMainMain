@@ -31,6 +31,8 @@ if (window.initBannersPage) {
         
         // --- FUNÇÕES DE LÓGICA ---
 
+        let allBannersData = []; // Cache para os dados dos banners
+
         const loadBanners = async () => {
             tableBody.innerHTML = '<tr><td colspan="5">A carregar...</td></tr>';
             try {
@@ -38,7 +40,8 @@ if (window.initBannersPage) {
                 if (!response.success) {
                     throw new Error(response.message || "Erro desconhecido ao carregar banners.");
                 }
-                const banners = response.data;
+                allBannersData = response.data; // Armazena os dados no cache
+                const banners = allBannersData;
                 tableBody.innerHTML = '';
                 if (banners.length === 0) {
                     tableBody.innerHTML = '<tr><td colspan="5">Nenhum banner encontrado.</td></tr>';
@@ -157,17 +160,10 @@ if (window.initBannersPage) {
 
         const openModalForEdit = async (bannerId) => {
             resetModal();
-            try {
-                // Para garantir que temos os dados mais recentes
-                const response = await apiRequest('/api/banners');
-                if (!response.success) {
-                    showNotification(response.message || "Erro desconhecido ao carregar banners para edição.", 'error');
-                    return;
-                }
-                const banners = response.data;
-                const banner = banners.find(b => b.id === bannerId);
+            try {                
+                const banner = allBannersData.find(b => b.id === bannerId);
                 if (!banner) {
-                    showNotification('Banner não encontrado.', 'error');
+                    showNotification('Banner não encontrado. Por favor, recarregue a página.', 'error');
                     return;
                 }
 
@@ -253,4 +249,3 @@ if (window.initBannersPage) {
         loadBanners();
     };
 }
-

@@ -97,13 +97,6 @@ app.listen(PORT, async () => {
     const client = await pool.connect();
     console.log("✅ [SRV-ADM] Ligação com o PostgreSQL estabelecida com sucesso!");
     client.release(); // Libera o cliente de volta para o pool
-
-    // [NOVO] Roda o script de inicialização do banco de dados
-    console.log("Verificando e inicializando o esquema do banco de dados...");
-    const initializeDatabase = require('./db_init');
-    await initializeDatabase();
-    console.log("✅ [SRV-ADM] Esquema do banco de dados verificado com sucesso.");
-
   } catch (error) {
     console.error("❌ [SRV-ADM] ERRO CRÍTICO ao conectar ou inicializar o PostgreSQL:", error);
   }

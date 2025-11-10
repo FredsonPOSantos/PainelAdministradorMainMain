@@ -98,7 +98,7 @@ const updatePermissionsBatch = async (req, res) => {
             const { role, permission, checked } = change;
             
             // Validação de segurança
-            if (role === 'master' || role === 'DPO') {
+            if (role === 'master') {
                 console.warn(`Tentativa de alterar permissão da função protegida '${role}' (${permission}) foi bloqueada.`);
                 // Pula esta iteração, mas não para a transação
                 continue; 
@@ -146,8 +146,50 @@ const updatePermissionsBatch = async (req, res) => {
     }
 };
 
+/**
+ * [NOVO] Busca as permissões para uma única função (role).
+ * @param {string} roleName - O nome da função.
+ * @returns {Object} Um objeto onde as chaves são as permissões e os valores são 'true'.
+ */
+const getPermissionsForRole = async (roleName) => {
+    if (!roleName) {
+        return {};
+    }
+
+    // [CORRIGIDO] Garante que o 'master' sempre tenha todas as permissões
+    if (roleName === 'master') {
+        console.log(`[getPermissionsForRole] Função 'master' detectada. Concedendo acesso total.`);
+        const allPermissionsResult = await pool.query('SELECT permission_key FROM permissions');
+        const allPermissions = {};
+        allPermissionsResult.rows.forEach(row => {
+            // Exceção: Master não deve ter acesso direto às funções de exclusão de dados da LGPD
+            if (!row.permission_key.startsWith('lgpd.')) {
+                allPermissions[row.permission_key] = true;
+            }
+        });
+        return allPermissions;
+    }
+
+    try {
+        const permissionsResult = await pool.query(
+            'SELECT permission_key FROM role_permissions WHERE role_name = $1',
+            [roleName]
+        );
+
+        const permissions = {};
+        permissionsResult.rows.forEach(row => {
+            permissions[row.permission_key] = true;
+        });
+
+        return permissions;
+    } catch (error) {
+        console.error(`Erro ao buscar permissões para a função '${roleName}':`, error);
+        return {}; // Retorna um objeto vazio em caso de erro
+    }
+};
 
 module.exports = {
     getPermissionsMatrix,
-    updatePermissionsBatch
+    updatePermissionsBatch,
+    getPermissionsForRole // Exporta a nova função
 };

@@ -23,7 +23,15 @@ router.get(
 // ROTA UNIFICADA DE APARÊNCIA
 router.post(
     '/appearance',
-    [verifyToken, checkPermission('settings.appearance'), appearanceUploadMiddleware],
+    [
+        verifyToken, 
+        // [CORRIGIDO] Middleware customizado para verificar uma de duas permissões
+        (req, res, next) => {
+            if (req.user.permissions['settings.appearance'] || req.user.permissions['settings.login_page']) return next();
+            return res.status(403).json({ message: `Acesso negado. Permissão necessária: 'settings.appearance' ou 'settings.login_page'` });
+        },
+        appearanceUploadMiddleware
+    ],
     settingsController.updateAppearanceSettings // NOVA FUNÇÃO DO CONTROLLER
 );
 
@@ -33,6 +41,14 @@ router.put(
     [verifyToken, checkPermission('settings.appearance')],
     settingsController.resetAppearanceSettings
 );
+
+// [NOVO] ROTA PARA CONFIGURAÇÕES DE SMTP
+router.post(
+    '/smtp',
+    [verifyToken, checkPermission('settings.smtp')],
+    settingsController.updateSmtpSettings
+);
+
 
 
 

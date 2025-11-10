@@ -1,20 +1,20 @@
 // Ficheiro: frontend/js/admin_settings.js
 // [VERSÃO 14.2 - INICIALIZAÇÃO ROBUSTA]
 
-    let isInitializingSettings = false;
-    let originalPermissionsState = {};
+let originalPermissionsState = {}; // Mantém esta variável global para o estado das permissões
 
-    window.initSettingsPage = () => {
-        if (isInitializingSettings) { return; }
-        isInitializingSettings = true;
-        console.log("A inicializar a página de Configurações (V14.3 - Change Detection)...");
+window.initSettingsPage = () => {
+    // [CORRIGIDO] Move a verificação para dentro e usa uma variável local ou de escopo mais restrito.
+    // A melhor abordagem é simplesmente permitir a reinicialização.
+    console.log("A inicializar a página de Configurações (V14.3 - Reinicialização)...");
 
-        let initialAppearanceSettings = {}; // Armazena o estado inicial das configurações de aparência
+    let initialAppearanceSettings = {}; // Armazena o estado inicial das configurações de aparência
 
-        // --- Seletores de Elementos ---
-        const changeOwnPasswordForm = document.getElementById('changeOwnPasswordForm');
+    // --- Seletores de Elementos ---
+    const changeOwnPasswordForm = document.getElementById('changeOwnPasswordForm');
         const unifiedAppearanceForm = document.getElementById('unifiedAppearanceForm');
         const removeBackgroundBtn = document.getElementById('removeBackground');
+        const smtpSettingsForm = document.getElementById('smtpSettingsForm'); // [NOVO] Seletor para o novo formulário
         const removeLoginLogoBtn = document.getElementById('removeLoginLogo');
         const backgroundUploadInput = document.getElementById('backgroundUpload');
         const loginBgColorInput = document.getElementById('loginBackgroundColor');
@@ -299,7 +299,7 @@
             submitButton.textContent = 'A guardar...';
 
             try {
-                const result = await apiRequest('/api/user/change-password', 'POST', {
+                const result = await apiRequest('/api/admin/profile/change-own-password', 'POST', {
                     currentPassword,
                     newPassword: newVoluntaryPassword
                 });
@@ -418,6 +418,40 @@
             }
         };
 
+        /**
+         * [NOVO] Lida com a submissão do formulário de configurações de SMTP.
+         */
+        const handleSmtpSettings = async (e) => {
+            e.preventDefault();
+            const form = e.currentTarget;
+            const submitButton = form.querySelector('button[type="submit"]');
+            submitButton.disabled = true;
+            submitButton.textContent = 'A guardar...';
+
+            try {
+                const smtpData = {
+                    email_host: document.getElementById('emailHost').value,
+                    email_port: document.getElementById('emailPort').value,
+                    email_user: document.getElementById('emailUser').value,
+                    email_pass: document.getElementById('emailPass').value, // A senha, pode ser vazia
+                    email_from: document.getElementById('emailFrom').value,
+                    email_secure: document.getElementById('emailSecure').checked,
+                };
+
+                const result = await apiRequest('/api/settings/smtp', 'POST', smtpData);
+
+                showNotification(result.message || 'Operação concluída.', result.success ? 'success' : 'error');
+                if (result.success) {
+                    document.getElementById('emailPass').value = ''; // Limpa o campo de senha por segurança
+                }
+            } catch (error) {
+                showNotification(`Erro ao salvar configurações de SMTP: ${error.message}`, 'error');
+            } finally {
+                submitButton.disabled = false;
+                submitButton.textContent = 'Salvar Configurações de E-mail';
+            }
+        };
+
         // --- Lógica de Carregamento de Dados ---
         const loadGeneralSettings = async () => {
             try {
@@ -449,6 +483,12 @@
                     'loginFormBackgroundColor': settings.login_form_background_color,
                     'loginFontColor': settings.login_font_color,
                     'loginButtonColor': settings.login_button_color,
+                    // [NOVO] Campos de SMTP
+                    'emailHost': settings.email_host,
+                    'emailPort': settings.email_port,
+                    'emailUser': settings.email_user,
+                    'emailFrom': settings.email_from,
+                    // A senha não é preenchida por segurança
                 };
                 
                 for (const id in fields) {
@@ -458,6 +498,12 @@
                         // permitindo que o CSS ou o browser definam o valor visual padrão.
                         el.value = fields[id] || '';
                     }
+                }
+
+                // Preenche o checkbox de 'email_secure'
+                const emailSecureCheckbox = document.getElementById('emailSecure');
+                if (emailSecureCheckbox) {
+                    emailSecureCheckbox.checked = !!settings.email_secure;
                 }
 
                 const updatePreview = (previewId, removeBtnId, url) => {
@@ -642,14 +688,30 @@
             const isMaster = (role === 'master');
             let firstVisibleTabId = 'tab-perfil';
 
+            // [CORRIGIDO] Lógica de visibilidade da aba de Aparência
+            const canSeeAppearance = isMaster || permissions['settings.appearance'] || permissions['settings.login_page'];
+            const appearanceTabLink = document.querySelector('.tab-link[data-tab="tab-aparencia"]');
+            if (appearanceTabLink) {
+                appearanceTabLink.style.display = canSeeAppearance ? '' : 'none';
+            }
+
             tabLinks.forEach(link => {
                 const tabId = link.getAttribute('data-tab');
                 let show = true;
-                if (link.classList.contains('master-only') && !isMaster) { show = false; }
+                // [CORRIGIDO] Controla a visibilidade da aba Empresa (SMTP) pela permissão
+                if (tabId === 'tab-empresa' && !isMaster && !permissions['settings.smtp']) {
+                    show = false;
+                }
                 if (tabId === 'tab-permissoes' && !isMaster && role !== 'DPO') { show = false; }
-                if (tabId === 'tab-empresa' && !isMaster && !permissions['settings.general.read']) { show = false; }
-                if (tabId === 'tab-aparencia' && !isMaster && !permissions['settings.general.read']) { show = false; }
+                // A visibilidade da aba de aparência é tratada acima
+                if (tabId === 'tab-aparencia') {
+                    return; // Pula a lógica antiga
+                }
                 if (tabId === 'tab-logs' && !isMaster && role !== 'DPO') { show = false; }
+                // [CORRIGIDO] Adiciona a verificação de permissão para a aba de Gestão de Dados (LGPD)
+                if (tabId === 'tab-lgpd' && !permissions['lgpd.read']) {
+                    show = false;
+                }
                 
                 link.style.display = show ? '' : 'none';
                 const tabContentEl = document.getElementById(tabId);
@@ -670,17 +732,15 @@
                 loadAuditLogs();
             }
 
-            const appearanceSettings = document.querySelectorAll('.appearance-setting');
-            const canChangeAppearance = isMaster || window.currentUserProfile?.permissions['settings.appearance'] === true;
-            appearanceSettings.forEach(el => {
-                el.style.display = canChangeAppearance ? '' : 'none';
-            });
-
-            const loginAppearanceSettings = document.querySelectorAll('.login-appearance-setting');
-            const canChangeLoginAppearance = isMaster || window.currentUserProfile?.permissions['settings.login_page'] === true;
-            loginAppearanceSettings.forEach(el => {
-                el.style.display = canChangeLoginAppearance ? '' : 'none';
-            });
+            // [CORRIGIDO] Controla a visibilidade das seções de aparência
+            const panelAppearanceSection = document.querySelector('.appearance-section');
+            if (panelAppearanceSection) {
+                panelAppearanceSection.style.display = (isMaster || permissions['settings.appearance']) ? '' : 'none';
+            }
+            const loginAppearanceSection = document.querySelector('.login-appearance-section');
+            if (loginAppearanceSection) {
+                loginAppearanceSection.style.display = (isMaster || permissions['settings.login_page']) ? '' : 'none';
+            }
 
             const firstVisibleLink = Array.from(tabLinks).find(link => link.style.display !== 'none');
             if (firstVisibleLink) {
@@ -696,6 +756,16 @@
             })); 
         }
         
+        // [CORRIGIDO] Adiciona o listener para o formulário de troca de senha
+        if (changeOwnPasswordForm) {
+            changeOwnPasswordForm.addEventListener('submit', handleChangeOwnPassword);
+        }
+
+        // [CORRIGIDO] Adiciona o listener para o botão de reset de aparência
+        if (resetAppearanceBtn) {
+            resetAppearanceBtn.addEventListener('click', handleResetAppearance);
+        }
+
         // --- Lógica para os botões de remover imagem ---
         if (removeBackgroundBtn) {
             removeBackgroundBtn.addEventListener('click', () => {
@@ -727,6 +797,12 @@
             goToLgpdPageBtn.addEventListener('click', () => {
                 const reauthModal = document.getElementById('reauthLgpdModal');
                 const reauthEmail = document.getElementById('reauthEmail');
+                // [NOVO] Adiciona o listener para o formulário de SMTP
+                if (smtpSettingsForm) {
+                    smtpSettingsForm.addEventListener('submit', handleSmtpSettings);
+                }
+
+
                 if (reauthModal && reauthEmail && window.currentUserProfile) {
                     reauthEmail.value = window.currentUserProfile.email;
                     reauthModal.classList.remove('hidden');

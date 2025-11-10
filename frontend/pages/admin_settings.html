@@ -51,7 +51,42 @@
     </div>
 
     <!-- Aba 2: Geral (Fase 2.3) -->
-    <div id="tab-empresa" class="tab-content admin-only master-only"></div>
+    <div id="tab-empresa" class="tab-content admin-only">
+        <div class="content-section">
+            <div class="section-header">
+                <h4>Configurações do Servidor de E-mail (SMTP)</h4>
+            </div>
+            <form id="smtpSettingsForm">
+                <div class="input-group">
+                    <label for="emailHost">Host do Servidor (ex: smtps.uhserver.com)</label>
+                    <input type="text" id="emailHost" name="email_host">
+                </div>
+                <div class="input-group">
+                    <label for="emailPort">Porta (ex: 465)</label>
+                    <input type="number" id="emailPort" name="email_port">
+                </div>
+                <div class="input-group">
+                    <label for="emailUser">Utilizador (e-mail)</label>
+                    <input type="email" id="emailUser" name="email_user">
+                </div>
+                <div class="input-group">
+                    <label for="emailPass">Senha do E-mail</label>
+                    <input type="password" id="emailPass" name="email_pass" placeholder="Deixe em branco para não alterar">
+                </div>
+                <div class="input-group">
+                    <label for="emailFrom">E-mail do Remetente (ex: "Nome Empresa &lt;email@dominio.com&gt;")</label>
+                    <input type="text" id="emailFrom" name="email_from">
+                </div>
+                <div class="input-group checkbox-group" style="flex-direction: row; align-items: center;">
+                    <input type="checkbox" id="emailSecure" name="email_secure" style="width: auto; margin-right: 10px;">
+                    <label for="emailSecure" style="margin-bottom: 0;">Usar Conexão Segura (SSL/TLS)</label>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn-primary">Salvar Configurações de E-mail</button>
+                </div>
+            </form>
+        </div>
+    </div>
 
 
     <!-- Aba Aparência (REESTRUTURADA) -->
@@ -91,7 +126,7 @@
         </style>
         <form id="unifiedAppearanceForm" enctype="multipart/form-data">
             
-            <div class="content-section">
+            <div class="content-section appearance-section"> <!-- Classe adicionada -->
                 <div class="section-header">
                     <h4>Aparência Geral do Painel</h4>
                 </div>
@@ -163,7 +198,7 @@
                 </div>
             </div>
 
-            <div class="content-section">
+            <div class="content-section login-appearance-section"> <!-- Classe adicionada -->
                 <div class="section-header">
                     <h4>Aparência da Página de Login</h4>
                 </div>
@@ -220,6 +255,7 @@
             <!-- Ações do Formulário -->
             <div class="form-actions" style="margin-top: 20px; border-top: 1px solid var(--border-color); padding-top: 20px;">
                 <button type="submit" id="saveAppearanceBtn" class="btn-primary">Aplicar Todas as Alterações de Aparência</button>
+                <button type="button" id="resetAppearanceBtn" class="btn-secondary">Repor Predefinições</button>
             </div>
         </form>
     </div>
@@ -274,8 +310,8 @@
                 
                 <!-- Botão Salvar (V13.5.3) -->
                 <div id="permSaveChangesContainer" class="form-actions" style="display: none; margin-top: 25px;">
-                     <button type="button" id="permSaveChangesBtn" class="btn-primary">Salvar Alterações</button>
-
+                    <button type="button" id="permSaveChangesBtn" class="btn-primary">Salvar Alterações</button>
+                    <span id="permSaveStatus" style="margin-left: 15px; font-weight: 500;"></span>
                 </div>
             </div>
         </div>

@@ -15,8 +15,8 @@ const getGeneralSettings = async (req, res) => {
     console.log("getGeneralSettings: Buscando configurações...");
     try {
         const settings = await pool.query(
-            'SELECT company_name, logo_url, primary_color, background_color, font_color, font_family, font_size, background_image_url, modal_background_color, modal_font_color, modal_border_color, sidebar_color, login_background_color, login_form_background_color, login_font_color, login_button_color, login_logo_url FROM system_settings WHERE id = 1'
-        );
+            'SELECT company_name, logo_url, primary_color, background_color, font_color, font_family, font_size, background_image_url, modal_background_color, modal_font_color, modal_border_color, sidebar_color, login_background_color, login_form_background_color, login_font_color, login_button_color, login_logo_url, email_host, email_port, email_secure, email_user, email_from FROM system_settings WHERE id = 1'
+        ); 
 
         if (settings.rows.length === 0) {
             console.warn("getGeneralSettings: Nenhuma configuração encontrada (ID 1 não existe?).");
@@ -447,15 +447,72 @@ const resetAppearanceSettings = async (req, res) => {
     }
 };
 
+/**
+ * [NOVO] Atualiza as configurações de SMTP.
+ */
+const updateSmtpSettings = async (req, res) => {
+    console.log("updateSmtpSettings: Iniciando atualização...");
+    const {
+        email_host,
+        email_port,
+        email_user,
+        email_pass, // Pode vir vazio
+        email_from,
+        email_secure
+    } = req.body;
+
+    const updates = {};
+
+    // Adiciona campos ao objeto de atualização apenas se foram fornecidos
+    if (email_host !== undefined) updates.email_host = email_host;
+    if (email_port !== undefined) updates.email_port = email_port;
+    if (email_user !== undefined) updates.email_user = email_user;
+    if (email_from !== undefined) updates.email_from = email_from;
+    // O checkbox envia 'on' ou 'undefined', então convertemos para booleano
+    updates.email_secure = !!email_secure;
+
+    // Apenas atualiza a senha se uma nova foi fornecida
+    if (email_pass) {
+        updates.email_pass = email_pass;
+    }
+
+    if (Object.keys(updates).length === 0) {
+        return res.status(400).json({ message: 'Nenhuma configuração para atualizar foi fornecida.' });
+    }
+
+    try {
+        const setClause = Object.keys(updates).map((key, i) => `${key} = $${i + 1}`).join(', ');
+        const query = `UPDATE system_settings SET ${setClause} WHERE id = 1 RETURNING *`;
+        const values = Object.values(updates);
+
+        const result = await pool.query(query, values);
+
+        await logAction({
+            req,
+            action: 'SETTINGS_UPDATE_SMTP',
+            status: 'SUCCESS',
+            description: `Utilizador "${req.user.email}" atualizou as configurações de SMTP.`,
+        });
+
+        res.json({
+            success: true,
+            message: 'Configurações de SMTP atualizadas com sucesso!',
+            settings: result.rows[0]
+        });
+
+    } catch (error) {
+        console.error('Erro ao atualizar configurações de SMTP:', error);
+        res.status(500).json({ success: false, message: 'Erro interno ao salvar as configurações de SMTP.' });
+    }
+};
+
 
 // Exporta todas as funções do controller
 module.exports = {
     getGeneralSettings,
     getHotspotSettings,
     updateHotspotSettings,
-    updateBackgroundImage,
-    updateLoginAppearanceSettings,
-    updateLoginLogo,
     updateAppearanceSettings, // EXPORTA A NOVA FUNÇÃO
-    resetAppearanceSettings
+    resetAppearanceSettings,
+    updateSmtpSettings // EXPORTA A NOVA FUNÇÃO
 };

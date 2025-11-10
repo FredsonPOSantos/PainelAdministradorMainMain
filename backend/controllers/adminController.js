@@ -4,6 +4,7 @@
 // Ela NÃO envia 'profile.permissions' para o frontend.
 const pool = require('../connection');
 const bcrypt = require('bcrypt');
+const { getPermissionsForRole } = require('./permissionsController'); // [NOVO] Importa a função correta
 const { logAction } = require('../services/auditLogService');
 
 // Função para obter o perfil do utilizador logado
@@ -19,12 +20,12 @@ const getUserProfile = async (req, res) => {
       return res.status(404).json({ message: "Perfil do utilizador não encontrado." });
     }
 
-    // Adiciona as permissões do middleware ao objeto do perfil
     const userProfile = profileQuery.rows[0];
-    userProfile.permissions = req.user.permissions;
+    // [CORRIGIDO] Busca as permissões mais recentes do banco de dados para a função do utilizador
+    userProfile.permissions = await getPermissionsForRole(userProfile.role);
 
     res.json({
-      message: "Perfil do utilizador obtido com sucesso.",
+      message: "Perfil do utilizador obtido com sucesso (com permissões atualizadas).",
       profile: userProfile,
     });
 
