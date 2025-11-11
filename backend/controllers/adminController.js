@@ -4,7 +4,7 @@
 // Ela NÃO envia 'profile.permissions' para o frontend.
 const pool = require('../connection');
 const bcrypt = require('bcrypt');
-const { getPermissionsForRole } = require('./permissionsController'); // [NOVO] Importa a função correta
+const { getPermissionsForRole } = require('./permissionsController');
 const { logAction } = require('../services/auditLogService');
 
 // Função para obter o perfil do utilizador logado
@@ -22,11 +22,16 @@ const getUserProfile = async (req, res) => {
 
     const userProfile = profileQuery.rows[0];
     // [CORRIGIDO] Busca as permissões mais recentes do banco de dados para a função do utilizador
-    userProfile.permissions = await getPermissionsForRole(userProfile.role);
+    userProfile.permissions = await getPermissionsForRole(userProfile.role); // Esta chamada agora funcionará
 
     res.json({
       message: "Perfil do utilizador obtido com sucesso (com permissões atualizadas).",
       profile: userProfile,
+      // [CORRIGIDO] O frontend espera que o perfil esteja dentro de um objeto 'data'
+      // [CORRIGIDO] O frontend espera que o perfil esteja APENAS dentro de um objeto 'data'
+      data: {
+        profile: userProfile
+      }
     });
 
   } catch (error) {

@@ -191,5 +191,5 @@ const getPermissionsForRole = async (roleName) => {
 module.exports = {
     getPermissionsMatrix,
     updatePermissionsBatch,
-    getPermissionsForRole // Exporta a nova função
+    getPermissionsForRole
 };

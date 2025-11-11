@@ -335,7 +335,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // --- [ATUALIZADO V13.1.3] IDs de verificação para o waitForElement ---
     const pageElementIds = {
-        'admin_home': '#activeCampaigns',          
+        'admin_home': '#campaignsTotal',          // CORRIGIDO: ID atualizado após redesenho dos cards
         'admin_hotspot': '#hotspotFilterForm',      
         'admin_users': '#resetPasswordForm',        
         'admin_templates': '#templatesTable',       
@@ -397,7 +397,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             const elementToWaitFor = pageElementIds[pageName];
 
             if (typeof initFunction === 'function' && elementToWaitFor && mainContentArea) {
+                // A função waitForElement garante que o HTML foi renderizado antes de executar o JS.
+                // A chamada anterior estava incorreta.
                 waitForElement(elementToWaitFor, mainContentArea, initFunction, pageName);
+                waitForElement(elementToWaitFor, mainContentArea, initFunction);
             } else if (typeof initFunction !== 'function') {
                 console.warn(`Init function (V13.1.3) ${pageName} não encontrada.`);
             }

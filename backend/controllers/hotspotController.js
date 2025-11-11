@@ -86,13 +86,18 @@ const searchUsers = async (req, res) => {
 // [NOVO] Função para contar o total de utilizadores do hotspot (para o Dashboard)
 const getTotalHotspotUsers = async (req, res) => {
   try {
-    // Query otimizada para apenas contar os registos
-    const result = await pool.query('SELECT COUNT(id) FROM userdetails'); 
+    // [MODIFICADO] Query para contar o total e os registos dos últimos 30 dias
+    const result = await pool.query(`
+        SELECT 
+            COUNT(id) AS total,
+            COUNT(id) FILTER (WHERE data_cadastro >= NOW() - INTERVAL '30 days') AS last30days
+        FROM userdetails
+    `);
     
-    // Garante que o resultado é um número
-    const count = parseInt(result.rows[0].count, 10) || 0;
+    const total = parseInt(result.rows[0].total, 10) || 0;
+    const last30days = parseInt(result.rows[0].last30days, 10) || 0;
     
-    res.json({ count });
+    res.json({ success: true, data: { total, last30days } });
   } catch (error) {
     console.error('Erro ao contar utilizadores do hotspot:', error);
     res.status(500).json({ message: "Erro interno do servidor." });

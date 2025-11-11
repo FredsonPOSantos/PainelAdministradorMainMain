@@ -1,51 +1,59 @@
 <!-- Ficheiro: pages/admin_home.html -->
 <div class="stats-grid">
-    
-    <!-- [MODIFICADO] Cartão Total de Roteadores Removido -->
-    
-    <!-- [MODIFICADO] Cartão Total de Grupos Removido -->
-
-    <!-- Cartão Campanhas Ativas (Mantido) -->
+    <!-- Card de Campanhas -->
     <div class="stat-card">
         <div class="stat-card-icon" style="background-color: #38a169;">
             <span>🎯</span>
         </div>
         <div class="stat-card-info">
-            <span class="stat-card-title">Campanhas Ativas</span>
-            <span class="stat-card-value" id="activeCampaigns">...</span>
+            <span class="stat-card-title">Campanhas</span>
+            <div class="stat-card-details">
+                <span title="Total de Campanhas">Total: <strong id="campaignsTotal">...</strong></span>
+                <span title="Campanhas Ativas">Ativas: <strong id="campaignsActive">...</strong></span>
+                <span title="Campanhas Inativas">Inativas: <strong id="campaignsInactive">...</strong></span>
+            </div>
         </div>
     </div>
 
-    <!-- Cartão Banners Disponíveis (Mantido) -->
+    <!-- Card de Banners -->
     <div class="stat-card">
         <div class="stat-card-icon" style="background-color: #c53030;">
             <span>📢</span>
         </div>
         <div class="stat-card-info">
-            <span class="stat-card-title">Banners Disponíveis</span>
-            <span class="stat-card-value" id="totalBanners">...</span>
+            <span class="stat-card-title">Banners</span>
+            <div class="stat-card-details">
+                <span title="Total de Banners">Total: <strong id="bannersTotal">...</strong></span>
+                <span title="Banners Ativos">Ativos: <strong id="bannersActive">...</strong></span>
+                <span title="Banners Inativos">Inativos: <strong id="bannersInactive">...</strong></span>
+            </div>
         </div>
     </div>
 
-    <!-- [NOVO] Cartão Templates Disponíveis -->
+    <!-- Card de Templates -->
     <div class="stat-card">
-        <div class="stat-card-icon" style="background-color: #d69e2e;"> <!-- Cor nova -->
+        <div class="stat-card-icon" style="background-color: #d69e2e;">
             <span>🎨</span>
         </div>
         <div class="stat-card-info">
-            <span class="stat-card-title">Templates Disponíveis</span>
-            <span class="stat-card-value" id="totalTemplates">...</span>
+            <span class="stat-card-title">Templates</span>
+            <div class="stat-card-details">
+                <span title="Total de Templates">Total: <strong id="templatesTotal">...</strong></span>
+            </div>
         </div>
     </div>
 
-    <!-- [NOVO] Cartão Total de Utilizadores (Hotspot) -->
+    <!-- Card de Utilizadores -->
     <div class="stat-card">
-        <div class="stat-card-icon" style="background-color: #3182ce;"> <!-- Cor reutilizada -->
+        <div class="stat-card-icon" style="background-color: #3182ce;">
             <span>👥</span>
         </div>
         <div class="stat-card-info">
-            <span class="stat-card-title">Usuários Cadastrados</span>
-            <span class="stat-card-value" id="totalUsers">...</span>
+            <span class="stat-card-title">Utilizadores (Hotspot)</span>
+            <div class="stat-card-details">
+                <span title="Total de Utilizadores">Total: <strong id="usersTotal">...</strong></span>
+                <span title="Novos nos últimos 30 dias">Últimos 30 dias: <strong id="usersLast30Days">...</strong></span>
+            </div>
         </div>
     </div>
 </div>

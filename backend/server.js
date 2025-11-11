@@ -21,6 +21,7 @@ const lgpdRoutes = require('./routes/lgpd');
 const ticketRoutes = require('./routes/tickets');
 const notificationRoutes = require('./routes/notificationRoutes');
 const raffleRoutes = require('./routes/raffles');
+const dashboardRoutes = require('./routes/dashboard'); // [NOVO] Importa a rota do dashboard
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -50,6 +51,7 @@ app.use('/api/lgpd', lgpdRoutes);
 app.use('/api/tickets', ticketRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/raffles', raffleRoutes);
+app.use('/api/dashboard', dashboardRoutes); // [NOVO] Regista a rota do dashboard
 
 // --- [NOVO] Rotas de Logs ---
 const logRoutes = require('./routes/logRoutes');
