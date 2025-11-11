@@ -4,7 +4,6 @@ if (window.initRoutersPage) {
 } else {
     window.initRoutersPage = () => {
         console.log("A inicializar a página de gestão de Roteadores...");
-        const checkStatusBtn = document.getElementById('checkStatusBtn');
         const groupPrefixes = { 'CS': 'Cidade Sol', 'RT': 'Rota Transportes', 'GB': 'Grupo Brasileiro', 'EB': 'Expresso Brasileiro', 'MKT': 'Marketing', 'VM': 'Via Metro', 'VIP': 'Sala Vip', 'GNC': 'Genérico' };
 
         // --- Elementos do DOM ---
@@ -13,6 +12,7 @@ if (window.initRoutersPage) {
         
         const addGroupBtn = document.getElementById('addGroupBtn');
         const groupModal = document.getElementById('groupModal');
+        const checkStatusBtn = document.getElementById('checkStatusBtn');
         const groupForm = document.getElementById('groupForm');
         
         const routerModal = document.getElementById('routerModal');
@@ -152,7 +152,6 @@ if (window.initRoutersPage) {
             }
         };
 
-
         // --- NOVA LÓGICA DE VERIFICAÇÃO DE STATUS ---
         const handleCheckAllStatus = async () => {
             checkStatusBtn.disabled = true;
@@ -205,7 +204,14 @@ if (window.initRoutersPage) {
 
         const handleDiscoverRouters = async () => {
             try {
-                const newRouters = await apiRequest('/api/routers/discover');
+                // [CORRIGIDO] A função apiRequest retorna um objeto { success, data }.
+                // O array de roteadores está em response.data.
+                const response = await apiRequest('/api/routers/discover');
+                if (!response.success) throw new Error(response.message);
+
+                // [CORRIGIDO] A resposta da API está aninhada. O array está em response.data.data.
+                const newRouters = response.data.data;
+
                 const discoveredRouterList = document.getElementById('discoveredRouterList');
                 discoveredRouterList.innerHTML = '';
                 if (newRouters.length === 0) {
@@ -391,4 +397,3 @@ if (window.initRoutersPage) {
         document.getElementById('groupPrefix').addEventListener('change', handlePrefixChangeAndFilter);
     };
 }
-

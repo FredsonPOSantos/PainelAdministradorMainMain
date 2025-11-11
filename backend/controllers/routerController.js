@@ -135,16 +135,47 @@ const checkRouterStatus = async (req, res) => {
 
 // --- Funções de Deteção e Grupos ---
 const discoverNewRouters = async (req, res) => {
+    const client = await pool.connect();
     try {
-        const detectedResult = await pool.query('SELECT DISTINCT router_name FROM userdetails WHERE router_name IS NOT NULL');
+        await client.query('BEGIN');
+
+        const detectedResult = await client.query('SELECT DISTINCT router_name FROM userdetails WHERE router_name IS NOT NULL');
         const detectedNames = detectedResult.rows.map(r => r.router_name);
-        const registeredResult = await pool.query('SELECT name FROM routers');
+        
+        const registeredResult = await client.query('SELECT name FROM routers');
         const registeredNames = new Set(registeredResult.rows.map(r => r.name));
+        
         const newRouters = detectedNames.filter(name => !registeredNames.has(name));
-        res.json(newRouters);
+
+        // [NOVO] Se encontrar novos roteadores, cria notificações para admins
+        if (newRouters.length > 0) {
+            const adminUsers = await client.query("SELECT id FROM admin_users WHERE role IN ('master', 'gestao')");
+            
+            for (const routerName of newRouters) {
+                const notificationMessage = `Novo roteador detetado: "${routerName}". Adicione-o na página de Roteadores.`;
+                
+                for (const admin of adminUsers.rows) {
+                    // Evita notificações duplicadas para o mesmo roteador/usuário
+                    await client.query(`
+                        INSERT INTO notifications (user_id, type, message, is_read)
+                        SELECT $1, 'new_router', $2, false
+                        WHERE NOT EXISTS (
+                            SELECT 1 FROM notifications 
+                            WHERE user_id = $1 AND message = $2 AND is_read = false
+                        );
+                    `, [admin.id, notificationMessage]);
+                }
+            }
+        }
+
+        await client.query('COMMIT');
+        res.json({ success: true, data: newRouters });
     } catch (error) {
         console.error('Erro ao detetar novos roteadores:', error);
         res.status(500).json({ message: 'Erro interno do servidor.' });
+    } finally {
+        // [CORRIGIDO] Garante que a conexão com o banco de dados seja sempre liberada
+        if (client) client.release();
     }
 };
 
@@ -359,4 +390,3 @@ module.exports = {
   updateRouterGroup,
   deleteRouterGroup
 };
-

@@ -162,6 +162,7 @@ window.applyVisualSettings = (settings) => {
 // --- [NOVO V13.1 / V14.4] ---
 // Função robusta para esperar que um elemento exista no DOM antes de executar um script
 const waitForElement = (selector, container, initFunction, pageName) => {
+
     const maxRetries = 20; // 20 tentativas * 50ms = 1000ms (1 segundo)
     const delay = 50;
     let retryCount = 0;
@@ -400,7 +401,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 // A função waitForElement garante que o HTML foi renderizado antes de executar o JS.
                 // A chamada anterior estava incorreta.
                 waitForElement(elementToWaitFor, mainContentArea, initFunction, pageName);
-                waitForElement(elementToWaitFor, mainContentArea, initFunction);
             } else if (typeof initFunction !== 'function') {
                 console.warn(`Init function (V13.1.3) ${pageName} não encontrada.`);
             }
