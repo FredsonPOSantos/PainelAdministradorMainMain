@@ -98,6 +98,12 @@ const startPeriodicRouterCheck = () => {
     console.log('🔄 [ROUTER-CHECK] Iniciando ciclo de verificação de status...');
     const client = await pool.connect();
     try {
+      // [CORRIGIDO] Primeiro, marca como 'offline' todos os roteadores que não têm IP.
+      // Isso garante que, se um IP for removido, o status seja atualizado corretamente.
+      await client.query(
+        "UPDATE routers SET status = 'offline' WHERE ip_address IS NULL AND status != 'offline'"
+      );
+
       // Busca apenas roteadores que têm um endereço IP definido
       const routersResult = await client.query('SELECT id, ip_address FROM routers WHERE ip_address IS NOT NULL');
       const routersToCheck = routersResult.rows;
