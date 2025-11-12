@@ -110,6 +110,61 @@ const deleteRouter = async (req, res) => {
     }
 };
 
+/**
+ * [NOVO] Exclui um roteador permanentemente, limpando seu nome da tabela `userdetails`.
+ * Requer a permissão 'routers.individual.delete_permanent'.
+ */
+const deleteRouterPermanently = async (req, res) => {
+    const { id } = req.params;
+    const client = await pool.connect();
+
+    try {
+        await client.query('BEGIN');
+
+        // 1. Obter o nome do roteador antes de o excluir
+        const routerQuery = await client.query('SELECT name FROM routers WHERE id = $1', [id]);
+        if (routerQuery.rowCount === 0) {
+            await client.query('ROLLBACK');
+            return res.status(404).json({ message: 'Roteador não encontrado.' });
+        }
+        const routerName = routerQuery.rows[0].name;
+
+        // 2. Atualizar a tabela 'userdetails' para remover a referência ao nome do roteador
+        await client.query('UPDATE userdetails SET router_name = NULL WHERE router_name = $1', [routerName]);
+
+        // 3. Excluir o roteador da tabela 'routers'
+        await client.query('DELETE FROM routers WHERE id = $1', [id]);
+
+        await client.query('COMMIT');
+
+        await logAction({
+            req,
+            action: 'ROUTER_PERMANENT_DELETE',
+            status: 'SUCCESS',
+            description: `Utilizador "${req.user.email}" excluiu permanentemente o roteador "${routerName}" (ID: ${id}).`,
+            target_type: 'router',
+            target_id: id
+        });
+
+        res.json({ message: `Roteador "${routerName}" excluído permanentemente com sucesso.` });
+    } catch (error) {
+        await client.query('ROLLBACK');
+        await logAction({
+            req,
+            action: 'ROUTER_PERMANENT_DELETE_FAILURE',
+            status: 'FAILURE',
+            description: `Falha ao excluir permanentemente o roteador com ID "${id}". Erro: ${error.message}`,
+            target_type: 'router',
+            target_id: id,
+            details: { error: error.message }
+        });
+        console.error('Erro ao excluir roteador permanentemente:', error);
+        res.status(500).json({ message: 'Erro interno do servidor.' });
+    } finally {
+        client.release();
+    }
+};
+
 const checkRouterStatus = async (req, res) => {
     const { id } = req.params;
     try {
@@ -382,6 +437,7 @@ module.exports = {
   getAllRouters,
   updateRouter,
   deleteRouter,
+  deleteRouterPermanently, // Exporta a nova função
   checkRouterStatus,
   discoverNewRouters,
   batchAddRouters,

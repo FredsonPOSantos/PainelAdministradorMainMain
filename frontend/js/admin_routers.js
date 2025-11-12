@@ -140,15 +140,42 @@ if (window.initRoutersPage) {
         
         
         window.handleDeleteRouter = async (routerId) => {
-            const confirmed = await showConfirmationModal('Tem a certeza de que deseja eliminar este roteador? Ele será removido de qualquer grupo.');
-            if (confirmed) {
-                try {
-                    const result = await apiRequest(`/api/routers/${routerId}`, 'DELETE');
-                    showNotification(result.message, 'success');
-                    loadPageData();
-                } catch (error) {
-                    showNotification(`Erro: ${error.message}`, 'error');
-                }
+            const hasPermanentDeletePermission = window.currentUserProfile?.permissions['routers.individual.delete_permanent'];
+
+            const modalTitle = 'Confirmar Exclusão de Roteador';
+            const modalMessage = 'Como deseja proceder com a exclusão?';
+            
+            const modalButtons = [
+                { text: 'Cancelar', value: 'cancel', class: 'btn-secondary' },
+                { text: 'Remover (Manter Histórico)', value: 'soft_delete', class: 'btn-delete' }
+            ];
+
+            if (hasPermanentDeletePermission) {
+                modalButtons.push({ text: 'Excluir Permanentemente', value: 'permanent_delete', class: 'btn-danger' });
+            }
+
+            const userChoice = await showConfirmationModal(modalMessage, modalTitle, modalButtons);
+
+            if (userChoice === 'cancel' || !userChoice) {
+                showNotification('Operação cancelada.', 'info');
+                return;
+            }
+
+            let endpoint = '';
+            if (userChoice === 'soft_delete') {
+                endpoint = `/api/routers/${routerId}`;
+            } else if (userChoice === 'permanent_delete' && hasPermanentDeletePermission) {
+                endpoint = `/api/routers/${routerId}/permanent`;
+            } else {
+                return; // Nenhuma ação válida
+            }
+
+            try {
+                const result = await apiRequest(endpoint, 'DELETE');
+                showNotification(result.message, 'success');
+                loadPageData();
+            } catch (error) {
+                showNotification(`Erro: ${error.message}`, 'error');
             }
         };
 

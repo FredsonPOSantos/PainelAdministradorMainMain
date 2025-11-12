@@ -2395,6 +2395,7 @@ users.admin.update.limited	Utilizadores (Admin)	Editar (Limitado)	Editar apenas 
 users.admin.delete	Utilizadores (Admin)	Excluir	\N
 users.admin.reset_password	Utilizadores (Admin)	Resetar Senha	\N
 settings.profile.update_password	Configurações (Meu Perfil)	Alterar Senha	Alterar a própria senha
+routers.individual.delete_permanent	Roteadores Individuais	Excluir Permanentemente	Exclui o roteador e remove seu nome do histórico de utilizadores.
 settings.general.read	Configurações (Geral)	Ver	\N
 settings.general.write	Configurações (Geral)	Editar	\N
 settings.hotspot.read	Configurações (Portal Hotspot)	Ver	\N
@@ -4528,4 +4529,3 @@ ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public GRANT ALL ON TABLES 
 --
 
 \unrestrict fjU1B9uvKBy4wSe7GfDGlFTdFt8DUAnmZF4QgSqObrTZHPbCHciyoceoaleib9u
-

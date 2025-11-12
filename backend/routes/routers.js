@@ -13,6 +13,9 @@ router.get('/', verifyToken, checkPermission('routers.read'), routerController.g
 router.put('/:id', verifyToken, checkPermission('routers.update'), routerController.updateRouter);
 router.delete('/:id', verifyToken, checkPermission('routers.delete'), routerController.deleteRouter);
 
+// [NOVO] Rota para exclusão permanente de um roteador
+router.delete('/:id/permanent', verifyToken, checkPermission('routers.individual.delete_permanent'), routerController.deleteRouterPermanently);
+
 // --- ROTA DE VERIFICAÇÃO DE STATUS ---
 router.post('/:id/ping', verifyToken, checkPermission('routers.read'), routerController.checkRouterStatus);
 
@@ -27,4 +30,3 @@ router.put('/groups/:id', verifyToken, checkPermission('routers.update'), router
 router.delete('/groups/:id', verifyToken, checkPermission('routers.delete'), routerController.deleteRouterGroup);
 
 module.exports = router;
-
