@@ -23,6 +23,7 @@ const ticketRoutes = require('./routes/tickets');
 const notificationRoutes = require('./routes/notificationRoutes');
 const raffleRoutes = require('./routes/raffles');
 const dashboardRoutes = require('./routes/dashboard'); // [NOVO] Importa a rota do dashboard
+const publicRoutes = require('./routes/publicRoutes'); // [NOVO] Importa as rotas públicas
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -53,6 +54,7 @@ app.use('/api/tickets', ticketRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/raffles', raffleRoutes);
 app.use('/api/dashboard', dashboardRoutes); // [NOVO] Regista a rota do dashboard
+app.use('/api/public', publicRoutes);     // [NOVO] Regista as rotas públicas
 
 // --- [NOVO] Rotas de Logs ---
 const logRoutes = require('./routes/logRoutes');

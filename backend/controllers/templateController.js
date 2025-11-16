@@ -9,7 +9,7 @@ const { logAction } = require('../services/auditLogService');
  */
 const createTemplate = async (req, res) => {
   // Adicionado 'prelogin_banner_id' aos campos
-  const {
+  let {
     name,
     base_model,
     login_background_url,
@@ -29,13 +29,29 @@ const createTemplate = async (req, res) => {
     return res.status(400).json({ message: 'URL do vídeo promocional é obrigatória para templates V2.' });
   }
 
+  // Os arquivos enviados vêm de 'req.files' graças ao middleware
+  const files = req.files || {};
+
+  // Lógica para decidir qual URL usar:
+  // Se um novo arquivo de background foi enviado, use o caminho dele.
+  // Senão, use o valor do campo de texto 'login_background_url'.
+  if (files.backgroundFile?.[0]) {
+    login_background_url = `/uploads/Background_hotspot/${files.backgroundFile[0].filename}`;
+  }
+
+  // Mesma lógica para o logo
+  if (files.logoFile?.[0]) {
+    logo_url = `/uploads/logo_hotspot/${files.logoFile[0].filename}`;
+  }
+
   try {
     const query = `
       INSERT INTO templates (name, base_model, login_background_url, logo_url, primary_color, font_size, font_color, promo_video_url, login_type, prelogin_banner_id)
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
       RETURNING *;
     `;
-    const values = [name, base_model, login_background_url, logo_url, primary_color, font_size, font_color, promo_video_url, login_type, prelogin_banner_id];
+    // Usa as variáveis atualizadas que podem conter os caminhos dos novos arquivos
+    const values = [name, base_model, login_background_url, logo_url, primary_color, font_size, font_color, promo_video_url, login_type, prelogin_banner_id || null];
     const result = await pool.query(query, values);
 
     await logAction({
@@ -81,7 +97,7 @@ const getAllTemplates = async (req, res) => {
  */
 const updateTemplate = async (req, res) => {
   const { id } = req.params;
-  const {
+  let {
     name,
     base_model,
     login_background_url,
@@ -94,6 +110,21 @@ const updateTemplate = async (req, res) => {
     prelogin_banner_id, // <-- NOVO CAMPO
   } = req.body;
 
+  // Os arquivos enviados vêm de 'req.files'
+  const files = req.files || {};
+
+  // Lógica para decidir qual URL usar:
+  // Se um novo arquivo de background foi enviado, use o caminho dele.
+  // Senão, use o valor do campo de texto 'login_background_url' (para manter a URL externa ou a antiga).
+  if (files.backgroundFile?.[0]) {
+    login_background_url = `/uploads/Background_hotspot/${files.backgroundFile[0].filename}`;
+  }
+
+  // Mesma lógica para o logo
+  if (files.logoFile?.[0]) {
+    logo_url = `/uploads/logo_hotspot/${files.logoFile[0].filename}`;
+  }
+
   try {
     const query = `
       UPDATE templates
@@ -104,7 +135,8 @@ const updateTemplate = async (req, res) => {
       WHERE id = $11
       RETURNING *;
     `;
-    const values = [name, base_model, login_background_url, logo_url, primary_color, font_size, font_color, promo_video_url, login_type, prelogin_banner_id, id];
+    // Usa as variáveis atualizadas que podem conter os caminhos dos novos arquivos
+    const values = [name, base_model, login_background_url, logo_url, primary_color, font_size, font_color, promo_video_url, login_type, prelogin_banner_id || null, id];
     const result = await pool.query(query, values);
     if (result.rowCount === 0) {
       return res.status(404).json({ message: 'Template não encontrado.' });
@@ -184,4 +216,3 @@ module.exports = {
   updateTemplate,
   deleteTemplate,
 };
-

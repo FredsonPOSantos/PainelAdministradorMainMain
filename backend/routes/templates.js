@@ -6,13 +6,14 @@ const router = express.Router();
 const templateController = require('../controllers/templateController');
 const authMiddleware = require('../middlewares/authMiddleware');
 const checkPermission = require('../middlewares/roleMiddleware');
+const uploadMiddlewareHotspot = require('../middlewares/uploadMiddlewareHotspot'); // 1. Importar o novo middleware
 
 // --- Rotas para Templates ---
 
 // Criar um novo template
 router.post(
   '/',
-  [authMiddleware, checkPermission('templates.create')],
+  [authMiddleware, checkPermission('templates.create'), uploadMiddlewareHotspot], // 2. Aplicar o middleware
   templateController.createTemplate
 );
 
@@ -26,7 +27,7 @@ router.get(
 // Atualizar um template
 router.put(
   '/:id',
-  [authMiddleware, checkPermission('templates.update')],
+  [authMiddleware, checkPermission('templates.update'), uploadMiddlewareHotspot], // 3. Aplicar o middleware
   templateController.updateTemplate
 );
 
