@@ -14,12 +14,18 @@ const createTemplate = async (req, res) => {
     base_model,
     login_background_url,
     logo_url,
+    status_logo_url, // [NOVO]
     primary_color,
     font_size,
     font_color,
     promo_video_url,
     login_type,
-    prelogin_banner_id, // <-- NOVO CAMPO
+    prelogin_banner_id,
+    postlogin_banner_id,
+    form_background_color, // [NOVO]
+    font_family,           // [NOVO]
+    status_title,          // [NOVO]
+    status_message,        // [NOVO]
   } = req.body;
 
   if (!name || !base_model || !login_type) {
@@ -44,14 +50,19 @@ const createTemplate = async (req, res) => {
     logo_url = `/uploads/logo_hotspot/${files.logoFile[0].filename}`;
   }
 
+  // [NOVO] Mesma lógica para o logo de status
+  if (files.statusLogoFile?.[0]) {
+    status_logo_url = `/uploads/logo_hotspot/${files.statusLogoFile[0].filename}`;
+  }
+
   try {
     const query = `
-      INSERT INTO templates (name, base_model, login_background_url, logo_url, primary_color, font_size, font_color, promo_video_url, login_type, prelogin_banner_id)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+      INSERT INTO templates (name, base_model, login_background_url, logo_url, primary_color, font_size, font_color, promo_video_url, login_type, prelogin_banner_id, postlogin_banner_id, form_background_color, font_family, status_title, status_message, status_logo_url)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
       RETURNING *;
     `;
     // Usa as variáveis atualizadas que podem conter os caminhos dos novos arquivos
-    const values = [name, base_model, login_background_url, logo_url, primary_color, font_size, font_color, promo_video_url, login_type, prelogin_banner_id || null];
+    const values = [name, base_model, login_background_url, logo_url, primary_color, font_size, font_color, promo_video_url, login_type, prelogin_banner_id || null, postlogin_banner_id || null, form_background_color, font_family, status_title, status_message, status_logo_url];
     const result = await pool.query(query, values);
 
     await logAction({
@@ -102,12 +113,18 @@ const updateTemplate = async (req, res) => {
     base_model,
     login_background_url,
     logo_url,
+    status_logo_url, // [NOVO]
     primary_color,
     font_size,
     font_color,
     promo_video_url,
     login_type,
-    prelogin_banner_id, // <-- NOVO CAMPO
+    prelogin_banner_id,
+    postlogin_banner_id,
+    form_background_color, // [NOVO]
+    font_family,           // [NOVO]
+    status_title,          // [NOVO]
+    status_message,        // [NOVO]
   } = req.body;
 
   // Os arquivos enviados vêm de 'req.files'
@@ -125,18 +142,25 @@ const updateTemplate = async (req, res) => {
     logo_url = `/uploads/logo_hotspot/${files.logoFile[0].filename}`;
   }
 
+  // [NOVO] Mesma lógica para o logo de status
+  if (files.statusLogoFile?.[0]) {
+    status_logo_url = `/uploads/logo_hotspot/${files.statusLogoFile[0].filename}`;
+  }
+
   try {
     const query = `
       UPDATE templates
       SET 
         name = $1, base_model = $2, login_background_url = $3, logo_url = $4,
         primary_color = $5, font_size = $6, font_color = $7, promo_video_url = $8,
-        login_type = $9, prelogin_banner_id = $10
-      WHERE id = $11
+        login_type = $9, prelogin_banner_id = $10, postlogin_banner_id = $11,
+        form_background_color = $12, font_family = $13, status_title = $14,
+        status_message = $15, status_logo_url = $16
+      WHERE id = $17
       RETURNING *;
     `;
     // Usa as variáveis atualizadas que podem conter os caminhos dos novos arquivos
-    const values = [name, base_model, login_background_url, logo_url, primary_color, font_size, font_color, promo_video_url, login_type, prelogin_banner_id || null, id];
+    const values = [name, base_model, login_background_url, logo_url, primary_color, font_size, font_color, promo_video_url, login_type, prelogin_banner_id || null, postlogin_banner_id || null, form_background_color, font_family, status_title, status_message, status_logo_url, id];
     const result = await pool.query(query, values);
     if (result.rowCount === 0) {
       return res.status(404).json({ message: 'Template não encontrado.' });

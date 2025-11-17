@@ -24,11 +24,11 @@ const storage = multer.diskStorage({
         // Decide a pasta de destino com base no nome do campo do formulário
         if (file.fieldname === 'backgroundFile') {
             cb(null, UPLOAD_DIRS.background);
-        } else if (file.fieldname === 'logoFile') {
+        } else if (file.fieldname === 'logoFile' || file.fieldname === 'statusLogoFile') {
             cb(null, UPLOAD_DIRS.logo);
         } else {
             // Se um campo inesperado for enviado, rejeita com um erro
-            cb(new Error('Campo de arquivo inválido! Use "backgroundFile" ou "logoFile".'), null);
+            cb(new Error('Campo de arquivo inválido!'), null);
         }
     },
     filename: (req, file, cb) => {
@@ -59,5 +59,6 @@ const upload = multer({
 // Ele vai procurar por arquivos nos campos 'backgroundFile' e 'logoFile' do formulário.
 module.exports = upload.fields([
     { name: 'backgroundFile', maxCount: 1 },
-    { name: 'logoFile', maxCount: 1 }
+    { name: 'logoFile', maxCount: 1 },
+    { name: 'statusLogoFile', maxCount: 1 } // [NOVO]
 ]);

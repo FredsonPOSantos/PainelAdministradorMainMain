@@ -7,7 +7,13 @@ const { logAction } = require('../services/auditLogService');
  * @description Cria um novo banner.
  */
 const createBanner = async (req, res) => {
-  const { name, image_url, target_url, display_time_seconds, type, is_active } = req.body;
+  // A imagem pode vir como URL de texto ou como ficheiro
+  let { name, image_url, target_url, display_time_seconds, type, is_active } = req.body;
+
+  // Se um ficheiro foi enviado pelo middleware, usa o caminho dele
+  if (req.file) {
+    image_url = `/uploads/banners/${req.file.filename}`;
+  }
 
   // Validação
   if (!name || !image_url || !type) {
@@ -66,7 +72,12 @@ const getAllBanners = async (req, res) => {
  */
 const updateBanner = async (req, res) => {
   const { id } = req.params;
-  const { name, image_url, target_url, display_time_seconds, type, is_active } = req.body;
+  let { name, image_url, target_url, display_time_seconds, type, is_active } = req.body;
+
+  // Se um novo ficheiro foi enviado, usa o caminho dele. Senão, mantém o image_url existente.
+  if (req.file) {
+    image_url = `/uploads/banners/${req.file.filename}`;
+  }
 
   try {
     const query = `

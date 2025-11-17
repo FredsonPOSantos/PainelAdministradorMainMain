@@ -6,6 +6,7 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const pool = require('./connection');
+const methodOverride = require('method-override'); // [NOVO] Importa o method-override
 const ping = require('ping'); // [NOVO] Importa a biblioteca de ping para a verificação
 
 // Importação das rotas
@@ -31,11 +32,24 @@ const PORT = process.env.PORT || 3000;
 // --- Middlewares Essenciais ---
 app.use(cors()); // Permite requisições de origens diferentes (ex: frontend em porta diferente)
 app.use(express.json()); // Habilita o parsing de JSON no corpo das requisições
+app.use(express.urlencoded({ extended: true })); // Necessário para method-override ler o corpo
+
+// [NOVO] Configura o method-override para procurar por _method no corpo da requisição
+// Isto permite que formulários FormData que usam POST simulem requisições PUT.
+app.use(methodOverride(function (req, res) {
+  if (req.body && typeof req.body === 'object' && '_method' in req.body) {
+    // procura em corpos de requisição urlencoded e multipart
+    var method = req.body._method;
+    delete req.body._method;
+    return method;
+  }
+}));
 
 // --- Servir Ficheiros Estáticos ---
 // Torna a pasta 'public' (e subpastas como 'uploads') acessível via URL
 // Ex: http://localhost:3000/uploads/logos/company_logo.png
-app.use(express.static(path.join(__dirname, 'public')));
+// [CORRIGIDO] O caminho deve apontar para a pasta 'public' na raiz do projeto, um nível acima da pasta 'backend'.
+app.use(express.static(path.join(__dirname, '../public')));
 
 
 // --- Definição das Rotas da API ---

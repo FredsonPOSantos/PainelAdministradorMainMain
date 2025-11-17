@@ -43,7 +43,7 @@ const getOccupiedRouterIds = async (campaignIdToExclude = null, client = pool) =
  * @description Cria uma nova campanha.
  */
 const createCampaign = async (req, res) => {
-  const { name, template_id, target_type, target_id, start_date, end_date, is_active, postLoginBannerIds } = req.body;
+  const { name, template_id, target_type, target_id, start_date, end_date, is_active } = req.body;
 
   // Validação de entrada
   if (!name || !template_id || !target_type || !start_date || !end_date) {
@@ -93,16 +93,6 @@ const createCampaign = async (req, res) => {
     `;
     const values = [name, template_id, target_type, target_id, start_date, end_date, is_active || false];
     const result = await client.query(query, values);
-    const newCampaignId = result.rows[0].id;
-
-    // [NOVO] Insere as associações de banners de pós-login
-    if (postLoginBannerIds && Array.isArray(postLoginBannerIds) && postLoginBannerIds.length > 0) {
-      const bannerInsertQuery = `
-        INSERT INTO campaign_banners (campaign_id, banner_id)
-        SELECT $1, unnest($2::int[]);
-      `;
-      await client.query(bannerInsertQuery, [newCampaignId, postLoginBannerIds]);
-    }
     
     await client.query('COMMIT');
 
@@ -142,14 +132,9 @@ const getAllCampaigns = async (req, res) => {
   try {
     // Query para obter informações detalhadas, incluindo o nome do template e os banners de pós-login associados
     const query = `
-      SELECT 
-        c.*, 
-        t.name as template_name,
-        (
-          SELECT json_agg(cb.banner_id) 
-          FROM campaign_banners cb 
-          WHERE cb.campaign_id = c.id
-        ) as post_login_banner_ids
+      SELECT
+        c.*,
+        t.name as template_name
       FROM campaigns c
       JOIN templates t ON c.template_id = t.id
       ORDER BY c.start_date DESC;
@@ -167,7 +152,7 @@ const getAllCampaigns = async (req, res) => {
  */
 const updateCampaign = async (req, res) => {
   const { id } = req.params;
-  const { name, template_id, target_type, target_id, start_date, end_date, is_active, postLoginBannerIds } = req.body;
+  const { name, template_id, target_type, target_id, start_date, end_date, is_active } = req.body;
 
   const client = await pool.connect();
   try {
@@ -207,19 +192,6 @@ const updateCampaign = async (req, res) => {
     if (result.rowCount === 0) {
       await client.query('ROLLBACK');
       return res.status(404).json({ message: 'Campanha não encontrada.' });
-    }
-
-    // [NOVO] Atualiza as associações de banners de pós-login
-    // 1. Remove todas as associações antigas para esta campanha
-    await client.query('DELETE FROM campaign_banners WHERE campaign_id = $1', [id]);
-
-    // 2. Insere as novas associações, se houver
-    if (postLoginBannerIds && Array.isArray(postLoginBannerIds) && postLoginBannerIds.length > 0) {
-      const bannerInsertQuery = `
-        INSERT INTO campaign_banners (campaign_id, banner_id)
-        SELECT $1, unnest($2::int[]);
-      `;
-      await client.query(bannerInsertQuery, [id, postLoginBannerIds]);
     }
 
     await client.query('COMMIT');

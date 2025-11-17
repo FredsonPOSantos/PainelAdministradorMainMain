@@ -20,7 +20,7 @@ router.post(
 // Criar um novo banner (Criação)
 router.post(
   '/',
-  [authMiddleware, checkPermission('banners.create')],
+  [authMiddleware, checkPermission('banners.create'), uploadMiddleware.single('bannerImage')],
   bannerController.createBanner
 );
 
@@ -34,7 +34,7 @@ router.get(
 // Atualizar um banner (Atualização)
 router.put(
   '/:id',
-  [authMiddleware, checkPermission('banners.update')],
+  [authMiddleware, checkPermission('banners.update'), uploadMiddleware.single('bannerImage')],
   bannerController.updateBanner
 );
 

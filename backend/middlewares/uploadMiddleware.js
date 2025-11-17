@@ -5,7 +5,8 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 
-const uploadDir = 'public/uploads/banners/';
+// [CORRIGIDO] O caminho deve ser relativo ao ficheiro atual e apontar para a pasta public na raiz do projeto.
+const uploadDir = path.join(__dirname, '../../public/uploads/banners/');
 
 // Garante que o diretório de upload exista
 fs.mkdirSync(uploadDir, { recursive: true });

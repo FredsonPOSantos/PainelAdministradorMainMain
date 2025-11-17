@@ -7,7 +7,8 @@ const path = require('path');
 const fs = require('fs'); // Módulo 'fs' para verificar/criar diretórios
 
 // Define a pasta onde os logos serão guardados
-const logoUploadPath = 'public/uploads/logos/';
+// [CORRIGIDO] O caminho deve ser relativo ao ficheiro atual e apontar para a pasta public na raiz do projeto.
+const logoUploadPath = path.join(__dirname, '../../public/uploads/logos/');
 
 // Verifica se a pasta existe, senão cria-a
 if (!fs.existsSync(logoUploadPath)) {
@@ -101,4 +102,3 @@ const logoUploadMiddleware = (req, res, next) => {
 
 
 module.exports = logoUploadMiddleware; // Exporta a função middleware completa
-

@@ -317,14 +317,14 @@ const updateAppearanceSettings = async (req, res) => {
         const updates = {};
         const files = req.files || {};
 
-        // Processar arquivos enviados
-        if (files.companyLogo) {
+        // Processar ficheiros enviados
+        if (files.companyLogo?.[0]) {
             updates.logo_url = '/uploads/logos/' + files.companyLogo[0].filename;
         }
-        if (files.loginLogo) {
+        if (files.loginLogo?.[0]) {
             updates.login_logo_url = '/uploads/logos/' + files.loginLogo[0].filename;
         }
-        if (files.backgroundImage) {
+        if (files.backgroundImage?.[0]) {
             updates.background_image_url = '/uploads/background/' + files.backgroundImage[0].filename;
         }
 

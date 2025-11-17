@@ -1,62 +1,51 @@
-// Ficheiro: backend/middlewares/appearanceUploadMiddleware.js
-// Descrição: Middleware para upload de imagens de aparência (logo de login e imagem de fundo).
+// Ficheiro: middlewares/appearanceUploadMiddleware.js
+// Descrição: Middleware para upload de assets da página de configurações de aparência.
 
 const multer = require('multer');
 const path = require('path');
+const fs = require('fs');
 
-const storage = multer.diskStorage({
-    destination: function (req, file, cb) {
-        let uploadPath = 'public/uploads/';
-        
-        // Define o diretório correto baseado no campo do formulário
-        switch(file.fieldname) {
-            case 'companyLogo':
-                uploadPath += 'logos/';
-                break;
-            case 'loginLogo':
-                uploadPath += 'logos/';
-                break;
-            case 'backgroundImage':
-                uploadPath += 'background/';
-                break;
-        }
-        
-        cb(null, uploadPath);
-    },
-    filename: function (req, file, cb) {
-        // Define nomes específicos para cada tipo de arquivo
-        switch(file.fieldname) {
-            case 'companyLogo':
-                cb(null, 'company_logo' + path.extname(file.originalname));
-                break;
-            case 'loginLogo':
-                cb(null, 'login_logo' + path.extname(file.originalname));
-                break;
-            case 'backgroundImage':
-                cb(null, 'background' + path.extname(file.originalname));
-                break;
-            default:
-                cb(null, file.fieldname + '-' + Date.now() + path.extname(file.originalname));
-        }
+// Define os diretórios de upload
+const UPLOAD_DIRS = {
+    logos: path.join(__dirname, '../../public/uploads/logos'),
+    background: path.join(__dirname, '../../public/uploads/background')
+};
+
+// Garante que os diretórios de upload existam
+Object.values(UPLOAD_DIRS).forEach(dir => {
+    if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
     }
 });
 
-const fileFilter = (req, file, cb) => {
-    // Aceita SVG e formatos de imagem comuns
-    const allowedTypes = ['image/jpeg', 'image/png', 'image/svg+xml'];
-    if (allowedTypes.includes(file.mimetype)) {
-        cb(null, true);
-    } else {
-        cb(new Error('Formato de arquivo não suportado. Use JPEG, PNG ou SVG.'));
+// Configuração de armazenamento do Multer
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        // Decide a pasta de destino com base no nome do campo do formulário
+        if (file.fieldname === 'companyLogo' || file.fieldname === 'loginLogo') {
+            cb(null, UPLOAD_DIRS.logos);
+        } else if (file.fieldname === 'backgroundImage') {
+            cb(null, UPLOAD_DIRS.background);
+        } else {
+            cb(new Error('Campo de ficheiro inválido!'), null);
+        }
+    },
+    filename: (req, file, cb) => {
+        // Define nomes de ficheiro fixos para facilitar a referência
+        const fileExtension = path.extname(file.originalname).toLowerCase();
+        let finalName = file.fieldname; // ex: 'companyLogo'
+
+        if (file.fieldname === 'companyLogo') finalName = 'company_logo';
+        if (file.fieldname === 'loginLogo') finalName = 'login_logo';
+        if (file.fieldname === 'backgroundImage') finalName = 'background';
+
+        cb(null, finalName + fileExtension);
     }
-};
+});
 
 const upload = multer({
     storage: storage,
-    fileFilter: fileFilter,
-    limits: {
-        fileSize: 5 * 1024 * 1024 // 5MB limite
-    }
+    limits: { fileSize: 5 * 1024 * 1024 } // Limite de 5MB
 });
 
 module.exports = upload.fields([
