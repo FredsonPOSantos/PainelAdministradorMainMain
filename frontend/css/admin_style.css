@@ -125,6 +125,11 @@ body {
 .action-buttons button { margin-right: 8px; padding: 6px 10px; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; transition: transform 0.1s, opacity 0.2s; font-size: 12px; }
 .action-buttons button:hover { transform: scale(1.05); opacity: 0.9; } .action-buttons button:last-child { margin-right: 0; }
 .btn-edit { background-color: #dd6b20; color: #fff; } .btn-delete { background-color: #c53030; color: #fff; }
+.btn-preview { background-color: #3182ce; color: #fff; } /* [NOVO] Estilo para o botão de pré-visualização */
+.btn-preview i {
+    font-size: 14px; /* Ajusta o tamanho do ícone */
+    vertical-align: middle;
+}
 .btn-reset-pass { background-color: var(--primary-color, #3182ce); color: #fff; }
 
 /* Modal Styles */

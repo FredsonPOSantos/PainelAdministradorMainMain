@@ -91,4 +91,82 @@ const getActiveCampaignData = async (routerName) => {
     return campaignData;
 };
 
-module.exports = { getActiveCampaignData };
+/**
+ * [NOVO] Obtém os dados de uma campanha específica para pré-visualização,
+ * ignorando se está ativa ou não.
+ * @param {number} campaignId - O ID da campanha a ser pré-visualizada.
+ */
+const getCampaignPreviewData = async (campaignId) => {
+    const admServerUrl = `http://${process.env.SERVER_IP || '127.0.0.1'}:${process.env.PORT || 3000}`;
+
+    let campaignData = {
+        use_default: true,
+        template: null,
+        postLoginBanner: null,
+    };
+
+    const campaignResult = await pool.query('SELECT * FROM campaigns WHERE id = $1', [campaignId]);
+
+    if (campaignResult.rows.length === 0) {
+        console.log(`[CampaignService-Preview] Campanha com ID '${campaignId}' não encontrada.`);
+        return campaignData;
+    }
+
+    const campaign = campaignResult.rows[0];
+
+    const templateQuery = `
+        SELECT 
+            t.*,
+            b_post.image_url AS post_login_banner_url,
+            b_post.target_url AS post_login_target_url
+        FROM templates t
+        LEFT JOIN banners AS b_post ON t.postlogin_banner_id = b_post.id AND b_post.type = 'post-login'
+        WHERE t.id = $1;
+    `;
+    const templateResult = await pool.query(templateQuery, [campaign.template_id]);
+
+    if (templateResult.rows.length > 0) {
+        const templateData = templateResult.rows[0];
+        campaignData.use_default = false;
+
+        // [CORRIGIDO] Monta o objeto de template COMPLETO, incluindo dados de login e status.
+        campaignData.template = {
+            // --- Dados para a página de LOGIN ---
+            loginType: templateData.login_type,
+            primaryColor: templateData.primary_color,
+            fontColor: templateData.font_color,
+            fontSize: templateData.font_size,
+            formBackgroundColor: templateData.form_background_color,
+            fontFamily: templateData.font_family,
+            backgroundUrl: templateData.login_background_url 
+                ? (templateData.login_background_url.startsWith('http') 
+                    ? templateData.login_background_url 
+                    : `${admServerUrl}${templateData.login_background_url}`)
+                : null,
+            logoUrl: templateData.logo_url
+                ? (templateData.logo_url.startsWith('http')
+                    ? templateData.logo_url
+                    : `${admServerUrl}${templateData.logo_url}`)
+                : null,
+
+            // --- Dados para a página de STATUS ---
+            statusTitle: templateData.status_title,
+            statusMessage: templateData.status_message,
+            statusLogoUrl: (templateData.status_logo_url || templateData.logo_url) ? `${admServerUrl}${(templateData.status_logo_url || templateData.logo_url)}` : null,
+            statusBgColor: templateData.status_bg_color,
+            statusBgImageUrl: templateData.status_bg_image_url ? `${admServerUrl}${templateData.status_bg_image_url}` : null,
+            statusH1FontSize: templateData.status_h1_font_size,
+            statusPFontSize: templateData.status_p_font_size,
+        };
+
+        if (templateData.post_login_banner_url) {
+            campaignData.postLoginBanner = {
+                imageUrl: templateData.post_login_banner_url.startsWith('http') ? templateData.post_login_banner_url : `${admServerUrl}${templateData.post_login_banner_url}`,
+                targetUrl: templateData.post_login_target_url
+            };
+        }
+    }
+    return campaignData;
+};
+
+module.exports = { getActiveCampaignData, getCampaignPreviewData };

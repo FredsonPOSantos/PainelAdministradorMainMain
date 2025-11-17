@@ -109,12 +109,14 @@ if (window.initCampaignsPage) {
                         <td>${campaign.target_type}</td>
                         <td><span class="badge status-${campaign.is_active ? 'active' : 'inactive'}">${campaign.is_active ? 'Ativa' : 'Inativa'}</span></td>
                         <td class="action-buttons">
+                            <button class="btn-preview" title="Pré-visualizar Campanha"><i class="fas fa-eye"></i></button>
                             <button class="btn-edit">Editar</button>
                             <button class="btn-delete">Eliminar</button>
                         </td>
                     `;
                     row.querySelector('.btn-edit').addEventListener('click', () => openModalForEdit(campaign));
                     row.querySelector('.btn-delete').addEventListener('click', () => handleDelete(campaign.id, campaign.name));
+                    row.querySelector('.btn-preview').addEventListener('click', () => previewCampaign(campaign.id));
                     tableBody.appendChild(row);
                 });
             } catch (error) {
@@ -162,6 +164,18 @@ if (window.initCampaignsPage) {
                     showNotification(`Erro: ${error.message}`, 'error');
                 }
             }
+        };
+
+        /**
+         * [NOVO] Abre uma nova aba para pré-visualizar a campanha.
+         * @param {number} campaignId - O ID da campanha a ser pré-visualizada.
+         */
+        const previewCampaign = (campaignId) => {
+            // [CORRIGIDO] Constrói a URL para o SERVIDOR do hotspot (porta 3001),
+            // que irá renderizar o template EJS com os dados da campanha de pré-visualização.
+            // Usamos window.location.hostname para tornar o IP dinâmico.
+            const previewUrl = `http://${window.location.hostname}:3001/?previewCampaignId=${campaignId}`;
+            window.open(previewUrl, '_blank');
         };
 
         const openModalForCreate = () => {
