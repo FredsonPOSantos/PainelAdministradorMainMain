@@ -26,6 +26,11 @@ const createTemplate = async (req, res) => {
     font_family,           // [NOVO]
     status_title,          // [NOVO]
     status_message,        // [NOVO]
+    // [NOVO] Campos de personalização da tela de status
+    status_bg_color,
+    status_bg_image_url,
+    status_h1_font_size,
+    status_p_font_size,
   } = req.body;
 
   if (!name || !base_model || !login_type) {
@@ -55,14 +60,19 @@ const createTemplate = async (req, res) => {
     status_logo_url = `/uploads/logo_hotspot/${files.statusLogoFile[0].filename}`;
   }
 
+  // [NOVO] Mesma lógica para a imagem de fundo de status
+  if (files.statusBgFile?.[0]) {
+    status_bg_image_url = `/uploads/Background_hotspot/${files.statusBgFile[0].filename}`;
+  }
+
   try {
     const query = `
-      INSERT INTO templates (name, base_model, login_background_url, logo_url, primary_color, font_size, font_color, promo_video_url, login_type, prelogin_banner_id, postlogin_banner_id, form_background_color, font_family, status_title, status_message, status_logo_url)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+      INSERT INTO templates (name, base_model, login_background_url, logo_url, primary_color, font_size, font_color, promo_video_url, login_type, prelogin_banner_id, postlogin_banner_id, form_background_color, font_family, status_title, status_message, status_logo_url, status_bg_color, status_bg_image_url, status_h1_font_size, status_p_font_size)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
       RETURNING *;
     `;
     // Usa as variáveis atualizadas que podem conter os caminhos dos novos arquivos
-    const values = [name, base_model, login_background_url, logo_url, primary_color, font_size, font_color, promo_video_url, login_type, prelogin_banner_id || null, postlogin_banner_id || null, form_background_color, font_family, status_title, status_message, status_logo_url];
+    const values = [name, base_model, login_background_url, logo_url, primary_color, font_size, font_color, promo_video_url, login_type, prelogin_banner_id || null, postlogin_banner_id || null, form_background_color, font_family, status_title, status_message, status_logo_url, status_bg_color, status_bg_image_url, status_h1_font_size, status_p_font_size];
     const result = await pool.query(query, values);
 
     await logAction({
@@ -125,6 +135,11 @@ const updateTemplate = async (req, res) => {
     font_family,           // [NOVO]
     status_title,          // [NOVO]
     status_message,        // [NOVO]
+    // [NOVO] Campos de personalização da tela de status
+    status_bg_color,
+    status_bg_image_url,
+    status_h1_font_size,
+    status_p_font_size,
   } = req.body;
 
   // Os arquivos enviados vêm de 'req.files'
@@ -147,6 +162,11 @@ const updateTemplate = async (req, res) => {
     status_logo_url = `/uploads/logo_hotspot/${files.statusLogoFile[0].filename}`;
   }
 
+  // [NOVO] Mesma lógica para a imagem de fundo de status
+  if (files.statusBgFile?.[0]) {
+    status_bg_image_url = `/uploads/Background_hotspot/${files.statusBgFile[0].filename}`;
+  }
+
   try {
     const query = `
       UPDATE templates
@@ -154,13 +174,14 @@ const updateTemplate = async (req, res) => {
         name = $1, base_model = $2, login_background_url = $3, logo_url = $4,
         primary_color = $5, font_size = $6, font_color = $7, promo_video_url = $8,
         login_type = $9, prelogin_banner_id = $10, postlogin_banner_id = $11,
-        form_background_color = $12, font_family = $13, status_title = $14,
-        status_message = $15, status_logo_url = $16
-      WHERE id = $17
+        form_background_color = $12, font_family = $13, status_title = $15,
+        status_message = $16, status_logo_url = $17, status_bg_color = $18,
+        status_bg_image_url = $19, status_h1_font_size = $20, status_p_font_size = $21
+      WHERE id = $14
       RETURNING *;
     `;
     // Usa as variáveis atualizadas que podem conter os caminhos dos novos arquivos
-    const values = [name, base_model, login_background_url, logo_url, primary_color, font_size, font_color, promo_video_url, login_type, prelogin_banner_id || null, postlogin_banner_id || null, form_background_color, font_family, status_title, status_message, status_logo_url, id];
+    const values = [name, base_model, login_background_url, logo_url, primary_color, font_size, font_color, promo_video_url, login_type, prelogin_banner_id || null, postlogin_banner_id || null, form_background_color, font_family, id, status_title, status_message, status_logo_url, status_bg_color, status_bg_image_url, status_h1_font_size, status_p_font_size];
     const result = await pool.query(query, values);
     if (result.rowCount === 0) {
       return res.status(404).json({ message: 'Template não encontrado.' });

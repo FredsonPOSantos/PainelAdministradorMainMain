@@ -15,7 +15,7 @@ const getGeneralSettings = async (req, res) => {
     console.log("getGeneralSettings: Buscando configurações...");
     try {
         const settings = await pool.query(
-            'SELECT company_name, logo_url, primary_color, background_color, font_color, font_family, font_size, background_image_url, modal_background_color, modal_font_color, modal_border_color, sidebar_color, login_background_color, login_form_background_color, login_font_color, login_button_color, login_logo_url, email_host, email_port, email_secure, email_user, email_from FROM system_settings WHERE id = 1'
+            'SELECT company_name, logo_url, primary_color, background_color, font_color, font_family, font_size, background_image_url, modal_background_color, modal_font_color, modal_border_color, sidebar_color, login_background_color, login_form_background_color, login_font_color, login_button_color, login_logo_url, email_host, email_port, email_secure, email_user, email_from, nav_title_color, label_color, placeholder_color, tab_link_color, tab_link_active_color FROM system_settings WHERE id = 1'
         ); 
 
         if (settings.rows.length === 0) {
@@ -343,7 +343,13 @@ const updateAppearanceSettings = async (req, res) => {
             'login_form_background_color',
             'login_font_color',
             'login_button_color',
-            'company_name'
+            'company_name',
+            // [NOVO] Adiciona os novos campos de navegação e tipografia
+            'nav_title_color',
+            'label_color',
+            'placeholder_color',
+            'tab_link_color',
+            'tab_link_active_color'
         ];
 
         fields.forEach(field => {

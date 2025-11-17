@@ -64,7 +64,16 @@ const getActiveCampaignData = async (routerName) => {
                 ? ((templateData.status_logo_url || templateData.logo_url).startsWith('http')
                     ? (templateData.status_logo_url || templateData.logo_url)
                     : `${admServerUrl}${(templateData.status_logo_url || templateData.logo_url)}`)
-                : null
+                : null,
+            // [NOVO] Adiciona os novos campos de personalização
+            statusBgColor: templateData.status_bg_color,
+            statusBgImageUrl: templateData.status_bg_image_url
+                ? (templateData.status_bg_image_url.startsWith('http')
+                    ? templateData.status_bg_image_url
+                    : `${admServerUrl}${templateData.status_bg_image_url}`)
+                : null,
+            statusH1FontSize: templateData.status_h1_font_size,
+            statusPFontSize: templateData.status_p_font_size,
         };
 
         if (templateData.post_login_banner_url) {

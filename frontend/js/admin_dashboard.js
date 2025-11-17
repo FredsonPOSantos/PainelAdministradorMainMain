@@ -125,7 +125,13 @@ window.applyVisualSettings = (settings) => {
         'font_size': '--font-size', // Adicionado 'px' abaixo
         'modal_background_color': '--modal-background-color',
         'modal_font_color': '--modal-font-color',
-        'modal_border_color': '--modal-border-color'
+        'modal_border_color': '--modal-border-color',
+        // [NOVO] Mapeamento para navegação e tipografia
+        'nav_title_color': '--nav-title-color',
+        'label_color': '--label-color',
+        'placeholder_color': '--placeholder-color',
+        'tab_link_color': '--tab-link-color',
+        'tab_link_active_color': '--tab-link-active-color'
     };
 
     for (const key in styleMap) {

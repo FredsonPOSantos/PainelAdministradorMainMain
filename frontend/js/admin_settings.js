@@ -337,7 +337,13 @@ window.initSettingsPage = () => {
                 'loginFormBackgroundColor': 'login_form_background_color',
                 'loginFontColor': 'login_font_color',
                 'loginButtonColor': 'login_button_color',
-                'companyName': 'company_name'
+                'companyName': 'company_name',
+                // [NOVO] Adiciona os novos campos de navegação e tipografia ao mapeamento
+                'navTitleColor': 'nav_title_color',
+                'labelColor': 'label_color',
+                'placeholderColor': 'placeholder_color',
+                'tabLinkColor': 'tab_link_color',
+                'tabLinkActiveColor': 'tab_link_active_color'
             };
 
             // 1. Compara campos de texto e cor
@@ -483,6 +489,12 @@ window.initSettingsPage = () => {
                     'loginFormBackgroundColor': settings.login_form_background_color,
                     'loginFontColor': settings.login_font_color,
                     'loginButtonColor': settings.login_button_color,
+                    // [NOVO] Adiciona os novos campos para serem preenchidos
+                    'navTitleColor': settings.nav_title_color,
+                    'labelColor': settings.label_color,
+                    'placeholderColor': settings.placeholder_color,
+                    'tabLinkColor': settings.tab_link_color,
+                    'tabLinkActiveColor': settings.tab_link_active_color,
                     // [NOVO] Campos de SMTP
                     'emailHost': settings.email_host,
                     'emailPort': settings.email_port,

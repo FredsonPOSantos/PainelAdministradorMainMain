@@ -66,62 +66,41 @@ if (window.initBannersPage) {
             }
         };
         
-        const uploadImage = async (file) => {
-            const formData = new FormData();
-            formData.append('bannerImage', file);
-
-            const token = localStorage.getItem('adminToken');
-            const API_ADMIN_URL = 'http://localhost:3000';
-
-            try {
-                const response = await fetch(`${API_ADMIN_URL}/api/banners/upload`, {
-                    method: 'POST',
-                    headers: { 'Authorization': `Bearer ${token}` },
-                    body: formData,
-                });
-
-                const result = await response.json();
-                if (!response.ok) throw new Error(result.message);
-                
-                return result.imageUrl;
-            } catch (error) {
-                showNotification(`Erro no upload: ${error.message}`, 'error');
-                return null;
-            }
-        };
-
         const handleFormSubmit = async (event) => {
             event.preventDefault();
 
-            let imageUrl = bannerImageUrlInput.value;
             const bannerId = bannerIdInput.value;
+            const formData = new FormData();
 
-            // Se o modo de upload estiver ativo e um ficheiro for selecionado, faz o upload primeiro.
+            // Adiciona os campos de texto ao FormData
+            formData.append('name', bannerNameInput.value);
+            formData.append('type', bannerTypeSelect.value);
+            formData.append('target_url', bannerTargetUrlInput.value);
+            formData.append('display_time_seconds', parseInt(bannerDisplayTimeInput.value, 10));
+            formData.append('is_active', bannerIsActiveCheckbox.checked);
+
+            // Lógica para a imagem: ou ficheiro ou URL
             if (sourceUploadRadio.checked && bannerImageFileInput.files[0]) {
-                const uploadedUrl = await uploadImage(bannerImageFileInput.files[0]);
-                if (!uploadedUrl) return; // O upload falhou, para a submissão.
-                imageUrl = uploadedUrl;
-            }
-
-            if (!imageUrl) {
+                formData.append('bannerImage', bannerImageFileInput.files[0]);
+            } else if (sourceUrlRadio.checked && bannerImageUrlInput.value) {
+                formData.append('image_url', bannerImageUrlInput.value);
+            } else if (!bannerId) { 
+                // Se for criação e não houver nem ficheiro nem URL, mostra erro.
                 showNotification('Por favor, forneça uma imagem (via upload ou URL).', 'error');
                 return;
             }
-            
-            const bannerData = {
-                name: bannerNameInput.value,
-                type: bannerTypeSelect.value,
-                image_url: imageUrl,
-                target_url: bannerTargetUrlInput.value,
-                display_time_seconds: parseInt(bannerDisplayTimeInput.value, 10),
-                is_active: bannerIsActiveCheckbox.checked,
-            };
-            
-            const method = bannerId ? 'PUT' : 'POST';
-            const endpoint = bannerId ? `/api/banners/${bannerId}` : '/api/banners';
+
+            let method = bannerId ? 'PUT' : 'POST';
+            let endpoint = bannerId ? `/api/banners/${bannerId}` : '/api/banners';
+
+            // Simula o PUT para funcionar com FormData
+            if (method === 'PUT') {
+                formData.append('_method', 'PUT');
+                method = 'POST';
+            }
 
             try {
-                const result = await apiRequest(endpoint, method, bannerData);
+                const result = await apiRequest(endpoint, method, formData);
                 showNotification(result.message, 'success');
                 closeModal();
                 loadBanners();
@@ -155,6 +134,8 @@ if (window.initBannersPage) {
         const openModalForCreate = () => {
             resetModal();
             modalTitle.textContent = 'Adicionar Novo Banner';
+            // [CORREÇÃO] Garante que o conteúdo do modal role para o topo ao abrir
+            modal.querySelector('.modal-content').scrollTop = 0;
             modal.classList.remove('hidden');
         };
 
@@ -181,6 +162,8 @@ if (window.initBannersPage) {
                 toggleImageSource();
                 updateImagePreview(banner.image_url);
 
+                // [CORREÇÃO] Garante que o conteúdo do modal role para o topo ao abrir
+                modal.querySelector('.modal-content').scrollTop = 0;
                 modal.classList.remove('hidden');
             } catch (error) {
                 showNotification(`Erro ao carregar dados do banner: ${error.message}`, 'error');

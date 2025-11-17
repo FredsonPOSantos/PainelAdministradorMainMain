@@ -22,7 +22,7 @@ Object.values(UPLOAD_DIRS).forEach(dir => {
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
         // Decide a pasta de destino com base no nome do campo do formulário
-        if (file.fieldname === 'backgroundFile') {
+        if (file.fieldname === 'backgroundFile' || file.fieldname === 'statusBgFile') {
             cb(null, UPLOAD_DIRS.background);
         } else if (file.fieldname === 'logoFile' || file.fieldname === 'statusLogoFile') {
             cb(null, UPLOAD_DIRS.logo);
@@ -60,5 +60,6 @@ const upload = multer({
 module.exports = upload.fields([
     { name: 'backgroundFile', maxCount: 1 },
     { name: 'logoFile', maxCount: 1 },
-    { name: 'statusLogoFile', maxCount: 1 } // [NOVO]
+    { name: 'statusLogoFile', maxCount: 1 }, // [NOVO]
+    { name: 'statusBgFile', maxCount: 1 } // [NOVO]
 ]);

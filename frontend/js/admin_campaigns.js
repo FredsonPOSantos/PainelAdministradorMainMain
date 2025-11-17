@@ -126,6 +126,7 @@ if (window.initCampaignsPage) {
         const handleFormSubmit = async (event) => {
             event.preventDefault();
             const campaignId = document.getElementById('campaignId').value;
+
             // Atualizado para corresponder aos campos do backend
             const campaignData = {
                 name: document.getElementById('campaignName').value,
@@ -134,7 +135,7 @@ if (window.initCampaignsPage) {
                 target_id: document.getElementById('campaignTargetId').value || null,
                 start_date: document.getElementById('campaignStartDate').value,
                 end_date: document.getElementById('campaignEndDate').value,
-                is_active: document.getElementById('campaignIsActive').checked,
+                is_active: document.getElementById('campaignIsActive').checked
             };
             
             const method = campaignId ? 'PUT' : 'POST';
@@ -210,4 +211,3 @@ if (window.initCampaignsPage) {
         loadCampaigns();
     };
 }
-
