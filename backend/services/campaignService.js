@@ -116,10 +116,13 @@ const getCampaignPreviewData = async (campaignId) => {
 
     const templateQuery = `
         SELECT 
-            t.*,
+            t.*, -- Pega todos os campos do template
+            b_pre.image_url AS pre_login_banner_url,
+            b_pre.target_url AS pre_login_target_url,
             b_post.image_url AS post_login_banner_url,
             b_post.target_url AS post_login_target_url
         FROM templates t
+        LEFT JOIN banners AS b_pre ON t.prelogin_banner_id = b_pre.id AND b_pre.type = 'pre-login'
         LEFT JOIN banners AS b_post ON t.postlogin_banner_id = b_post.id AND b_post.type = 'post-login'
         WHERE t.id = $1;
     `;
@@ -128,6 +131,14 @@ const getCampaignPreviewData = async (campaignId) => {
     if (templateResult.rows.length > 0) {
         const templateData = templateResult.rows[0];
         campaignData.use_default = false;
+
+        // [CORRIGIDO] Adiciona a lógica para o banner de PRÉ-LOGIN na pré-visualização
+        if (templateData.pre_login_banner_url) {
+            campaignData.preLoginBanner = {
+                imageUrl: templateData.pre_login_banner_url.startsWith('http') ? templateData.pre_login_banner_url : `${admServerUrl}${templateData.pre_login_banner_url}`,
+                targetUrl: templateData.pre_login_target_url
+            };
+        }
 
         // [CORRIGIDO] Monta o objeto de template COMPLETO, incluindo dados de login e status.
         campaignData.template = {

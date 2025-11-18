@@ -126,9 +126,11 @@ body {
 .action-buttons button:hover { transform: scale(1.05); opacity: 0.9; } .action-buttons button:last-child { margin-right: 0; }
 .btn-edit { background-color: #dd6b20; color: #fff; } .btn-delete { background-color: #c53030; color: #fff; }
 .btn-preview { background-color: #3182ce; color: #fff; } /* [NOVO] Estilo para o botão de pré-visualização */
-.btn-preview i {
-    font-size: 14px; /* Ajusta o tamanho do ícone */
-    vertical-align: middle;
+.btn-preview svg {
+    /* [CORRIGIDO] Estilo para o ícone SVG */
+    vertical-align: middle; /* Alinha o ícone verticalmente */
+    margin-top: -2px; /* Pequeno ajuste para centralização perfeita */
+    display: inline-block;
 }
 .btn-reset-pass { background-color: var(--primary-color, #3182ce); color: #fff; }
 
