@@ -30,6 +30,18 @@ window.initSettingsPage = () => {
         const permSaveChangesContainer = document.getElementById('permSaveChangesContainer');
         const permSaveChangesBtn = document.getElementById('permSaveChangesBtn');
         const permSaveStatus = document.getElementById('permSaveStatus');
+ 
+        // [NOVO] Elementos da Aba de Políticas
+        const viewTermsBtn = document.getElementById('viewTermsBtn');
+        const viewMarketingPolicyBtn = document.getElementById('viewMarketingPolicyBtn');
+        const policyModal = document.getElementById('policyModal');
+        const policyModalTitle = document.getElementById('policyModalTitle');
+        const policyViewer = document.getElementById('policyViewer');
+        const policyEditor = document.getElementById('policyEditor');
+        const policyModalActions = document.getElementById('policyModalActions');
+        const policyContentField = document.getElementById('policyContentField');
+        const policyTypeField = document.getElementById('policyTypeField');
+        const policyEditForm = document.getElementById('policyEditForm');
 
         // --- LÓGICA DA ABA DE PERMISSÕES (REFEITA) ---
 
@@ -506,8 +518,6 @@ window.initSettingsPage = () => {
                 for (const id in fields) {
                     const el = document.getElementById(id);
                     if (el) {
-                        // Se o valor for nulo ou indefinido, o campo ficará vazio,
-                        // permitindo que o CSS ou o browser definam o valor visual padrão.
                         el.value = fields[id] || '';
                     }
                 }
@@ -761,6 +771,100 @@ window.initSettingsPage = () => {
             switchTab(firstVisibleTabId);
         };
 
+        // --- [NOVA LÓGICA PARA O MODAL DE POLÍTICAS] ---
+
+        const openPolicyModal = (type) => {
+            const isMaster = window.currentUserProfile?.role === 'master';
+            const content = (type === 'terms') ? window.systemSettings.terms_content : window.systemSettings.marketing_policy_content;
+            const title = (type === 'terms') ? 'Termos e Condições' : 'Política de Sorteios e Promoções';
+
+            policyModalTitle.textContent = title;
+            policyViewer.innerHTML = content || '<p>Nenhum conteúdo definido.</p>';
+            policyTypeField.value = type;
+
+            // Reseta o estado do modal
+            policyViewer.classList.remove('hidden');
+            policyEditor.classList.add('hidden');
+
+            // Configura os botões
+            policyModalActions.innerHTML = '';
+            if (isMaster) {
+                const editBtn = document.createElement('button');
+                editBtn.id = 'editPolicyBtn';
+                editBtn.className = 'btn-secondary';
+                editBtn.textContent = 'Editar';
+                editBtn.onclick = () => enterEditMode(content);
+                policyModalActions.appendChild(editBtn);
+            }
+
+            policyModal.classList.remove('hidden');
+        };
+
+        const enterEditMode = (currentContent) => {
+            policyViewer.classList.add('hidden');
+            policyEditor.classList.remove('hidden');
+
+            const editor = document.querySelector("trix-editor[input='policyContentField']").editor;
+            editor.loadHTML(currentContent || '');
+
+            // Altera os botões para Salvar e Cancelar
+            policyModalActions.innerHTML = `
+                <button id="cancelEditBtn" type="button" class="btn-secondary">Cancelar Edição</button>
+                <button id="savePolicyBtn" type="button" class="btn-primary">Salvar Alterações</button>
+            `;
+
+            document.getElementById('cancelEditBtn').onclick = () => exitEditMode(currentContent);
+            document.getElementById('savePolicyBtn').onclick = handleSavePolicy;
+        };
+
+        const exitEditMode = (originalContent) => {
+            policyViewer.innerHTML = originalContent || '<p>Nenhum conteúdo definido.</p>';
+            policyViewer.classList.remove('hidden');
+            policyEditor.classList.add('hidden');
+            openPolicyModal(policyTypeField.value); // Reabre o modal no modo de visualização
+        };
+
+        const handleSavePolicy = async () => {
+            const saveBtn = document.getElementById('savePolicyBtn');
+            saveBtn.disabled = true;
+            saveBtn.textContent = 'A guardar...';
+
+            const type = policyTypeField.value;
+            const content = policyContentField.value;
+
+            const dataToSend = {};
+            if (type === 'terms') {
+                dataToSend.terms_content = content;
+                dataToSend.marketing_policy_content = window.systemSettings.marketing_policy_content; // Envia o outro campo inalterado
+            } else {
+                dataToSend.terms_content = window.systemSettings.terms_content; // Envia o outro campo inalterado
+                dataToSend.marketing_policy_content = content;
+            }
+
+            try {
+                const result = await apiRequest('/api/settings/policies', 'POST', dataToSend);
+                if (result.success) {
+                    showNotification('Política atualizada com sucesso!', 'success');
+                    // Atualiza o cache local e sai do modo de edição
+                    if (type === 'terms') {
+                        window.systemSettings.terms_content = content;
+                    } else {
+                        window.systemSettings.marketing_policy_content = content;
+                    }
+                    exitEditMode(content);
+                } else {
+                    throw new Error(result.message || 'Falha ao guardar a política.');
+                }
+            } catch (error) {
+                showNotification(`Erro: ${error.message}`, 'error');
+            } finally {
+                saveBtn.disabled = false;
+                saveBtn.textContent = 'Salvar Alterações';
+            }
+        };
+
+        const closePolicyModal = () => policyModal.classList.add('hidden');
+
         if (tabLinks.length > 0) { 
             tabLinks.forEach(link => link.addEventListener('click', (e) => {
                 e.preventDefault();
@@ -826,6 +930,11 @@ window.initSettingsPage = () => {
         if (unifiedAppearanceForm) {
             unifiedAppearanceForm.addEventListener('submit', handleUnifiedAppearance);
         }
+
+        // [NOVO] Listeners para os botões de visualização de políticas
+        viewTermsBtn?.addEventListener('click', () => openPolicyModal('terms'));
+        viewMarketingPolicyBtn?.addEventListener('click', () => openPolicyModal('marketing'));
+        policyModal?.querySelector('.modal-close-btn').addEventListener('click', closePolicyModal);
 
         initializeSettingsPage();
     }; // <-- Esta chave fecha a função window.initSettingsPage

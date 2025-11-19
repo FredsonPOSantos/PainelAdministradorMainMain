@@ -1,6 +1,10 @@
 <!-- Ficheiro: pages/admin_settings.html -->
 <!-- [VERSÃO 13.5.3 - GESTÃO BATCH + CORREÇÃO DE LABELS] -->
 
+<!-- [NOVO] Adiciona os recursos do editor de texto Trix -->
+<link rel="stylesheet" type="text/css" href="https://unpkg.com/trix@2.0.0/dist/trix.css">
+<script type="text/javascript" src="https://unpkg.com/trix@2.0.0/dist/trix.umd.min.js" defer></script>
+
 <div class="page-header">
     <h3>Configurações do Sistema</h3>
 </div>
@@ -13,6 +17,7 @@
     <button class="tab-link admin-only" data-tab="tab-aparencia">Aparência</button>
     <!-- [ATUALIZADO V13.5.2] Removido master-only daqui para o JS controlar (permite DPO) -->
     <button class="tab-link admin-only" data-tab="tab-permissoes">Funções e Permissões</button>
+    <button class="tab-link admin-only" data-tab="tab-politicas">Políticas</button> <!-- [NOVO] Aba de Políticas -->
     <button class="tab-link admin-only" data-tab="tab-logs">Logs de Atividade</button>
     <button class="tab-link admin-only" data-tab="tab-lgpd">Gestão de Dados</button>
 </nav>
@@ -406,3 +411,42 @@
             </div>
         </div>
 </div>
+        </div>
+    </div>
+
+    <!-- [ATUALIZADO] Aba 7: Políticas - Agora com botões para abrir o modal -->
+    <div id="tab-politicas" class="tab-content admin-only" style="text-align: center;">
+        <div class="content-section">
+            <div class="section-header">
+                <h4>Gestão de Políticas</h4>
+            </div>
+            <p class="input-hint" style="margin-bottom: 25px;">Clique para visualizar ou editar o conteúdo das políticas exibidas no portal do hotspot.</p>
+            <div class="form-actions" style="justify-content: center; border-top: none; padding-top: 0;">
+                <button id="viewTermsBtn" class="btn-primary">Termos e Condições</button>
+                <button id="viewMarketingPolicyBtn" class="btn-secondary">Política de Sorteios</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- [NOVO] Modal para Visualizar/Editar Políticas -->
+    <div id="policyModal" class="modal-overlay hidden">
+        <div class="modal-content large">
+            <button class="modal-close-btn">&times;</button>
+            <h3 id="policyModalTitle"></h3>
+            <div id="policyViewer" class="policy-viewer">
+                <!-- O conteúdo será inserido aqui -->
+            </div>
+            <div id="policyEditor" class="hidden">
+                <form id="policyEditForm">
+                    <input type="hidden" id="policyTypeField">
+                    <input id="policyContentField" type="hidden" name="content">
+                    <trix-editor input="policyContentField" class="trix-content"></trix-editor>
+                </form>
+            </div>
+            <div id="policyModalActions" class="modal-actions">
+                <!-- Botões de ação (Editar, Salvar, Cancelar) serão inseridos aqui -->
+            </div>
+        </div>
+    </div>
+</div>
+

@@ -243,6 +243,56 @@ router.post('/reset-password', async (req, res) => {
     }
 });
 
+// [NOVO] Rota para registo de utilizadores do hotspot
+router.post('/register', async (req, res) => {
+    const { nomeCompleto, email, telefone, senha, mac, routerName, accepts_marketing, terms_accepted } = req.body;
+
+    // Validação de entrada
+    if (!nomeCompleto || !email || !senha || !mac || !routerName) {
+        return res.status(400).json({ message: 'Todos os campos obrigatórios devem ser preenchidos.' });
+    }
+    if (terms_accepted !== true) {
+        return res.status(400).json({ message: 'É necessário aceitar os Termos e Condições.' });
+    }
+
+    try {
+        // Verifica se o e-mail já está em uso
+        const userExists = await pool.query('SELECT id FROM userdetails WHERE username = $1', [email]);
+        if (userExists.rows.length > 0) {
+            return res.status(409).json({ message: 'Este e-mail já está cadastrado.' });
+        }
+
+        // Criptografa a senha
+        const salt = await bcrypt.genSalt(10);
+        const passwordHash = await bcrypt.hash(senha, salt);
+
+        // Insere o novo utilizador na base de dados
+        const query = `
+            INSERT INTO userdetails (username, nome_completo, telefone, password, mac_address, router_name, accepts_marketing, terms_accepted_at)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
+            RETURNING id;
+        `;
+        const values = [email, nomeCompleto, telefone, passwordHash, mac, routerName, !!accepts_marketing];
+        
+        const newUser = await pool.query(query, values);
+
+        // Log de auditoria (não precisa de 'req' pois é uma rota pública)
+        await logAction({
+            action: 'HOTSPOT_USER_REGISTER',
+            status: 'SUCCESS',
+            description: `Novo utilizador do hotspot registado: "${email}" no roteador "${routerName}".`,
+            target_type: 'hotspot_user',
+            target_id: newUser.rows[0].id
+        });
+
+        res.status(201).json({ message: 'Cadastro realizado com sucesso!' });
+
+    } catch (error) {
+        console.error('Erro no registo de utilizador do hotspot:', error);
+        res.status(500).json({ message: 'Erro interno do servidor.' });
+    }
+});
+
 router.post('/re-authenticate', authMiddleware, reauthenticate);
 
 

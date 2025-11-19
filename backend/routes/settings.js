@@ -49,6 +49,13 @@ router.post(
     settingsController.updateSmtpSettings
 );
 
+// [NOVO] ROTA PARA ATUALIZAR AS POLÍTICAS
+router.post(
+    '/policies',
+    [verifyToken, checkPermission('settings.policies')], // Permissão a ser criada
+    settingsController.updatePolicies
+);
+
 
 
 

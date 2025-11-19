@@ -474,3 +474,17 @@ trix-editor {
     padding-top: 20px;
     border-top: 1px solid var(--border-color);
 }
+
+/* [NOVO] Estilos para o visualizador de políticas */
+.policy-viewer {
+    max-height: 60vh;
+    overflow-y: auto;
+    padding: 15px;
+    background-color: var(--background-dark);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    color: var(--text-primary);
+    line-height: 1.6;
+}
+
+.policy-viewer h1, .policy-viewer h2 { margin-top: 0; }
