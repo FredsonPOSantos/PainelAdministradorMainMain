@@ -90,8 +90,8 @@ body {
 .sidebar-nav { flex-grow: 1; padding: 16px 0; overflow-y: auto; }
 .sidebar-nav .nav-title { padding: 10px 24px 5px; font-size: 0.75rem; font-weight: 600; color: var(--nav-title-color); text-transform: uppercase; letter-spacing: 0.05em; margin-top: 15px; }
 .sidebar-nav .nav-title:first-of-type { margin-top: 0; }
-.nav-item { display: flex; align-items: center; padding: 12px 24px; color: var(--text-secondary); text-decoration: none; font-weight: 500; transition: background-color 0.2s, color 0.2s; cursor: pointer; white-space: nowrap; }
-.nav-item .icon { margin-right: 12px; font-size: 20px; color: inherit; width: 24px; text-align: center; }
+.nav-item { display: flex; align-items: center; padding: 12px 24px; color: var(--text-secondary); text-decoration: none; font-size: 14px; transition: background-color 0.2s, color 0.2s; cursor: pointer; white-space: nowrap; }
+.nav-item .icon { margin-right: 12px; font-size: 50px; color: inherit; width: 24px; text-align: center; }
 .nav-item:hover { background-color: var(--background-light); color: #fff; }
 .nav-item.active { background-color: var(--primary-color, #4299e1); color: #fff; font-weight: 600; }
 .nav-item.active .icon { color: #fff; }
