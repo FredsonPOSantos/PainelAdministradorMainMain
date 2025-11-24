@@ -87,8 +87,6 @@ window.initSettingsPage = () => {
             }
         };
 
-
-
         // --- Lógica de Abas ---
         const switchTab = (targetTabId) => {
             if (!targetTabId) return;
@@ -926,10 +924,28 @@ window.initSettingsPage = () => {
             unifiedAppearanceForm.addEventListener('submit', handleUnifiedAppearance);
         }
 
-        // [NOVO] Listeners para os botões de visualização de políticas
-        viewTermsBtn?.addEventListener('click', () => openPolicyModal('terms'));
-        viewMarketingPolicyBtn?.addEventListener('click', () => openPolicyModal('marketing'));
-        policyModal?.querySelector('.modal-close-btn').addEventListener('click', closePolicyModal);
+        // --- [SOLUÇÃO DEFINITIVA PARA "MODAL FANTASMA"] ---
+        // 1. Guarda as referências exatas das funções de listener num objeto.
+        //    Isto é crucial para que o `removeEventListener` saiba qual função remover.
+        const policyListeners = {
+            openTerms: () => openPolicyModal('terms'),
+            openMarketing: () => openPolicyModal('marketing'),
+            closeModal: () => closePolicyModal()
+        };
+
+        // 2. Adiciona os listeners aos botões usando as referências guardadas.
+        viewTermsBtn?.addEventListener('click', policyListeners.openTerms);
+        viewMarketingPolicyBtn?.addEventListener('click', policyListeners.openMarketing);
+        policyModal?.querySelector('.modal-close-btn')?.addEventListener('click', policyListeners.closeModal);
+
+        // 3. Cria uma função de "limpeza" que usa as mesmas referências para remover os listeners.
+        //    Esta função será chamada pelo `admin_dashboard.js` ao navegar para outra página.
+        window.cleanupSettingsPage = () => {
+            console.log("Executando cleanupSettingsPage para remover listeners de políticas.");
+            viewTermsBtn?.removeEventListener('click', policyListeners.openTerms);
+            viewMarketingPolicyBtn?.removeEventListener('click', policyListeners.openMarketing);
+            policyModal?.querySelector('.modal-close-btn')?.removeEventListener('click', policyListeners.closeModal);
+        };
 
         initializeSettingsPage();
     }; // <-- Esta chave fecha a função window.initSettingsPage

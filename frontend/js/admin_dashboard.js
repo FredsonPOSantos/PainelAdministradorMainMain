@@ -211,7 +211,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     console.log("DOM Carregado (V13.1.3). Iniciando Dashboard...");
     const token = localStorage.getItem('adminToken');
     if (!token) {
-        console.log("Nenhum token (V13.1.3). Redirecionando.");
+        console.log("Nenhum token (V13.1.3). Redirecionando."); 
         window.location.href = 'admin_login.html';
         return;
     }
@@ -220,7 +220,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const userNameElement = document.getElementById('userName');
     const userRoleElement = document.getElementById('userRole');
     const logoutButton = document.getElementById('logoutButton');
-    const mainContentArea = document.querySelector('.content-area');
+    let mainContentArea = document.querySelector('.content-area'); // [CORREÇÃO] Alterado de 'const' para 'let' para permitir a reatribuição.
     const navLinks = document.querySelectorAll('.sidebar-nav .nav-item');
     const allNavItemsAndTitles = document.querySelectorAll('.sidebar-nav .nav-item, .sidebar-nav .nav-title');
     const pageTitleElement = document.getElementById('pageTitle');
@@ -404,6 +404,20 @@ document.addEventListener('DOMContentLoaded', async () => {
                 throw new Error(`Página ${pageName}.html não encontrada (${response.status})`);
             }
             if (mainContentArea) {
+                // [CORREÇÃO DEFINITIVA] Chama a função de limpeza da página anterior, se ela existir.
+                // Isto é crucial para remover listeners globais (no 'document' ou 'window')
+                // que foram adicionados por scripts de páginas específicas, como o admin_settings.js.
+                if (window.cleanupSettingsPage) {
+                    window.cleanupSettingsPage();
+                    window.cleanupSettingsPage = undefined; // Limpa a referência para a próxima navegação.
+                }
+                // [CORREÇÃO] Remove event listeners "fantasmas" de páginas anteriores.
+                // A maneira mais eficaz de remover todos os listeners de um elemento é
+                // substituí-lo por um clone dele mesmo. Isso evita que scripts de uma página
+                // (como admin_settings.js) afetem a navegação de outra (como admin_routers.js).
+                const newMainContentArea = mainContentArea.cloneNode(false);
+                mainContentArea.parentNode.replaceChild(newMainContentArea, mainContentArea);
+                mainContentArea = newMainContentArea; // Atualiza a referência para o novo elemento limpo.
                 const html = await response.text();
                 mainContentArea.innerHTML = html;
 
@@ -425,7 +439,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 });
 
             } else {
-                console.error("'.content-area' (V13.1.3) não encontrado.");
+                console.error("'.content-area' não encontrado.");
                 return;
             }
 
