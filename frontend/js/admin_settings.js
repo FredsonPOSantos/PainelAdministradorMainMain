@@ -73,19 +73,14 @@ window.initSettingsPage = () => {
 
             try {
                 const response = await apiRequest('/api/permissions/update-batch', 'POST', { changes });
-                if (permSaveStatus) {
-                    permSaveStatus.textContent = response.message || 'Alterações guardadas!';
-                    permSaveStatus.style.color = 'var(--success-text)';
-                }
+                // [MELHORIA] Usa o sistema de notificações para uma mensagem mais agradável.
+                showNotification(response.message || 'Permissões atualizadas com sucesso!', 'success');
                 // Atualiza o estado original para o novo estado salvo
                 changes.forEach(change => {
                     originalPermissionsState[`${change.role}|${change.permission}`] = change.checked;
                 });
             } catch (error) {
-                if (permSaveStatus) {
-                    permSaveStatus.textContent = `Erro: ${error.message}`;
-                    permSaveStatus.style.color = 'var(--error-text)';
-                }
+                showNotification(`Erro ao guardar permissões: ${error.message}`, 'error');
             } finally {
                 permSaveChangesBtn.disabled = false;
                 setTimeout(() => { if (permSaveStatus) { permSaveStatus.textContent = ''; permSaveStatus.style.color = ''; } }, 4000);

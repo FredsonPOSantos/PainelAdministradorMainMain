@@ -1,0 +1,996 @@
+// Ficheiro: frontend/js/analytics_dashboard.js
+
+if (window.initAnalyticsDashboard) {
+    console.warn("Tentativa de carregar analytics_dashboard.js múltiplas vezes.");
+} else {
+    window.initAnalyticsDashboard = () => {
+        console.log("A inicializar o Dashboard Analítico...");
+
+        // [NOVO] Variável para guardar a instância do gráfico e evitar duplicados
+        let loginsChartInstance = null;
+        let hotspotActivityChartInstance = null; // Renomeado
+        let hotspotRegistrationsChartInstance = null; // Novo gráfico para registos
+        let ticketsChartInstance = null; // [NOVO]
+        let lgpdChartInstance = null; // [NOVO]
+        let adminActivityChartInstance = null; // [NOVO] Instância para o novo gráfico
+        let rafflesChartInstance = null; // [NOVO]
+        let campaignsChartInstance = null; // [NOVO]
+        let serverHealthChartInstance = null; // [NOVO]
+
+        const fillCard = (id, value) => {
+            const element = document.getElementById(id);
+            if (element) {
+                element.textContent = value ?? '0';
+            }
+        };
+
+        // Função para renderizar as tabelas de forma segura e eficiente
+        const renderTable = (tbodyId, data, columns, emptyMessage) => {
+            const tbody = document.getElementById(tbodyId);
+            if (!tbody) return;
+
+            tbody.innerHTML = ''; // Limpa o corpo da tabela
+            if (data.length > 0) {
+                data.forEach(rowData => {
+                    const tr = document.createElement('tr');
+                    for (const column of columns) { // [CORRIGIDO] Usa um laço 'for...of' em vez de 'forEach'
+                        const td = document.createElement('td');
+                        let cellValue = rowData[column.key] ?? 'N/A';
+
+                        // [NOVO] Formatação de data para a tabela
+                        if (column.type === 'datetime' && cellValue !== 'N/A') {
+                            cellValue = new Date(cellValue).toLocaleString('pt-BR', {
+                                day: '2-digit', month: '2-digit', year: 'numeric',
+                                hour: '2-digit', minute: '2-digit'
+                            });
+                        }
+                        // [NOVO] Adiciona classe de status para colorir
+                        if (column.key === 'status') {
+                            const statusClass = cellValue === 'online' ? 'status-success' : 'status-failure';
+                            const statusSpan = document.createElement('span');
+                            statusSpan.className = statusClass;
+                            statusSpan.textContent = cellValue;
+                            td.innerHTML = ''; // Limpa o textContent
+                            td.appendChild(statusSpan);
+                            tr.appendChild(td); // Adiciona a célula atual antes de continuar
+                            continue; // [CORRIGIDO] 'continue' agora é válido dentro do laço 'for...of'
+                        }
+                        // [NOVO] Formatação para booleano
+                        if (column.type === 'boolean' && cellValue !== 'N/A') {
+                            cellValue = cellValue ? 'Sim' : 'Não';
+                        }
+
+                        td.textContent = cellValue;
+                        tr.appendChild(td);
+                    }
+                    tbody.appendChild(tr);
+                });
+            } else {
+                const tr = document.createElement('tr');
+                const td = document.createElement('td');
+                td.colSpan = columns.length;
+                td.style.textAlign = 'center';
+                td.textContent = emptyMessage;
+                tr.appendChild(td);
+                tbody.appendChild(tr);
+            }
+        };
+
+        // Função para mostrar a secção de detalhe correta
+        const showDetailSection = (metric) => {
+            document.querySelectorAll('.analytics-detail-section').forEach(section => {
+                section.classList.add('hidden');
+            });
+            const activeSection = document.getElementById(`details-${metric}`);
+            if (activeSection) {
+                activeSection.classList.remove('hidden');
+                // Aqui você chamaria a função para carregar os dados detalhados
+                if (metric === 'logins') {
+                    // Carrega dados e ativa o botão de 30 dias por padrão
+                    loadLoginDetails(30);
+                }
+                if (metric === 'hotspotUsers') {
+                    // Por padrão, carrega a primeira sub-aba (Atividade)
+                    loadHotspotActivityDetails(30);
+                    loadHotspotRegistrationDetails(30, false); // Pré-carrega a outra aba em segundo plano
+
+                    // Adiciona listeners para as sub-abas
+                    const subTabContainer = document.querySelector('#details-hotspotUsers .sub-tab-nav');
+                    if (subTabContainer) {
+                        subTabContainer.addEventListener('click', (e) => {
+                            if (e.target.matches('.sub-tab-btn')) {
+                                const subTabName = e.target.dataset.subtab;
+                                document.querySelectorAll('#details-hotspotUsers .sub-tab-btn').forEach(btn => btn.classList.remove('active'));
+                                document.querySelectorAll('#details-hotspotUsers .sub-tab-content').forEach(content => content.classList.remove('active'));
+                                e.target.classList.add('active');
+                                document.getElementById(`hotspot-details-${subTabName}`).classList.add('active');
+                            }
+                        });
+                    }
+                }
+                if (metric === 'routers') {
+                    initRoutersSection();
+                }
+                if (metric === 'tickets') {
+                    loadTicketDetails(30);
+                }
+                if (metric === 'lgpd') {
+                    loadLgpdDetails(30);
+                }
+                if (metric === 'adminActivity') {
+                    loadAdminActivityDetails(30);
+                }
+                if (metric === 'raffles') { // [NOVO]
+                    loadRafflesDetails(30);
+                }
+                if (metric === 'campaigns') { // [NOVO]
+                    loadCampaignsDetails();
+                }
+                if (metric === 'serverHealth') { // [NOVO]
+                    loadServerHealthDetails();
+                }
+            }
+        };
+
+        const loadAnalyticsData = async () => {
+            try {
+                console.log('[loadAnalyticsData] A chamar apiRequest para /api/dashboard/analytics...');
+                const response = await apiRequest('/api/dashboard/analytics');
+                console.log('[loadAnalyticsData] Objeto recebido de apiRequest:', response);
+
+                if (!response || !response.success) {
+                    throw new Error(response.message || 'Falha ao carregar dados analíticos.');
+                }
+                
+                // [CORRIGIDO] A função apiRequest aninha a resposta da API.
+                // A resposta de /api/dashboard/analytics é { success: true, data: { ... } }
+                // O apiRequest transforma isso em { success: true, data: { success: true, data: { ... } } }
+                // Portanto, precisamos aceder a response.data.data para obter os dados dos cards.
+                const data = response.data.data;
+                console.log('[loadAnalyticsData] Dados extraídos com sucesso:', data);
+
+                // Preenche os cards principais
+                fillCard('loginsSuccess', data.logins.success);
+                fillCard('loginsFailure', data.logins.failure);
+                fillCard('hotspotUsersTotal', data.hotspotUsers.total);
+                fillCard('hotspotUsersMarketing', data.hotspotUsers.marketing);
+                fillCard('routersOnline', data.routers.online);
+                fillCard('routersOffline', data.routers.offline);
+                fillCard('ticketsOpen', data.tickets.open);
+                fillCard('ticketsTotal', data.tickets.total);
+                fillCard('lgpdPending', data.lgpd.pending);
+                fillCard('lgpdCompleted', data.lgpd.completed);
+                // [NOVO] Preenche o card de atividade do admin
+                fillCard('adminActions24h', data.adminActivity.actionsLast24h);
+                fillCard('adminMostActive', data.adminActivity.mostActiveAdmin);
+                // [NOVO] Preenche o card de sorteios
+                fillCard('rafflesActive', data.raffles.active);
+                fillCard('rafflesParticipants30d', data.raffles.participantsLast30d);
+                // [NOVO] Preenche o card de campanhas
+                fillCard('campaignsActive', data.campaigns.active);
+                fillCard('campaignsTotalViews', data.campaigns.totalViews);
+                // [NOVO] Preenche o card de saúde do servidor
+                const uptimeMs = data.serverHealth.uptime;
+                const days = Math.floor(uptimeMs / (1000 * 60 * 60 * 24));
+                const hours = Math.floor((uptimeMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                const minutes = Math.floor((uptimeMs % (1000 * 60 * 60)) / (1000 * 60));
+                fillCard('serverUptime', `${days}d ${hours}h ${minutes}m`);
+
+                const radiusStatusEl = document.getElementById('radiusStatus');
+                if (radiusStatusEl) {
+                    const status = data.serverHealth.radiusStatus;
+                    radiusStatusEl.textContent = status;
+                    radiusStatusEl.className = status === 'online' ? 'status-success' : 'status-failure';
+                }
+
+
+
+                
+                console.log('[loadAnalyticsData] Cards preenchidos com sucesso.');
+
+                // Preenche a tabela de atividade por roteador (usando a nova função)
+                renderTable('routerActivityBody', data.routerActivity || [], [
+                    { key: 'fullname' },
+                    { key: 'email' },
+                    { key: 'last_login', type: 'datetime' }
+                ], 'Nenhuma atividade encontrada.');
+
+            } catch (error) {
+                console.error('[loadAnalyticsData] ERRO FINAL:', error);
+                showNotification(`Erro ao carregar dados: ${error.message}`, 'error');
+            }
+        };
+
+        // Função para carregar detalhes de login (exemplo)
+        const loadLoginDetails = async (periodInDays) => {
+            const tbody = document.getElementById('loginsDetailBody');
+            if (!tbody) return;
+            tbody.innerHTML = '<tr><td colspan="4" style="text-align: center;">A carregar detalhes...</td></tr>';
+            
+            // [NOVO] Atualiza a classe 'active' nos botões de filtro
+            const filterContainer = document.querySelector('#details-logins .filter-buttons');
+            if (filterContainer) {
+                filterContainer.querySelectorAll('button').forEach(btn => btn.classList.remove('active'));
+                filterContainer.querySelector(`button[data-period="${periodInDays}"]`)?.classList.add('active');
+            }
+
+            try {
+                // Você precisará criar este endpoint no seu backend
+                const response = await apiRequest(`/api/dashboard/analytics/logins?period=${periodInDays}`);
+                if (!response.success && response.status === 404) {
+                    tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--warning-text);">Funcionalidade em desenvolvimento.</td></tr>';
+                    console.warn(`Endpoint /api/dashboard/analytics/logins não encontrado (404).`);
+                    return; // Interrompe a execução para não tentar renderizar dados inexistentes
+                }
+                const data = response.data.data;
+
+                // Renderiza a tabela de detalhes
+                renderTable('loginsDetailBody', data.latest_logins, [
+                    { key: 'user_email' },
+                    { key: 'timestamp', type: 'datetime' }, // [NOVO] Adiciona tipo para formatação
+                    { key: 'status' }, // Pode adicionar um tipo 'status' para colorir no futuro
+                    { key: 'ip_address' }
+                ], 'Nenhum login encontrado no período.');
+
+                // Renderiza o gráfico (preparado para o futuro)
+                renderLoginsChart(data.logins_by_day);
+
+            } catch (error) {
+                showNotification(`Erro ao carregar detalhes de login: ${error.message}`, 'error');
+            }
+        };
+
+        // Função para renderizar o gráfico de logins (exemplo com Chart.js)
+        const renderLoginsChart = (chartData) => {
+            const canvas = document.getElementById('loginsChart');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+
+            // [NOVO] Destrói o gráfico anterior antes de desenhar um novo
+            if (loginsChartInstance) {
+                loginsChartInstance.destroy();
+            }
+
+            console.log("Preparado para renderizar gráfico com os dados:", chartData);
+
+            // O backend deve retornar um objeto com 'labels' (dias) e 'data' (contagens)
+            // Ex: { labels: ['01/01', '02/01'], data: [10, 15] }
+            const labels = chartData?.labels || [];
+            const data = chartData?.data || [];
+
+            loginsChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Acessos por Dia',
+                        data: data,
+                        borderColor: 'var(--primary-color)',
+                        backgroundColor: 'rgba(10, 132, 255, 0.2)',
+                        borderWidth: 2,
+                        tension: 0.3,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                color: 'var(--text-secondary)'
+                            }
+                        },
+                        x: {
+                            ticks: {
+                                color: 'var(--text-secondary)'
+                            }
+                        }
+                    }
+                }
+            });
+        };
+
+        // [RENOMEADO] Função para carregar detalhes de ATIVIDADE de utilizadores
+        const loadHotspotActivityDetails = async (periodInDays) => {
+            // [CORRIGIDO] Aponta para o tbody correto da aba de Atividade.
+            const tbody = document.getElementById('hotspotUsersActivityBody');
+            if (!tbody) return;
+            tbody.innerHTML = '<tr><td colspan="4" style="text-align: center;">A carregar detalhes...</td></tr>';
+
+            // [CORRIGIDO] Aponta para o container de filtros compartilhado
+            const filterContainer = document.querySelector('#details-hotspotUsers .filter-buttons');
+            if (filterContainer) {
+                filterContainer.querySelectorAll('button').forEach(btn => btn.classList.remove('active'));
+                filterContainer.querySelector(`button[data-period="${periodInDays}"]`)?.classList.add('active');
+            }
+
+            try {
+                const response = await apiRequest(`/api/dashboard/analytics/hotspot-users?period=${periodInDays}`);
+                if (!response.success) {
+                    tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: var(--warning-text);">${response.message || 'Funcionalidade em desenvolvimento.'}</td></tr>`;
+                    console.warn(`Endpoint /api/dashboard/analytics/hotspot-users não encontrado ou com erro.`);
+                    return;
+                }
+                const data = response.data.data;
+
+                renderTable('hotspotUsersActivityBody', data.latest_users, [
+                    { key: 'fullname' },
+                    { key: 'email' },
+                    { key: 'created_at', type: 'datetime' },
+                    { key: 'accepts_marketing', type: 'boolean' }
+                ], 'Nenhuma atividade de utilizador encontrada no período.');
+
+                renderHotspotActivityChart(data.users_by_day); // Corrigido
+
+            } catch (error) {
+                showNotification(`Erro ao carregar detalhes de utilizadores: ${error.message}`, 'error');
+            }
+        };
+
+        // [RENOMEADO] Função para renderizar o gráfico de ATIVIDADE de utilizadores
+        const renderHotspotActivityChart = (chartData) => {
+            const canvas = document.getElementById('hotspotUsersActivityChart');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+
+            if (hotspotActivityChartInstance) {
+                hotspotActivityChartInstance.destroy();
+            }
+
+            const labels = chartData?.labels || [];
+            const data = chartData?.data || [];
+
+            hotspotActivityChartInstance = new Chart(ctx, {
+                type: 'bar', // Gráfico de barras para variar
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Usuários Ativos por Dia',
+                        data: data,
+                        backgroundColor: 'rgba(175, 82, 222, 0.5)', // Cor roxa do card
+                        borderColor: 'rgba(175, 82, 222, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                stepSize: 1 // Força a contagem em inteiros
+                            }
+                        }
+                    }
+                }
+            });
+        };
+
+        // [NOVO] Função para carregar detalhes de REGISTOS de utilizadores
+        const loadHotspotRegistrationDetails = async (periodInDays, marketingOnly) => {
+            const tbody = document.getElementById('hotspotRegistrationsBody');
+            if (!tbody) return;
+            tbody.innerHTML = '<tr><td colspan="4" style="text-align: center;">A carregar detalhes...</td></tr>';
+
+            // [CORRIGIDO] Aponta para o container de filtros compartilhado
+            const filterContainer = document.querySelector('#details-hotspotUsers .filter-buttons');
+            if (filterContainer) {
+                filterContainer.querySelectorAll('button').forEach(btn => btn.classList.remove('active'));
+                filterContainer.querySelector(`button[data-period="${periodInDays}"]`)?.classList.add('active');
+            }
+
+            try {
+                const response = await apiRequest(`/api/dashboard/analytics/hotspot-registrations?period=${periodInDays}&marketing=${marketingOnly}`);
+                if (!response.success) {
+                    tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: var(--warning-text);">${response.message || 'Funcionalidade em desenvolvimento.'}</td></tr>`;
+                    return;
+                }
+                const data = response.data.data;
+
+                renderTable('hotspotRegistrationsBody', data.latest_users, [
+                    { key: 'fullname' },
+                    { key: 'email' },
+                    { key: 'created_at', type: 'datetime' },
+                    { key: 'accepts_marketing', type: 'boolean' }
+                ], 'Nenhum novo registro encontrado no período.');
+
+                renderHotspotRegistrationsChart(data.registrations_by_day);
+
+            } catch (error) {
+                showNotification(`Erro ao carregar detalhes de registos: ${error.message}`, 'error');
+            }
+        };
+
+        // [NOVO] Função para renderizar o gráfico de REGISTOS
+        const renderHotspotRegistrationsChart = (chartData) => {
+            const canvas = document.getElementById('hotspotRegistrationsChart');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+
+            if (hotspotRegistrationsChartInstance) {
+                hotspotRegistrationsChartInstance.destroy();
+            }
+
+            const labels = chartData?.labels || [];
+            const data = chartData?.data || [];
+
+            hotspotRegistrationsChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Novos Registos por Dia',
+                        data: data,
+                        backgroundColor: 'rgba(88, 86, 214, 0.2)',
+                        borderColor: 'rgba(88, 86, 214, 1)',
+                        borderWidth: 2,
+                        tension: 0.3,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                stepSize: 1
+                            }
+                        }
+                    }
+                }
+            });
+        };
+
+        // [NOVO] Listener para o checkbox de marketing
+        const marketingCheckbox = document.getElementById('marketingFilterCheckbox');
+        if (marketingCheckbox) {
+            marketingCheckbox.addEventListener('change', (e) => {
+                const period = document.querySelector('#details-hotspotUsers .filter-buttons button.active')?.dataset.period || 30;
+                loadHotspotRegistrationDetails(period, marketingCheckbox.checked);
+            });
+        }
+
+        // [RENOMEADO] Função para carregar a tabela de status dos roteadores
+        const loadRouterStatusDetails = async () => {
+            const tbody = document.getElementById('routerStatusBody');
+            if (!tbody) return;
+            tbody.innerHTML = '<tr><td colspan="4" style="text-align: center;">A carregar status...</td></tr>';
+
+            try {
+                const response = await apiRequest('/api/dashboard/analytics/routers-status');
+                if (!response.success) {
+                    throw new Error(response.message || 'Falha ao carregar status dos roteadores.');
+                }
+
+                renderTable('routerStatusBody', response.data.data, [
+                    { key: 'name' },
+                    { key: 'status' },
+                    { key: 'ip_address' },
+                    { key: 'last_seen', type: 'datetime' }
+                ], 'Nenhum roteador encontrado.');
+
+            } catch (error) {
+                showNotification(`Erro ao carregar status dos roteadores: ${error.message}`, 'error');
+                tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--warning-text);">Falha ao carregar dados.</td></tr>';
+            }
+        };
+
+        // [NOVO] Função para carregar a tabela de atividade por roteador (com filtro)
+        const loadRouterActivityDetails = async (routerName) => {
+            const tbody = document.getElementById('routerActivityBody');
+            if (!tbody) return;
+            tbody.innerHTML = '<tr><td colspan="3" style="text-align: center;">A carregar usuários...</td></tr>';
+
+            try {
+                // A rota /api/dashboard/analytics/users-by-router será criada no backend
+                const response = await apiRequest(`/api/dashboard/analytics/users-by-router?router=${routerName}`);
+                if (!response.success) throw new Error(response.message);
+
+                renderTable('routerActivityBody', response.data.data, [
+                    { key: 'fullname' },
+                    { key: 'email' },
+                    { key: 'last_login', type: 'datetime' }
+                ], 'Nenhum usuário encontrado para este roteador.');
+
+            } catch (error) {
+                showNotification(`Erro ao carregar usuários do roteador: ${error.message}`, 'error');
+                tbody.innerHTML = '<tr><td colspan="3" style="text-align: center; color: var(--warning-text);">Falha ao carregar dados.</td></tr>';
+            }
+        };
+
+        // [NOVO] Função principal para inicializar toda a seção de Roteadores
+        const initRoutersSection = async () => {
+            // Carrega as duas tabelas em paralelo
+            loadRouterStatusDetails();
+            loadRouterActivityDetails('all'); // Carrega inicialmente para todos
+
+            // Popula o dropdown de filtro
+            const select = document.getElementById('routerFilterSelect');
+            if (select) {
+                try {
+                    const response = await apiRequest('/api/routers'); // Reutiliza a rota existente
+                    if (response.success) {
+                        // [CORRIGIDO] A rota /api/routers retorna a lista diretamente em `response.data`
+                        response.data.forEach(router => {
+                            const option = new Option(router.name, router.name);
+                            select.add(option);
+                        });
+                    }
+                    select.onchange = (e) => loadRouterActivityDetails(e.target.value);
+                } catch (error) {
+                    console.error("Falha ao popular filtro de roteadores:", error);
+                }
+            }
+        };
+
+        // [NOVO] Função para carregar detalhes de Tickets de Suporte
+        const loadTicketDetails = async (periodInDays) => {
+            const tbody = document.getElementById('ticketsDetailBody');
+            if (!tbody) return;
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align: center;">A carregar tickets...</td></tr>';
+
+            const filterContainer = document.querySelector('#details-tickets .filter-buttons');
+            if (filterContainer) {
+                filterContainer.querySelectorAll('button').forEach(btn => btn.classList.remove('active'));
+                filterContainer.querySelector(`button[data-period="${periodInDays}"]`)?.classList.add('active');
+            }
+
+            try {
+                const response = await apiRequest(`/api/dashboard/analytics/tickets?period=${periodInDays}`);
+                if (!response.success) throw new Error(response.message);
+
+                const data = response.data.data;
+
+                renderTable('ticketsDetailBody', data.latest_tickets, [
+                    { key: 'id' },
+                    { key: 'title' },
+                    { key: 'status' },
+                    { key: 'created_at', type: 'datetime' }
+                ], 'Nenhum ticket encontrado no período.');
+
+                renderTicketsChart(data.tickets_by_day);
+
+            } catch (error) {
+                showNotification(`Erro ao carregar detalhes dos tickets: ${error.message}`, 'error');
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--warning-text);">Falha ao carregar dados.</td></tr>';
+            }
+        };
+
+        // [NOVO] Função para renderizar o gráfico de Tickets
+        const renderTicketsChart = (chartData) => {
+            const canvas = document.getElementById('ticketsChart');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+
+            if (ticketsChartInstance) {
+                ticketsChartInstance.destroy();
+            }
+
+            ticketsChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: chartData.labels,
+                    datasets: [
+                        {
+                            label: 'Tickets Abertos',
+                            data: chartData.opened,
+                            borderColor: 'var(--warning-color)',
+                            backgroundColor: 'rgba(255, 159, 10, 0.2)',
+                            tension: 0.3,
+                            fill: true,
+                        },
+                        {
+                            label: 'Tickets Fechados',
+                            data: chartData.closed,
+                            borderColor: 'var(--success-color)',
+                            backgroundColor: 'rgba(48, 209, 88, 0.2)',
+                            tension: 0.3,
+                            fill: true,
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                stepSize: 1,
+                                color: 'var(--text-secondary)'
+                            }
+                        },
+                        x: {
+                            ticks: {
+                                color: 'var(--text-secondary)'
+                            }
+                        }
+                    }
+                }
+            });
+        };
+
+        // [NOVO] Função para carregar detalhes de Pedidos LGPD
+        const loadLgpdDetails = async (periodInDays) => {
+            const tbody = document.getElementById('lgpdDetailBody');
+            if (!tbody) return;
+            tbody.innerHTML = '<tr><td colspan="4" style="text-align: center;">A carregar pedidos...</td></tr>';
+
+            const filterContainer = document.querySelector('#details-lgpd .filter-buttons');
+            if (filterContainer) {
+                filterContainer.querySelectorAll('button').forEach(btn => btn.classList.remove('active'));
+                filterContainer.querySelector(`button[data-period="${periodInDays}"]`)?.classList.add('active');
+            }
+
+            try {
+                const response = await apiRequest(`/api/dashboard/analytics/lgpd-requests?period=${periodInDays}`);
+                if (!response.success) throw new Error(response.message);
+
+                const data = response.data.data;
+
+                renderTable('lgpdDetailBody', data.latest_requests, [
+                    { key: 'user_email' },
+                    { key: 'request_date', type: 'datetime' },
+                    { key: 'status' },
+                    { key: 'completion_date', type: 'datetime' }
+                ], 'Nenhum pedido LGPD encontrado no período.');
+
+                renderLgpdChart(data.requests_by_day);
+
+            } catch (error) {
+                showNotification(`Erro ao carregar detalhes de pedidos LGPD: ${error.message}`, 'error');
+                tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--warning-text);">Falha ao carregar dados.</td></tr>';
+            }
+        };
+
+        // [NOVO] Função para renderizar o gráfico de Pedidos LGPD
+        const renderLgpdChart = (chartData) => {
+            const canvas = document.getElementById('lgpdChart');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+
+            if (lgpdChartInstance) {
+                lgpdChartInstance.destroy();
+            }
+
+            lgpdChartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: chartData.labels,
+                    datasets: [{
+                        label: 'Pedidos por Dia',
+                        data: chartData.data,
+                        backgroundColor: 'rgba(255, 69, 58, 0.5)', // Cor vermelha do card
+                        borderColor: 'rgba(255, 69, 58, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                stepSize: 1,
+                                color: 'var(--text-secondary)'
+                            }
+                        },
+                        x: {
+                            ticks: {
+                                color: 'var(--text-secondary)'
+                            }
+                        }
+                    }
+                }
+            });
+        };
+
+        // [NOVO] Função para carregar detalhes de Atividade dos Administradores
+        const loadAdminActivityDetails = async (periodInDays) => {
+            const tbody = document.getElementById('adminActivityDetailBody');
+            if (!tbody) return;
+            tbody.innerHTML = '<tr><td colspan="4" style="text-align: center;">A carregar atividades...</td></tr>';
+
+            const filterContainer = document.querySelector('#details-adminActivity .filter-buttons');
+            if (filterContainer) {
+                filterContainer.querySelectorAll('button').forEach(btn => btn.classList.remove('active'));
+                filterContainer.querySelector(`button[data-period="${periodInDays}"]`)?.classList.add('active');
+            }
+
+            try {
+                const response = await apiRequest(`/api/dashboard/analytics/admin-activity?period=${periodInDays}`);
+                if (!response.success) throw new Error(response.message);
+
+                const data = response.data.data;
+
+                renderTable('adminActivityDetailBody', data.latest_actions, [
+                    { key: 'user_email' },
+                    { key: 'action' },
+                    { key: 'status' },
+                    { key: 'timestamp', type: 'datetime' }
+                ], 'Nenhuma atividade de administrador encontrada no período.');
+
+                renderAdminActivityChart(data.actions_by_day);
+
+            } catch (error) {
+                showNotification(`Erro ao carregar atividade dos administradores: ${error.message}`, 'error');
+                tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--warning-text);">Falha ao carregar dados.</td></tr>';
+            }
+        };
+
+        // [NOVO] Função para renderizar o gráfico de Atividade dos Administradores
+        const renderAdminActivityChart = (chartData) => {
+            const canvas = document.getElementById('adminActivityChart');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+
+            if (adminActivityChartInstance) {
+                adminActivityChartInstance.destroy();
+            }
+
+            adminActivityChartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: chartData.labels,
+                    datasets: [{
+                        label: 'Ações por Dia',
+                        data: chartData.data,
+                        backgroundColor: 'rgba(50, 215, 75, 0.5)', // Cor verde do card
+                        borderColor: 'rgba(50, 215, 75, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                stepSize: 1,
+                                color: 'var(--text-secondary)'
+                            }
+                        },
+                        x: {
+                            ticks: {
+                                color: 'var(--text-secondary)'
+                            }
+                        }
+                    }
+                }
+            });
+        };
+
+        // [NOVO] Função para carregar detalhes de Performance de Sorteios
+        const loadRafflesDetails = async (periodInDays) => {
+            const winnersTbody = document.getElementById('latestWinnersBody');
+            const popularTbody = document.getElementById('popularRafflesBody');
+            if (!winnersTbody || !popularTbody) return;
+
+            winnersTbody.innerHTML = '<tr><td colspan="3" style="text-align: center;">A carregar...</td></tr>';
+            popularTbody.innerHTML = '<tr><td colspan="2" style="text-align: center;">A carregar...</td></tr>';
+
+            const filterContainer = document.querySelector('#details-raffles .filter-buttons');
+            if (filterContainer) {
+                filterContainer.querySelectorAll('button').forEach(btn => btn.classList.remove('active'));
+                filterContainer.querySelector(`button[data-period="${periodInDays}"]`)?.classList.add('active');
+            }
+
+            try {
+                const response = await apiRequest(`/api/dashboard/analytics/raffles?period=${periodInDays}`);
+                if (!response.success) throw new Error(response.message);
+
+                const data = response.data.data;
+
+                // Renderiza as duas tabelas
+                renderTable('latestWinnersBody', data.latest_winners, [
+                    { key: 'title' },
+                    { key: 'winner_email' },
+                    { key: 'draw_date', type: 'datetime' }
+                ], 'Nenhum vencedor encontrado.');
+
+                renderTable('popularRafflesBody', data.popular_raffles, [
+                    { key: 'title' },
+                    { key: 'participant_count' }
+                ], 'Nenhum sorteio popular encontrado.');
+
+                renderRafflesChart(data.participants_by_day);
+
+            } catch (error) {
+                showNotification(`Erro ao carregar detalhes dos sorteios: ${error.message}`, 'error');
+                winnersTbody.innerHTML = '<tr><td colspan="3" style="text-align: center; color: var(--warning-text);">Falha ao carregar.</td></tr>';
+                popularTbody.innerHTML = '<tr><td colspan="2" style="text-align: center; color: var(--warning-text);">Falha ao carregar.</td></tr>';
+            }
+        };
+
+        // [NOVO] Função para renderizar o gráfico de Sorteios
+        const renderRafflesChart = (chartData) => {
+            const canvas = document.getElementById('rafflesChart');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+
+            if (rafflesChartInstance) {
+                rafflesChartInstance.destroy();
+            }
+
+            rafflesChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: chartData.labels,
+                    datasets: [{
+                        label: 'Novos Participantes por Dia',
+                        data: chartData.data,
+                        backgroundColor: 'rgba(255, 204, 0, 0.4)', // Cor amarela do card
+                        borderColor: 'rgba(255, 204, 0, 1)',
+                        borderWidth: 2,
+                        tension: 0.3,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                stepSize: 1,
+                                color: 'var(--text-secondary)'
+                            }
+                        }
+                    }
+                }
+            });
+        };
+
+        // [NOVO] Função para carregar detalhes de Engajamento com Campanhas
+        const loadCampaignsDetails = async () => {
+            const tbody = document.getElementById('topTemplatesBody');
+            if (!tbody) return;
+            tbody.innerHTML = '<tr><td colspan="3" style="text-align: center;">A carregar...</td></tr>';
+
+            try {
+                const response = await apiRequest(`/api/dashboard/analytics/campaigns`);
+                if (!response.success) throw new Error(response.message);
+
+                const data = response.data.data;
+
+                renderTable('topTemplatesBody', data.top_templates_table, [
+                    { key: 'template_name' },
+                    { key: 'campaign_count' },
+                    { key: 'total_views' }
+                ], 'Nenhum template em uso em campanhas ativas.');
+
+                renderCampaignsChart(data.top_campaigns_chart);
+
+            } catch (error) {
+                showNotification(`Erro ao carregar detalhes das campanhas: ${error.message}`, 'error');
+                tbody.innerHTML = '<tr><td colspan="3" style="text-align: center; color: var(--warning-text);">Falha ao carregar.</td></tr>';
+            }
+        };
+
+        // [NOVO] Função para renderizar o gráfico de Campanhas
+        const renderCampaignsChart = (chartData) => {
+            const canvas = document.getElementById('campaignsChart');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+
+            if (campaignsChartInstance) {
+                campaignsChartInstance.destroy();
+            }
+
+            campaignsChartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: chartData.labels,
+                    datasets: [{
+                        label: 'Visualizações',
+                        data: chartData.data,
+                        backgroundColor: 'rgba(0, 199, 190, 0.5)', // Cor ciano do card
+                        borderColor: 'rgba(0, 199, 190, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    indexAxis: 'y', // Gráfico de barras horizontais para melhor leitura dos nomes
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            beginAtZero: true,
+                            ticks: {
+                                color: 'var(--text-secondary)'
+                            }
+                        },
+                        y: {
+                            ticks: {
+                                color: 'var(--text-secondary)'
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false } // O label no dataset já é suficiente
+                    }
+                }
+            });
+        };
+
+        // [NOVO] Função para carregar detalhes de Saúde do Servidor
+        const loadServerHealthDetails = async () => {
+            const tbody = document.getElementById('serviceEventsBody');
+            if (!tbody) return;
+            tbody.innerHTML = '<tr><td colspan="3" style="text-align: center;">A carregar eventos...</td></tr>';
+
+            try {
+                const response = await apiRequest(`/api/dashboard/analytics/server-health`);
+                if (!response.success) throw new Error(response.message);
+
+                const data = response.data.data;
+
+                renderTable('serviceEventsBody', data.service_events, [
+                    { key: 'timestamp', type: 'datetime' },
+                    { key: 'action' },
+                    { key: 'description' }
+                ], 'Nenhum evento de sistema registado.');
+
+            } catch (error) {
+                showNotification(`Erro ao carregar detalhes de saúde do servidor: ${error.message}`, 'error');
+                tbody.innerHTML = '<tr><td colspan="3" style="text-align: center; color: var(--warning-text);">Falha ao carregar.</td></tr>';
+            }
+        };
+
+        // Adiciona os listeners de clique aos cards
+        document.querySelectorAll('.stat-card.clickable').forEach(card => {
+            card.addEventListener('click', () => {
+                const metric = card.dataset.metric;
+                showDetailSection(metric);
+            });
+        });
+
+        // [NOVO] Adiciona listener para os botões de filtro usando delegação de eventos
+        const detailsContainer = document.getElementById('analytics-details-container');
+        if (detailsContainer) {
+            detailsContainer.addEventListener('click', (event) => {
+                const button = event.target.closest('.filter-buttons button');
+                if (button && button.dataset.period) {
+                    // Descobre em qual seção o botão foi clicado
+                    const detailSection = button.closest('.analytics-detail-section');
+                    if (detailSection.id === 'details-logins') {
+                        loadLoginDetails(button.dataset.period);
+                    } else if (detailSection.id === 'details-hotspotUsers') {
+                        // Verifica qual sub-aba está ativa
+                        if (document.getElementById('hotspot-details-activity').classList.contains('active')) {
+                            loadHotspotActivityDetails(button.dataset.period);
+                        } else {
+                            loadHotspotRegistrationDetails(button.dataset.period, marketingCheckbox.checked);
+                        }
+                    } else if (detailSection.id === 'details-routers') {
+                        // A seção de roteadores não tem filtro de período por enquanto
+                    } else if (detailSection.id === 'details-tickets') {
+                        loadTicketDetails(button.dataset.period);
+                    } else if (detailSection.id === 'details-lgpd') {
+                        loadLgpdDetails(button.dataset.period);
+                    } else if (detailSection.id === 'details-adminActivity') {
+                        loadAdminActivityDetails(button.dataset.period);
+                    } else if (detailSection.id === 'details-raffles') { // [NOVO]
+                        loadRafflesDetails(button.dataset.period);
+                    } else if (detailSection.id === 'details-campaigns') {
+                        // Esta seção não tem filtro de período por enquanto
+                        // loadCampaignsDetails();
+                    } else if (detailSection.id === 'details-serverHealth') {
+                        // Esta seção não tem filtro de período
+                        // loadServerHealthDetails();
+                    }
+                }
+            });
+        }
+
+        loadAnalyticsData();
+    };
+}

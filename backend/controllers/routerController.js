@@ -299,7 +299,7 @@ const getAllRouterGroups = async (req, res) => {
 
 const createRouterGroup = async (req, res) => {
   const { name, observacao, routerIds } = req.body;
-  if (!name || !routerIds || !Array.isArray(routerIds) || routerIds.length < 2) {
+  if (!name || !routerIds || !Array.isArray(routerIds)) {
     return res.status(400).json({ message: "Nome do grupo e pelo menos 2 IDs de roteadores são obrigatórios." });
   }
   const client = await pool.connect();

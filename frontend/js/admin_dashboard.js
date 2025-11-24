@@ -49,13 +49,15 @@ const apiRequest = async (endpoint, method = 'GET', body = null) => {
 
     try {
         const response = await fetch(url, options); 
-
+        console.log(`[apiRequest] Recebida resposta para ${endpoint} com status: ${response.status}`);
+        
         if (!response.ok) {
             let errorData = {};
             try {
                 errorData = await response.json();
             } catch (e) {
-                errorData.message = response.statusText || `Erro HTTP ${response.status}`;
+                errorData.message = `O servidor respondeu com um erro (${response.status}) mas a resposta não pôde ser lida.`;
+                console.error(`[apiRequest] Erro de parsing JSON para ${endpoint}`, e);
             }
 
             // Tratamento de erros específicos
@@ -90,17 +92,23 @@ const apiRequest = async (endpoint, method = 'GET', body = null) => {
         // Verifica o tipo de conteúdo da resposta
         const contentType = response.headers.get("content-type");
         if (contentType && contentType.includes("application/json")) {
+            console.log(`[apiRequest] Resposta para ${endpoint} é JSON. A processar...`);
             const data = await response.json();
-            return { success: true, data: data, message: data.message || "Operação realizada com sucesso." };
+            const returnObject = { success: true, data: data, message: data.message || "Operação realizada com sucesso." };
+            console.log(`[apiRequest] A retornar para ${endpoint}:`, returnObject);
+            return returnObject;
         } else {
             const textData = await response.text();
             return { success: true, data: textData || null, message: "Operação realizada com sucesso." };
         }
 
     } catch (error) {
-        console.error(`Erro em apiRequest (V13.1.3) ${method} ${endpoint}:`, error);
-        // Para erros de rede ou erros lançados acima, ainda lança o erro
-        throw error;
+        // Este bloco 'catch' captura erros de rede (ex: servidor offline) ou erros de parsing do JSON.
+        console.error(`[apiRequest] FALHA CRÍTICA (rede/fetch) para ${method} ${endpoint}:`, error);
+        return {
+            success: false,
+            message: 'Falha de comunicação com o servidor. Verifique a sua ligação ou o estado do servidor.'
+        };
     }
 };
 
@@ -337,7 +345,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         'admin_routers': window.initRoutersPage,
         'admin_settings': window.initSettingsPage,
         'support': window.initSupportPage,
-        'admin_raffles': window.initRafflesPage
+        'admin_raffles': window.initRafflesPage,
+        'analytics_dashboard': window.initAnalyticsDashboard // [NOVO]
     };
 
     // --- [ATUALIZADO V13.1.3] IDs de verificação para o waitForElement ---
@@ -351,7 +360,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         'admin_routers': '#groupsTable',            
         'admin_settings': '#tab-perfil',
         'support': '#support-page-container',
-        'admin_raffles': '#createRaffleForm'
+        'admin_raffles': '#createRaffleForm',
+        'analytics_dashboard': '#analytics-dashboard-wrapper' // [CORRIGIDO]
     };
     // --- FIM V13.1.3 ---
 
@@ -394,7 +404,26 @@ document.addEventListener('DOMContentLoaded', async () => {
                 throw new Error(`Página ${pageName}.html não encontrada (${response.status})`);
             }
             if (mainContentArea) {
-                mainContentArea.innerHTML = await response.text();
+                const html = await response.text();
+                mainContentArea.innerHTML = html;
+
+                // [CORREÇÃO] Scripts inseridos via innerHTML não são executados.
+                // Precisamos encontrá-los e recriá-los para que o navegador os execute.
+                // Isso é crucial para carregar bibliotecas como Chart.js a partir do HTML dinâmico.
+                const scripts = mainContentArea.querySelectorAll("script");
+                scripts.forEach(oldScript => {
+                    const newScript = document.createElement("script");
+                    // Copia todos os atributos (como src, type, etc.)
+                    Array.from(oldScript.attributes).forEach(attr => {
+                        newScript.setAttribute(attr.name, attr.value);
+                    });
+                    // Copia o conteúdo do script, se houver
+                    newScript.textContent = oldScript.textContent;
+                    // Substitui o script antigo pelo novo para acionar a execução
+                    oldScript.parentNode.replaceChild(newScript, oldScript);
+                    console.log(`[loadPage] Script "${newScript.src || 'inline'}" re-executado.`);
+                });
+
             } else {
                 console.error("'.content-area' (V13.1.3) não encontrado.");
                 return;
@@ -499,13 +528,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     };
 
     // --- [LÓGICA V13.6.1] applyMenuPermissions (Baseada em Permissões) ---
-    const applyMenuPermissions = (permissions) => {
+    const applyMenuPermissions = (permissions, userRole) => {
         console.log(`applyMenuPermissions (V13.6.1): Aplicando permissões...`, permissions);
 
         if (!permissions) {
             console.error("applyMenuPermissions (V13.6.1): Objeto de permissões não fornecido!");
             return;
         }
+
+        // [CORRIGIDO] Define a variável isMaster dentro do escopo da função
+        const isMaster = (userRole === 'master');
 
         // Mapeia cada item de menu para a permissão de leitura necessária
         const menuPermissionMap = {
@@ -515,7 +547,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             'admin_templates': 'templates.read',
             'admin_banners': 'banners.read',
             'admin_routers': 'routers.read',
-            'admin_users': 'users.read'
+            'admin_users': 'users.read',
+            'analytics_dashboard': 'analytics.read', // [CORREÇÃO] Adiciona a permissão para o dashboard analítico
+            'support': 'tickets.read' // [NOVO]
         };
 
         allNavItemsAndTitles.forEach(el => {
@@ -536,9 +570,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
                 return;
             }
-
+            
             // Se não há uma permissão mapeada, o item é considerado público (como o Dashboard)
-            if (!requiredPermission || permissions[requiredPermission]) {
+            if (!requiredPermission || permissions[requiredPermission] || isMaster) { // Garante que master veja tudo
                 el.style.removeProperty('display');
             } else {
                 el.style.display = 'none';
@@ -571,14 +605,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // --- Logout ---
     if (logoutButton) {
-        logoutButton.addEventListener('click', () => {
+        logoutButton.onclick = () => { // Usar onclick para garantir que não haja múltiplos listeners
             console.log("Logout (V13.1.3).");
             localStorage.removeItem('adminToken');
             window.currentUserProfile = null;
             isProfileLoaded = false;
             window.systemSettings = null;
             window.location.href = 'admin_login.html';
-        });
+        };
     } else {
         console.warn("Botão logout (V13.1.3) não encontrado.");
     }
@@ -728,7 +762,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // 3. [LÓGICA V13.6.1] Aplica permissões ao menu
     console.log("Dashboard (V13.6.1): Permissões do usuário:", window.currentUserProfile.permissions);
-    applyMenuPermissions(window.currentUserProfile.permissions);
+    applyMenuPermissions(window.currentUserProfile.permissions, window.currentUserProfile.role);
 
     // [NOVO] Inicia a verificação de notificações
     startNotificationPolling();

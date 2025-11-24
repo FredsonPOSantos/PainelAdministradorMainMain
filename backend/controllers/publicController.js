@@ -66,6 +66,12 @@ const getActiveCampaign = async (req, res) => {
         const activeCampaign = campaignResult.rows[0];
         console.log(`[Public API] Campanha ativa encontrada: "${activeCampaign.name}" (ID: ${activeCampaign.id})`);
 
+        // [NOVO] Incrementa o contador de visualizações da campanha.
+        // Usamos um `await` aqui para garantir que a atualização ocorra, mas não bloqueamos a resposta ao cliente.
+        // O `client.query` é rápido e não deve impactar a performance.
+        await client.query('UPDATE campaigns SET view_count = view_count + 1 WHERE id = $1', [activeCampaign.id]);
+
+
         // 5. Buscar todos os dados associados à campanha
 
         // 5.1. Buscar o template e o banner de pré-login associado a ele

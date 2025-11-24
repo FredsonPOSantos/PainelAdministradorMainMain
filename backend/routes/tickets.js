@@ -5,33 +5,34 @@ const express = require('express');
 const router = express.Router();
 const ticketController = require('../controllers/ticketController');
 const authMiddleware = require('../middlewares/authMiddleware');
+const checkPermission = require('../middlewares/roleMiddleware'); // [NOVO]
 const ticketAttachmentUploadMiddleware = require('../middlewares/ticketAttachmentUploadMiddleware');
 
 // Todas as rotas de tickets requerem autenticação
 router.use(authMiddleware);
 
 // Criar um novo ticket
-router.post('/', ticketController.createTicket);
+router.post('/', ticketController.createTicket); // Não precisa de permissão especial
 
 // Obter todos os tickets
-router.get('/', ticketController.getAllTickets);
+router.get('/', checkPermission('tickets.read'), ticketController.getAllTickets);
 
 // Obter um ticket específico pelo ID
-router.get('/:id', ticketController.getTicketById);
+router.get('/:id', checkPermission('tickets.read'), ticketController.getTicketById);
 
 // Adicionar uma mensagem a um ticket
-router.post('/:id/messages', ticketController.addMessageToTicket);
+router.post('/:id/messages', checkPermission('tickets.read'), ticketController.addMessageToTicket);
 
-// Atribuir um ticket (apenas master)
-router.put('/:id/assign', ticketController.assignTicket);
+// Atribuir um ticket
+router.put('/:id/assign', checkPermission('tickets.manage'), ticketController.assignTicket);
 
 // Mudar o status de um ticket
-router.put('/:id/status', ticketController.updateTicketStatus);
+router.put('/:id/status', checkPermission('tickets.manage'), ticketController.updateTicketStatus);
 
 // Avaliar um ticket
-router.post('/:id/rate', ticketController.addTicketRating);
+router.post('/:id/rate', ticketController.addTicketRating); // Não precisa de permissão especial
 
 // Upload de anexo
-router.post('/attachments', ticketAttachmentUploadMiddleware.single('file'), ticketController.uploadAttachment);
+router.post('/attachments', ticketAttachmentUploadMiddleware.single('file'), ticketController.uploadAttachment); // Não precisa de permissão especial
 
 module.exports = router;

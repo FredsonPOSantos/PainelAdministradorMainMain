@@ -1,0 +1,448 @@
+<!-- [NOVO] Adiciona a biblioteca Chart.js, necessária para renderizar os gráficos -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<!-- Ficheiro: pages/analytics_dashboard.html -->
+<div id="analytics-dashboard-wrapper"> <!-- [NOVO] Contêiner principal para toda a página -->
+    <div class="page-header">
+        <h3>Dashboard Analítico</h3>
+    </div>
+
+    <!-- Grelha de Métricas Principais -->
+    <div id="analytics-cards-container" class="stats-grid">
+        <!-- Card de Acessos ao Painel ADM -->
+        <div class="stat-card clickable" data-metric="logins">
+            <div class="stat-card-icon color-blue"><span>🔑</span></div>
+            <div class="stat-card-info">
+                <span class="stat-card-title">Acessos ao Painel</span>
+                <div class="stat-card-details">
+                    <span>Sucesso: <strong id="loginsSuccess">...</strong></span>
+                    <span>Falhas: <strong id="loginsFailure">...</strong></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Card de Utilizadores do Hotspot -->
+        <div class="stat-card clickable" data-metric="hotspotUsers">
+            <div class="stat-card-icon color-purple"><span>👥</span></div>
+            <div class="stat-card-info">
+                <span class="stat-card-title">Usuários Hotspot</span>
+                <div class="stat-card-details">
+                    <span>Ativos: <strong id="hotspotUsersTotal">...</strong></span>
+                    <span>Marketing: <strong id="hotspotUsersMarketing">...</strong></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Card de Roteadores -->
+        <div class="stat-card clickable" data-metric="routers">
+            <div class="stat-card-icon color-orange"><span>📡</span></div>
+            <div class="stat-card-info">
+                <span class="stat-card-title">Roteadores</span>
+                <div class="stat-card-details">
+                    <span>Online: <strong id="routersOnline">...</strong></span>
+                    <span>Offline: <strong id="routersOffline">...</strong></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Card de Tickets de Suporte -->
+        <div class="stat-card clickable" data-metric="tickets">
+            <div class="stat-card-icon color-teal"><span>🎫</span></div>
+            <div class="stat-card-info">
+                <span class="stat-card-title">Tickets de Suporte</span>
+                <div class="stat-card-details">
+                    <span>Abertos: <strong id="ticketsOpen">...</strong></span>
+                    <span>Total: <strong id="ticketsTotal">...</strong></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Card de Pedidos LGPD -->
+        <div class="stat-card clickable" data-metric="lgpd">
+            <div class="stat-card-icon color-red"><span>🛡️</span></div>
+            <div class="stat-card-info">
+                <span class="stat-card-title">Pedidos LGPD</span>
+                <div class="stat-card-details">
+                    <span>Pendentes: <strong id="lgpdPending">...</strong></span>
+                    <span>Concluídos: <strong id="lgpdCompleted">...</strong></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- [NOVO] Card de Atividade dos Administradores -->
+        <div class="stat-card clickable" data-metric="adminActivity">
+            <div class="stat-card-icon color-green"><span>⚙️</span></div>
+            <div class="stat-card-info">
+                <span class="stat-card-title">Atividade Admin</span>
+                <div class="stat-card-details">
+                    <span>Ações (24h): <strong id="adminActions24h">...</strong></span>
+                    <span>Mais Ativo: <strong id="adminMostActive">...</strong></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- [NOVO] Card de Performance de Sorteios -->
+        <div class="stat-card clickable" data-metric="raffles">
+            <div class="stat-card-icon color-yellow"><span>🏆</span></div>
+            <div class="stat-card-info">
+                <span class="stat-card-title">Sorteios</span>
+                <div class="stat-card-details">
+                    <span>Ativos: <strong id="rafflesActive">...</strong></span>
+                    <span>Participantes (30d): <strong id="rafflesParticipants30d">...</strong></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- [NOVO] Card de Engajamento com Campanhas -->
+        <div class="stat-card clickable" data-metric="campaigns">
+            <div class="stat-card-icon color-cyan"><span>📈</span></div>
+            <div class="stat-card-info">
+                <span class="stat-card-title">Campanhas</span>
+                <div class="stat-card-details">
+                    <span>Ativas: <strong id="campaignsActive">...</strong></span>
+                    <span>Visualizações: <strong id="campaignsTotalViews">...</strong></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- [NOVO] Card de Saúde do Servidor -->
+        <div class="stat-card clickable" data-metric="serverHealth">
+            <div class="stat-card-icon color-gray"><span>❤️‍🩹</span></div>
+            <div class="stat-card-info">
+                <span class="stat-card-title">Saúde do Servidor</span>
+                <div class="stat-card-details">
+                    <span>Uptime: <strong id="serverUptime">...</strong></span>
+                    <span>RADIUS: <strong id="radiusStatus">...</strong></span>
+                </div>
+            </div>
+        </div>
+
+
+    </div>
+
+    <!-- Container para as Secções de Detalhes (inicialmente ocultas) -->
+    <div id="analytics-details-container" class="content-section" style="margin-top: 2rem;">
+
+        <!-- Detalhes de Acessos -->
+        <div id="details-logins" class="analytics-detail-section hidden">
+            <div class="section-header">
+                <h4>Detalhes de Acessos ao Painel</h4> 
+            </div>
+            <div class="filter-buttons" style="margin-top: -0.5rem; margin-bottom: 1.5rem; text-align: center;">
+                <button class="btn-secondary btn-sm" data-period="7">7 dias</button>
+                <button class="btn-secondary btn-sm" data-period="15">15 dias</button>
+                <button class="btn-secondary btn-sm active" data-period="30">30 dias</button>
+            </div>
+            <div class="analytics-detail-content">
+                <div class="chart-container">
+                    <canvas id="loginsChart"></canvas>
+                </div>
+                <div class="table-container">
+                    <h5>Últimos Acessos</h5>
+                    <table id="loginsDetailTable">
+                        <thead>
+                            <tr>
+                                <th>Utilizador</th>
+                                <th>Data/Hora</th>
+                                <th>Status</th>
+                                <th>IP</th>
+                            </tr>
+                        </thead>
+                        <tbody id="loginsDetailBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Adicione outras seções de detalhes aqui (ex: details-hotspotUsers, details-routers) -->
+        <!-- Exemplo para Roteadores -->
+        <div id="details-routers" class="analytics-detail-section hidden">
+            <div class="section-header">
+                <h4>Detalhes de Roteadores</h4>
+            </div>
+            <!-- [NOVO] Filtro de Roteadores -->
+            <div class="input-group" style="max-width: 400px; margin: 1rem auto;">
+                <label for="routerFilterSelect">Mostrar usuários para o roteador:</label>
+                <select id="routerFilterSelect">
+                    <option value="all">Todos os Roteadores</option>
+                    <!-- Opções serão preenchidas via JS -->
+                </select>
+            </div>
+            <!-- [MOVIDO PARA CÁ] A tabela de atividade agora pertence a esta seção -->
+            <div class="table-container" style="margin-top: 1rem;">
+                <table id="routerActivityTable">
+                    <thead>
+                        <tr>
+                            <th>Nome do Usuário</th>
+                            <th>Email</th>
+                            <th>Último Login</th>
+                        </tr>
+                    </thead>
+                    <tbody id="routerActivityBody">
+                        <tr><td colspan="3" style="text-align: center;">A carregar...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <!-- Fim da tabela movida -->
+
+            <!-- [NOVO] Tabela de Status Detalhado -->
+            <div class="table-container" style="margin-top: 2rem;">
+                 <div class="section-header" style="margin-bottom: 1rem;">
+                    <h4>Status de Todos os Roteadores</h4>
+                </div>
+                <table id="routerStatusTable">
+                    <thead>
+                        <tr>
+                            <th>Nome do Roteador</th>
+                            <th>Status</th>
+                            <th>Endereço IP</th>
+                            <th>Última Verificação</th>
+                        </tr>
+                    </thead>
+                    <tbody id="routerStatusBody">
+                        <!-- Conteúdo será preenchido via JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- [NOVO] Detalhes de Utilizadores Hotspot -->
+        <div id="details-hotspotUsers" class="analytics-detail-section hidden">
+            <div class="section-header">
+                <h4>Análise de Usuários Hotspot</h4>
+            </div>
+
+            <!-- Sub-abas para Atividade vs Registos -->
+            <div class="sub-tab-nav">
+                <button class="sub-tab-btn active" data-subtab="activity">Atividade (Logins)</button>
+                <button class="sub-tab-btn" data-subtab="registrations">Novos Registos</button>
+            </div>
+
+            <!-- [NOVO] Filtros de Período Compartilhados -->
+            <div class="filter-buttons" style="margin-top: 0.5rem; margin-bottom: 1.5rem; text-align: center;">
+                <button class="btn-secondary btn-sm" data-period="7">7 dias</button>
+                <button class="btn-secondary btn-sm" data-period="15">15 dias</button>
+                <button class="btn-secondary btn-sm active" data-period="30">30 dias</button>
+            </div>
+
+            <!-- Conteúdo da Sub-aba de Atividade (Logins) -->
+            <div id="hotspot-details-activity" class="sub-tab-content active">
+                <div class="analytics-detail-content">
+                    <div class="chart-container"><canvas id="hotspotUsersActivityChart"></canvas></div>
+                    <div class="table-container">
+                        <h5>Última Atividade de Usuários</h5>
+                        <table id="hotspotUsersActivityTable">
+                            <thead><tr><th>Nome</th><th>Email</th><th>Última Atividade</th><th>Aceita Mkt</th></tr></thead>
+                            <tbody id="hotspotUsersActivityBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Conteúdo da Sub-aba de Novos Registos -->
+            <div id="hotspot-details-registrations" class="sub-tab-content">
+                <!-- Filtro específico para esta aba -->
+                <div class="input-group-inline" style="justify-content: center; margin-bottom: 1.5rem;">
+                    <input type="checkbox" id="marketingFilterCheckbox">
+                    <label for="marketingFilterCheckbox">Mostrar apenas quem aceitou marketing</label>
+                </div>
+                <div class="analytics-detail-content">
+                    <div class="chart-container"><canvas id="hotspotRegistrationsChart"></canvas></div>
+                    <div class="table-container">
+                        <h5>Usuários Recém-Registrados</h5>
+                        <table id="hotspotRegistrationsTable">
+                            <thead><tr><th>Nome</th><th>Email</th><th>Data de Registro</th><th>Aceita Mkt</th></tr></thead>
+                            <tbody id="hotspotRegistrationsBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- [NOVO] Detalhes de Tickets de Suporte -->
+        <div id="details-tickets" class="analytics-detail-section hidden">
+            <div class="section-header">
+                <h4>Análise de Tickets de Suporte</h4>
+            </div>
+            <div class="filter-buttons" style="margin-top: 0.5rem; margin-bottom: 1.5rem; text-align: center;">
+                <button class="btn-secondary btn-sm" data-period="7">7 dias</button>
+                <button class="btn-secondary btn-sm" data-period="15">15 dias</button>
+                <button class="btn-secondary btn-sm active" data-period="30">30 dias</button>
+            </div>
+            <div class="analytics-detail-content">
+                <div class="chart-container">
+                    <canvas id="ticketsChart"></canvas>
+                </div>
+                <div class="table-container">
+                    <h5>Últimos Tickets Atualizados</h5>
+                    <table id="ticketsDetailTable">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Título</th>
+                                <th>Status</th>
+                                <th>Data de Abertura</th>
+                            </tr>
+                        </thead>
+                        <tbody id="ticketsDetailBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- [NOVO] Detalhes de Pedidos LGPD -->
+        <div id="details-lgpd" class="analytics-detail-section hidden">
+            <div class="section-header">
+                <h4>Análise de Pedidos LGPD</h4>
+            </div>
+            <div class="filter-buttons" style="margin-top: 0.5rem; margin-bottom: 1.5rem; text-align: center;">
+                <button class="btn-secondary btn-sm" data-period="7">7 dias</button>
+                <button class="btn-secondary btn-sm" data-period="15">15 dias</button>
+                <button class="btn-secondary btn-sm active" data-period="30">30 dias</button>
+            </div>
+            <div class="analytics-detail-content">
+                <div class="chart-container">
+                    <canvas id="lgpdChart"></canvas>
+                </div>
+                <div class="table-container">
+                    <h5>Últimos Pedidos de Exclusão</h5>
+                    <table id="lgpdDetailTable">
+                        <thead>
+                            <tr>
+                                <th>Email do Usuário</th>
+                                <th>Data do Pedido</th>
+                                <th>Status</th>
+                                <th>Data de Conclusão</th>
+                            </tr>
+                        </thead>
+                        <tbody id="lgpdDetailBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- [NOVO] Detalhes de Atividade dos Administradores -->
+        <div id="details-adminActivity" class="analytics-detail-section hidden">
+            <div class="section-header">
+                <h4>Análise de Atividade dos Administradores</h4>
+            </div>
+            <div class="filter-buttons" style="margin-top: 0.5rem; margin-bottom: 1.5rem; text-align: center;">
+                <button class="btn-secondary btn-sm" data-period="7">7 dias</button>
+                <button class="btn-secondary btn-sm" data-period="15">15 dias</button>
+                <button class="btn-secondary btn-sm active" data-period="30">30 dias</button>
+            </div>
+            <div class="analytics-detail-content">
+                <div class="chart-container">
+                    <canvas id="adminActivityChart"></canvas>
+                </div>
+                <div class="table-container">
+                    <h5>Últimas Ações Registradas</h5>
+                    <table id="adminActivityDetailTable">
+                        <thead>
+                            <tr>
+                                <th>Administrador</th>
+                                <th>Ação</th>
+                                <th>Status</th>
+                                <th>Data/Hora</th>
+                            </tr>
+                        </thead>
+                        <tbody id="adminActivityDetailBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- [NOVO] Detalhes de Performance de Sorteios -->
+        <div id="details-raffles" class="analytics-detail-section hidden">
+            <div class="section-header">
+                <h4>Análise de Performance de Sorteios</h4>
+            </div>
+            <div class="filter-buttons" style="margin-top: 0.5rem; margin-bottom: 1.5rem; text-align: center;">
+                <button class="btn-secondary btn-sm" data-period="7">7 dias</button>
+                <button class="btn-secondary btn-sm" data-period="15">15 dias</button>
+                <button class="btn-secondary btn-sm active" data-period="30">30 dias</button>
+            </div>
+            <div class="analytics-detail-content">
+                <div class="chart-container">
+                    <canvas id="rafflesChart"></canvas>
+                </div>
+                <div class="table-container-split">
+                    <div class="table-container">
+                        <h5>Últimos Vencedores</h5>
+                        <table id="latestWinnersTable">
+                            <thead>
+                                <tr>
+                                    <th>Sorteio</th>
+                                    <th>Vencedor</th>
+                                    <th>Data</th>
+                                </tr>
+                            </thead>
+                            <tbody id="latestWinnersBody"></tbody>
+                        </table>
+                    </div>
+                    <div class="table-container">
+                        <h5>Sorteios Mais Populares</h5>
+                        <table id="popularRafflesTable">
+                            <thead><tr><th>Sorteio</th><th>Participantes</th></tr></thead>
+                            <tbody id="popularRafflesBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- [NOVO] Detalhes de Engajamento com Campanhas -->
+        <div id="details-campaigns" class="analytics-detail-section hidden">
+            <div class="section-header">
+                <h4>Análise de Engajamento com Campanhas</h4>
+            </div>
+            <div class="analytics-detail-content">
+                <!-- [CORREÇÃO] Adiciona uma altura máxima ao container do gráfico para evitar o loop de crescimento infinito que causa a rolagem interminável. -->
+                <div class="chart-container" style="max-height: 450px;">
+                    <h5>Top 10 Campanhas Mais Vistas</h5>
+                    <canvas id="campaignsChart"></canvas>
+                </div>
+                <div class="table-container">
+                    <h5>Templates Mais Utilizados (em Campanhas Ativas)</h5>
+                    <table id="topTemplatesTable">
+                        <thead>
+                            <tr>
+                                <th>Nome do Template</th>
+                                <th>Nº de Campanhas</th>
+                                <th>Total de Visualizações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="topTemplatesBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- [NOVO] Detalhes de Saúde do Servidor -->
+        <div id="details-serverHealth" class="analytics-detail-section hidden">
+            <div class="section-header">
+                <h4>Análise de Saúde do Servidor</h4>
+            </div>
+            <div class="analytics-detail-content">
+                <div class="chart-container">
+                    <h5>Histórico de Uptime (Últimos 30 dias)</h5>
+                    <div id="uptimeChartPlaceholder" class="placeholder-message">
+                        <p>A funcionalidade de gráfico de uptime histórico requer um sistema de monitorização externo e não está implementada.</p>
+                    </div>
+                    <canvas id="serverHealthChart" class="hidden"></canvas>
+                </div>
+                <div class="table-container">
+                    <h5>Últimos Eventos do Sistema</h5>
+                    <table id="serviceEventsTable">
+                        <thead>
+                            <tr><th>Data/Hora</th><th>Ação</th><th>Descrição</th></tr>
+                        </thead>
+                        <tbody id="serviceEventsBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div> <!-- [NOVO] Fim do contêiner principal -->

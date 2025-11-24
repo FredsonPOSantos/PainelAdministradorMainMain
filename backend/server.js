@@ -7,6 +7,9 @@ const express = require('express');
 const cors = require('cors');
 const pool = require('./connection');
 const methodOverride = require('method-override'); // [NOVO] Importa o method-override
+
+// [NOVO] Registra o momento em que o servidor inicia para calcular o uptime.
+const serverStartTime = new Date();
 const ping = require('ping'); // [NOVO] Importa a biblioteca de ping para a verificação
 
 // Importação das rotas
@@ -25,6 +28,9 @@ const notificationRoutes = require('./routes/notificationRoutes');
 const raffleRoutes = require('./routes/raffles');
 const dashboardRoutes = require('./routes/dashboard'); // [NOVO] Importa a rota do dashboard
 const publicRoutes = require('./routes/publicRoutes'); // [NOVO] Importa as rotas públicas
+// [NOVO] Importa as rotas do dashboard analítico
+const dashboardAnalyticsRoutes = require('./routes/AnalyticsRoutes');
+
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -69,6 +75,9 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/raffles', raffleRoutes);
 app.use('/api/dashboard', dashboardRoutes); // [NOVO] Regista a rota do dashboard
 app.use('/api/public', publicRoutes);     // [NOVO] Regista as rotas públicas
+// [NOVO] Monta as novas rotas sob o prefixo /api/dashboard/analytics
+app.use('/api/dashboard/analytics', dashboardAnalyticsRoutes);
+
 
 // --- [NOVO] Rotas de Logs ---
 const logRoutes = require('./routes/logRoutes');
@@ -165,3 +174,6 @@ app.listen(PORT, async () => {
     console.error("❌ [SRV-ADM] ERRO CRÍTICO ao conectar ou inicializar o PostgreSQL:", error);
   }
 });
+
+// [NOVO] Exporta a variável para que outras partes da aplicação possam usá-la.
+exports.serverStartTime = serverStartTime;
