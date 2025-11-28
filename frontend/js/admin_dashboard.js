@@ -346,7 +346,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         'admin_settings': window.initSettingsPage,
         'support': window.initSupportPage,
         'admin_raffles': window.initRafflesPage,
-        'analytics_dashboard': window.initAnalyticsDashboard // [NOVO]
+        'analytics_dashboard': window.initAnalyticsDashboard, // [NOVO]
     };
 
     // --- [ATUALIZADO V13.1.3] IDs de verificação para o waitForElement ---
@@ -361,13 +361,20 @@ document.addEventListener('DOMContentLoaded', async () => {
         'admin_settings': '#tab-perfil',
         'support': '#support-page-container',
         'admin_raffles': '#createRaffleForm',
-        'analytics_dashboard': '#analytics-dashboard-wrapper' // [CORRIGIDO]
+        'analytics_dashboard': '#analytics-dashboard-wrapper', // [CORRIGIDO]
     };
     // --- FIM V13.1.3 ---
 
 
     // --- PAGE NAVIGATION (Atualizado V13.1) ---
     const loadPage = async (pageName, linkElement, params = {}) => {
+        // --- [CORREÇÃO CRÍTICA V14.5] ---
+        // Garante que a referência ao 'mainContentArea' é sempre a mais recente.
+        // A lógica de clonagem abaixo remove o elemento antigo do DOM, tornando a
+        // referência anterior inválida. Esta linha busca o elemento "vivo" a cada navegação.
+        mainContentArea = document.querySelector('.content-area');
+        // --- FIM DA CORREÇÃO ---
+
         if (!isProfileLoaded) {
             console.warn(`loadPage (${pageName}) chamado antes do perfil (V13.1.3).`);
         }
@@ -779,17 +786,19 @@ document.addEventListener('DOMContentLoaded', async () => {
     applyMenuPermissions(window.currentUserProfile.permissions, window.currentUserProfile.role);
 
     // [NOVO] Inicia a verificação de notificações
-    startNotificationPolling();
+    if (document.getElementById('notification-icon-wrapper')) {
+        startNotificationPolling();
+    }
 
 
     // 4. Carrega a página inicial
-    console.log("Dashboard (V13.1.3): Carregando página inicial 'admin_home'...");
+    console.log("Dashboard (V14.5): Página principal já carregada. Inicializando scripts da home...");
     const homeLink = document.querySelector('.sidebar-nav .nav-item[data-page="admin_home"]');
-    if (homeLink) {
-        loadPage('admin_home', homeLink);
-    } else {
-        console.error("Link 'admin_home' (V13.1.3) não encontrado!");
-        loadPage('admin_home', null); // Tenta carregar mesmo assim
+    if (homeLink) homeLink.classList.add('active');
+
+    // Como o HTML já está na página, apenas executamos a função de inicialização.
+    if (window.initHomePage) {
+        window.initHomePage();
     }
 
     console.log("Dashboard (V13.1.3): Inicialização concluída com sucesso.");

@@ -122,16 +122,32 @@ body {
 .role-master { background-color: #c53030; color: #fff; } .role-gestao { background-color: #dd6b20; color: #fff; } .role-estetica { background-color: #3182ce; color: #fff; } .role-DPO { background-color: #702459; color: #fff; }
 .status-active { background-color: #38a169; color: #fff; } .status-inactive { background-color: #718096; color: #fff; }
 
-.action-buttons button { margin-right: 8px; padding: 6px 10px; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; transition: transform 0.1s, opacity 0.2s; font-size: 12px; }
-.action-buttons button:hover { transform: scale(1.05); opacity: 0.9; } .action-buttons button:last-child { margin-right: 0; }
-.btn-edit { background-color: #dd6b20; color: #fff; } .btn-delete { background-color: #c53030; color: #fff; }
-.btn-preview { background-color: #3182ce; color: #fff; } /* [NOVO] Estilo para o botão de pré-visualização */
-.btn-preview svg {
-    /* [CORRIGIDO] Estilo para o ícone SVG */
-    vertical-align: middle; /* Alinha o ícone verticalmente */
-    margin-top: -2px; /* Pequeno ajuste para centralização perfeita */
-    display: inline-block;
+.action-buttons {
+    display: flex; /* Alinha os botões na horizontal */
+    align-items: center;
+    gap: 8px; /* Espaçamento consistente entre os botões */
 }
+
+/* Regra base para TODOS os elementos de ação (botões e links) */
+.action-buttons button,
+.action-buttons a.btn-preview {
+    padding: 6px 12px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: transform 0.1s, opacity 0.2s;
+    font-size: 12px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none; /* Remove sublinhado dos links */
+}
+
+.action-buttons button:hover, .action-buttons a.btn-preview:hover { transform: scale(1.05); opacity: 0.9; }
+.btn-edit { background-color: #dd6b20; color: #fff; }
+.btn-delete { background-color: #c53030; color: #fff; }
+.btn-preview { background-color: #3182ce; color: #fff; } /* Estilo para o novo botão de análise */
 .btn-reset-pass { background-color: var(--primary-color, #3182ce); color: #fff; }
 
 /* Modal Styles */

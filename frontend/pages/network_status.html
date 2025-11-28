@@ -1,0 +1,32 @@
+<!-- Estilos específicos para esta página, se necessário -->
+<style>
+    .status-icon.online { color: #28a745; } /* Verde */
+    .status-icon.offline { color: #dc3545; } /* Vermelho */
+    .actions-cell a { margin: 0 5px; }
+</style>
+
+<div class="container"> <!-- Use a classe do seu layout principal -->
+    <h1><i class="fas fa-network-wired"></i> Status da Rede</h1>
+    <p>Visão geral da saúde e performance de todos os roteadores.</p>
+    
+    <div class="table-responsive">
+        <table class="table table-striped"> <!-- Use as classes de tabela do seu sistema -->
+            <thead>
+                <tr>
+                    <th>Status</th>
+                    <th>Nome do Roteador</th>
+                    <th>Endereço IP</th>
+                    <th>Uptime</th>
+                    <th>CPU</th>
+                    <th>Ações</th>
+                </tr>
+            </thead>
+            <tbody id="router-status-table-body">
+                <!-- As linhas da tabela serão inseridas aqui pelo JavaScript -->
+                <tr>
+                    <td colspan="6" style="text-align: center;">A carregar dados...</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>

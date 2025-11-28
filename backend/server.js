@@ -30,7 +30,7 @@ const dashboardRoutes = require('./routes/dashboard'); // [NOVO] Importa a rota 
 const publicRoutes = require('./routes/publicRoutes'); // [NOVO] Importa as rotas públicas
 // [NOVO] Importa as rotas do dashboard analítico
 const dashboardAnalyticsRoutes = require('./routes/AnalyticsRoutes');
-
+const monitoringRoutes = require('./routes/monitoring'); // <-- 1. IMPORTE A NOVA ROTA
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -57,6 +57,11 @@ app.use(methodOverride(function (req, res) {
 // [CORRIGIDO] O caminho deve apontar para a pasta 'public' na raiz do projeto, um nível acima da pasta 'backend'.
 app.use(express.static(path.join(__dirname, '../public')));
 
+// [NOVO] Serve ficheiros estáticos da pasta 'Rede'
+// Torna a pasta 'Rede' acessível via URL
+// Ex: http://localhost:3000/Rede/pages/router_analytics.html
+app.use(express.static(path.join(__dirname, '../Rede')));
+
 
 // --- Definição das Rotas da API ---
 // Mapeia os prefixos de URL para os ficheiros de rotas correspondentes
@@ -77,7 +82,7 @@ app.use('/api/dashboard', dashboardRoutes); // [NOVO] Regista a rota do dashboar
 app.use('/api/public', publicRoutes);     // [NOVO] Regista as rotas públicas
 // [NOVO] Monta as novas rotas sob o prefixo /api/dashboard/analytics
 app.use('/api/dashboard/analytics', dashboardAnalyticsRoutes);
-
+app.use('/api/monitoring', monitoringRoutes); // <-- 2. USE A NOVA ROTA
 
 // --- [NOVO] Rotas de Logs ---
 const logRoutes = require('./routes/logRoutes');

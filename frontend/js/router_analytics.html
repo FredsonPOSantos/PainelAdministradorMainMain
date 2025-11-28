@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Análise do Roteador</title>
+    
+    <!-- CSS dedicado para a página de análise -->
+    <link rel="stylesheet" href="../css/router_analytics.css"> <!-- Caminho relativo correto -->
+    
+    <!-- Biblioteca de Gráficos ApexCharts.js -->
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+</head>
+<body>
+    <div class="analytics-container">
+        <header class="analytics-header">
+            <h1 id="routerNameTitle">A carregar dados do roteador...</h1>
+            <p>Análise detalhada de performance e métricas.</p>
+        </header>
+
+        <main class="charts-grid">
+            <!-- Card para o Gráfico de CPU -->
+            <div class="chart-card">
+                <div class="chart-header">
+                    <h2>Uso de CPU (%)</h2>
+                    <!-- Filtros de tempo serão adicionados aqui no futuro -->
+                </div>
+                <div id="cpuChart"></div>
+            </div>
+
+            <!-- Outros gráficos serão adicionados aqui -->
+        </main>
+    </div>
+
+    <!-- 
+        CORREÇÃO: Carrega os scripts necessários na ordem correta.
+        1. 'admin_dashboard.js' é carregado primeiro para fornecer a função global 'apiRequest'.
+        2. 'router_analytics.js' é carregado depois e agora pode usar 'apiRequest'.
+    -->
+    <script src="../../js/admin_dashboard.js" defer></script> <!-- Caminho relativo correto -->
+    <script src="../js/router_analytics.js" defer></script> <!-- Caminho relativo correto -->
+</body>
+</html>

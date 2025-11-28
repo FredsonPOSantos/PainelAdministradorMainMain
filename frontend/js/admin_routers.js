@@ -101,6 +101,7 @@ if (window.initRoutersPage) {
                     <td>${router.observacao || 'N/A'}</td> 
                     <td class="action-buttons">
                         <button class="btn-edit" onclick="openModalForEditRouter(${router.id})">Editar</button>
+                        <a href="/pages/router_dashboard.html#${router.id}" target="_blank" title="Dashboard de Análise" class="btn-preview"><i class="fas fa-chart-line"></i></a>
                         <button class="btn-delete" onclick="handleDeleteRouter(${router.id})">Eliminar</button>
                     </td>
                 `;

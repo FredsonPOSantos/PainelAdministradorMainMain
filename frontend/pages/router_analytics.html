@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Análise Detalhada do Roteador</title>
+    
+    <!-- CSS dedicado para a página de análise -->
+    <link rel="stylesheet" href="../css/router_analytics.css">
+    
+    <!-- Biblioteca de Gráficos ApexCharts.js -->
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+    
+    <!-- Font Awesome para ícones -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div class="analytics-container">
+        <!-- Header -->
+        <header class="analytics-header">
+            <div class="header-content">
+                <div>
+                    <h1 id="routerNameTitle">A carregar dados do roteador...</h1>
+                    <p id="routerIpDisplay">IP: -</p>
+                </div>
+                <button class="btn-back" onclick="window.history.back()">
+                    <i class="fas fa-arrow-left"></i> Voltar
+                </button>
+            </div>
+        </header>
+
+        <!-- Filtros de Tempo -->
+        <div class="time-filters">
+            <button class="filter-btn active" data-range="1h">Última Hora</button>
+            <button class="filter-btn" data-range="6h">Últimas 6 Horas</button>
+            <button class="filter-btn" data-range="24h">Últimas 24 Horas</button>
+            <button class="filter-btn" data-range="7d">Últimos 7 Dias</button>
+            <button class="filter-btn" data-range="30d">Últimos 30 Dias</button>
+            
+            <!-- Filtro de Data Personalizada -->
+            <div class="custom-date-filter">
+                <input type="date" id="customStartDate" class="date-input">
+                <span>até</span>
+                <input type="date" id="customEndDate" class="date-input">
+                <button class="filter-btn" id="applyCustomDate">Aplicar</button>
+            </div>
+        </div>
+
+        <!-- Cards de Estatísticas -->
+        <div class="stats-cards">
+            <div class="stat-card" id="cpuCard">
+                <div class="stat-icon cpu-icon">
+                    <i class="fas fa-microchip"></i>
+                </div>
+                <div class="stat-content">
+                    <h3>CPU</h3>
+                    <div class="stat-value" id="cpuCurrent">-</div>
+                    <div class="stat-details">
+                        <span>Mín: <span id="cpuMin">-</span>%</span>
+                        <span>Máx: <span id="cpuMax">-</span>%</span>
+                        <span>Média: <span id="cpuAvg">-</span>%</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="stat-card" id="memoryCard">
+                <div class="stat-icon memory-icon">
+                    <i class="fas fa-memory"></i>
+                </div>
+                <div class="stat-content">
+                    <h3>Memória</h3>
+                    <div class="stat-value" id="memoryCurrent">-</div>
+                    <div class="stat-details">
+                        <span>Mín: <span id="memoryMin">-</span>%</span>
+                        <span>Máx: <span id="memoryMax">-</span>%</span>
+                        <span>Média: <span id="memoryAvg">-</span>%</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="stat-card" id="trafficCard">
+                <div class="stat-icon traffic-icon">
+                    <i class="fas fa-network-wired"></i>
+                </div>
+                <div class="stat-content">
+                    <h3>Tráfego de Rede</h3>
+                    <div class="stat-value" id="trafficCurrent">-</div>
+                    <div class="stat-details">
+                        <span>Mín: <span id="trafficMin">-</span></span>
+                        <span>Máx: <span id="trafficMax">-</span></span>
+                        <span>Média: <span id="trafficAvg">-</span></span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="stat-card" id="dhcpCard">
+                <div class="stat-icon dhcp-icon">
+                    <i class="fas fa-network-wired"></i>
+                </div>
+                <div class="stat-content">
+                    <h3>Clientes DHCP</h3>
+                    <div class="stat-value" id="dhcpCount">-</div>
+                    <div class="stat-details">
+                        <span>Ativos</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="stat-card" id="hotspotCard">
+                <div class="stat-icon hotspot-icon">
+                    <i class="fas fa-wifi"></i>
+                </div>
+                <div class="stat-content">
+                    <h3>Hotspot Ativos</h3>
+                    <div class="stat-value" id="hotspotCount">-</div>
+                    <div class="stat-details">
+                        <span>Conectados</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Gráficos -->
+        <main class="charts-grid">
+            <!-- Gráfico de CPU -->
+            <div class="chart-card">
+                <div class="chart-header">
+                    <h2>Uso de CPU (%)</h2>
+                    <div class="chart-controls">
+                        <button class="chart-btn" id="cpuFullscreen" title="Tela Cheia">
+                            <i class="fas fa-expand"></i>
+                        </button>
+                    </div>
+                </div>
+                <div id="cpuChart" class="chart-container"></div>
+            </div>
+
+            <!-- Gráfico de Memória -->
+            <div class="chart-card">
+                <div class="chart-header">
+                    <h2>Uso de Memória (%)</h2>
+                    <div class="chart-controls">
+                        <button class="chart-btn" id="memoryFullscreen" title="Tela Cheia">
+                            <i class="fas fa-expand"></i>
+                        </button>
+                    </div>
+                </div>
+                <div id="memoryChart" class="chart-container"></div>
+            </div>
+
+            <!-- Gráfico de Tráfego de Rede -->
+            <div class="chart-card">
+                <div class="chart-header">
+                    <h2>Tráfego de Rede</h2>
+                    <div class="chart-controls">
+                        <button class="chart-btn" id="trafficFullscreen" title="Tela Cheia">
+                            <i class="fas fa-expand"></i>
+                        </button>
+                    </div>
+                </div>
+                <div id="trafficChart" class="chart-container"></div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal para Tela Cheia -->
+    <div id="fullscreenModal" class="fullscreen-modal hidden">
+        <div class="fullscreen-content">
+            <button class="close-fullscreen" onclick="closeFullscreen()">
+                <i class="fas fa-times"></i>
+            </button>
+            <div id="fullscreenChart"></div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="../js/admin_dashboard.js" defer></script>
+    <script src="../js/router_analytics_new.js" defer></script>
+</body>
+</html>
