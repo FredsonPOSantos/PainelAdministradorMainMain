@@ -427,7 +427,10 @@ router.get('/router/:id/detailed-metrics', /* seuMiddlewareDeAuth, */ async (req
                 `;
 
                 if (filterTag && filterValue) {
-                    query += `|> filter(fn: (r) => r.${filterTag} == "${filterValue}")`;
+                    // [CORREÇÃO] Escapa caracteres especiais (barras invertidas e aspas duplas) no valor do filtro
+                    // para prevenir erros de sintaxe na query Flux.
+                    const escapedFilterValue = String(filterValue).replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+                    query += `|> filter(fn: (r) => r.${filterTag} == "${escapedFilterValue}")`;
                 }
                 query += `|> aggregateWindow(every: 5m, fn: mean, createEmpty: false)`;
 
@@ -453,7 +456,7 @@ router.get('/router/:id/detailed-metrics', /* seuMiddlewareDeAuth, */ async (req
                         |> filter(fn: (r) => r._field == "free_memory" or r._field == "total_memory")
                         |> filter(fn: (r) => r.router_host == "${routerIp}")
                         |> pivot(rowKey:["_time"], columnKey: ["_field"], valueColumn: "_value")
-                        |> map(fn: (r) => ({ r with _value: if exists r.total_memory and r.total_memory > 0 then (float(v: r.total_memory) - float(v: r.free_memory)) / float(v: r.total_memory) * 100.0 else 0.0 }))
+                        |> map(fn: (r) => ({ r with _value: if exists r.total_memory and exists r.free_memory and r.total_memory > 0 then (float(v: r.total_memory) - float(v: r.free_memory)) / float(v: r.total_memory) * 100.0 else 0.0 }))
                         |> aggregateWindow(every: 5m, fn: mean, createEmpty: false)
                 `;
                 const data = [];
@@ -481,14 +484,16 @@ router.get('/router/:id/detailed-metrics', /* seuMiddlewareDeAuth, */ async (req
         };
 
         // Buscar todas as interfaces disponíveis
+        // [CORREÇÃO] Usar schema.tagValues para obter nomes de interface de forma mais robusta
         const interfacesQuery = `
-            from(bucket: "${influxBucket}")
-              |> range(start: -${range})
-              |> filter(fn: (r) => r._measurement == "interface_stats")
-              |> filter(fn: (r) => r.router_host == "${routerIp}")
-              |> group(columns: ["interface_name"])
-              |> first()
-              |> keep(columns: ["interface_name"])
+            import "influxdata/influxdb/schema"
+
+            schema.tagValues(
+              bucket: "${influxBucket}",
+              tag: "interface_name",
+              predicate: (r) => r._measurement == "interface_stats" and r.router_host == "${routerIp}",
+              start: -${range}
+            )
         `;
 
         const interfaces = [];
@@ -496,8 +501,8 @@ router.get('/router/:id/detailed-metrics', /* seuMiddlewareDeAuth, */ async (req
             queryApi.queryRows(interfacesQuery, {
                 next(row, tableMeta) { // Esta função pode não ser chamada se não houver resultados
                     const o = tableMeta.toObject(row);
-                    if (o.interface_name) {
-                        interfaces.push(o.interface_name);
+                    if (o._value) { // schema.tagValues retorna o valor na coluna _value
+                        interfaces.push(o._value);
                     }
                 },
                 error: reject,
@@ -657,6 +662,213 @@ router.get('/router/:id/availability', async (req, res) => {
     } catch (error) {
         console.error(`Erro na rota /api/monitoring/router/${req.params.id}/availability:`, error);
         res.status(500).json({ success: false, message: 'Erro ao buscar dados de disponibilidade.' });
+    }
+});
+
+/**
+ * @route   GET /api/monitoring/router/:id/wifi-analytics
+ * @desc    Busca análises detalhadas sobre clientes Wi-Fi (atuais, 1h, 7d, 30d).
+ * @access  Private
+ */
+router.get('/router/:id/wifi-analytics', async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        // 1. Buscar o IP do roteador no PostgreSQL
+        const routerQuery = await pool.query("SELECT ip_address FROM routers WHERE id = $1", [id]);
+        if (routerQuery.rows.length === 0) {
+            return res.status(404).json({ success: false, message: 'Roteador não encontrado.' });
+        }
+        const routerIp = routerQuery.rows[0].ip_address;
+
+        // Função para contar clientes únicos em um período
+        const countUniqueClients = (range) => {
+            return new Promise((resolve, reject) => {
+                const query = `
+                    from(bucket: "${influxBucket}")
+                      |> range(start: -${range})
+                      |> filter(fn: (r) => r._measurement == "interface_wireless_registration_table")
+                      |> filter(fn: (r) => r.router_host == "${routerIp}")
+                      |> keep(columns: ["mac_address"])
+                      |> distinct(column: "mac_address")
+                      |> count()
+                `;
+                queryApi.queryRows(query, {
+                    next: (row, tableMeta) => resolve(tableMeta.toObject(row)._value || 0),
+                    error: reject,
+                    complete: () => resolve(0),
+                });
+            });
+        };
+
+        // Contagem de clientes atualmente conectados (nos últimos 5 minutos)
+        const currentClientsPromise = countUniqueClients('5m');
+        // Contagem de clientes únicos na última hora
+        const last1hPromise = countUniqueClients('1h');
+        // Contagem de clientes únicos nos últimos 7 dias
+        const last7dPromise = countUniqueClients('7d');
+        // Contagem de clientes únicos nos últimos 30 dias
+        const last30dPromise = countUniqueClients('30d');
+
+        // Executa todas as consultas em paralelo
+        const [
+            currentCount,
+            count1h,
+            count7d,
+            count30d
+        ] = await Promise.all([
+            currentClientsPromise,
+            last1hPromise,
+            last7dPromise,
+            last30dPromise
+        ]);
+
+        res.json({
+            success: true,
+            data: {
+                current: currentCount,
+                last_1h: count1h,
+                last_7d: count7d,
+                last_30d: count30d
+            }
+        });
+
+    } catch (error) {
+        console.error(`Erro na rota /api/monitoring/router/${req.params.id}/wifi-analytics:`, error);
+        res.status(500).json({ success: false, message: 'Erro ao buscar análise de clientes Wi-Fi.' });
+    }
+});
+
+/**
+ * @route   GET /api/monitoring/router/:id/dhcp-analytics
+ * @desc    Busca análises detalhadas sobre clientes DHCP.
+ * @access  Private
+ */
+router.get('/router/:id/dhcp-analytics', async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        // 1. Buscar o IP do roteador no PostgreSQL
+        const routerQuery = await pool.query("SELECT ip_address FROM routers WHERE id = $1", [id]);
+        if (routerQuery.rows.length === 0) {
+            return res.status(404).json({ success: false, message: 'Roteador não encontrado.' });
+        }
+        const routerIp = routerQuery.rows[0].ip_address;
+
+        // Query para contar clientes DHCP ativos e agrupá-los por servidor
+        const dhcpAnalyticsQuery = `
+            from(bucket: "${influxBucket}")
+              |> range(start: -10m) // Busca recente para dados de estado
+              |> filter(fn: (r) => r._measurement == "ip_dhcp_server_lease")
+              |> filter(fn: (r) => r.router_host == "${routerIp}")
+              |> filter(fn: (r) => r.status == "bound") // Apenas clientes conectados
+              |> last()
+              |> group(columns: ["server"])
+              |> count(column: "mac_address")
+              |> group() // Remove o agrupamento para somar o total
+        `;
+
+        const results = [];
+        await new Promise((resolve, reject) => {
+            queryApi.queryRows(dhcpAnalyticsQuery, {
+                next: (row, tableMeta) => {
+                    results.push(tableMeta.toObject(row));
+                },
+                error: reject,
+                complete: resolve,
+            });
+        });
+
+        // Processa os resultados para o formato do gráfico
+        const totalCount = results.reduce((sum, item) => sum + item._value, 0);
+        const chartData = {
+            labels: results.map(item => item.server || 'Desconhecido'),
+            series: results.map(item => item._value)
+        };
+
+        res.json({
+            success: true,
+            data: {
+                current: totalCount,
+                distribution: chartData
+            }
+        });
+
+    } catch (error) {
+        console.error(`Erro na rota /api/monitoring/router/${req.params.id}/dhcp-analytics:`, error);
+        res.status(500).json({ success: false, message: 'Erro ao buscar análise de clientes DHCP.' });
+    }
+});
+
+
+/**
+ * @route   GET /api/monitoring/router/:id/hotspot-analytics
+ * @desc    Busca análises detalhadas sobre clientes Hotspot.
+ * @access  Private
+ */
+router.get('/router/:id/hotspot-analytics', async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        // 1. Buscar o IP do roteador no PostgreSQL
+        const routerQuery = await pool.query("SELECT ip_address FROM routers WHERE id = $1", [id]);
+        if (routerQuery.rows.length === 0) {
+            return res.status(404).json({ success: false, message: 'Roteador não encontrado.' });
+        }
+        const routerIp = routerQuery.rows[0].ip_address;
+
+        // Função reutilizável para contar clientes únicos do hotspot em um período
+        const countUniqueHotspotClients = (range) => {
+            return new Promise((resolve, reject) => {
+                const query = `
+                    from(bucket: "${influxBucket}")
+                      |> range(start: -${range})
+                      |> filter(fn: (r) => r._measurement == "hotspot_active")
+                      |> filter(fn: (r) => r.router_host == "${routerIp}")
+                      |> keep(columns: ["mac_address"])
+                      |> distinct(column: "mac_address")
+                      |> count()
+                `;
+                queryApi.queryRows(query, {
+                    next: (row, tableMeta) => resolve(tableMeta.toObject(row)._value || 0),
+                    error: reject,
+                    complete: () => resolve(0),
+                });
+            });
+        };
+
+        // Executa todas as consultas em paralelo para máxima eficiência
+        const [
+            currentCount,
+            count1h,
+            count24h,
+            count7d,
+            count15d,
+            count30d
+        ] = await Promise.all([
+            countUniqueHotspotClients('5m'),   // "Agora" são os clientes nos últimos 5 minutos
+            countUniqueHotspotClients('1h'),
+            countUniqueHotspotClients('24h'),
+            countUniqueHotspotClients('7d'),
+            countUniqueHotspotClients('15d'),
+            countUniqueHotspotClients('30d')
+        ]);
+
+        res.json({
+            success: true,
+            data: {
+                current: currentCount,
+                last_1h: count1h,
+                last_24h: count24h,
+                last_7d: count7d,
+                last_15d: count15d,
+                last_30d: count30d
+            }
+        });
+
+    } catch (error) {
+        console.error(`Erro na rota /api/monitoring/router/${req.params.id}/hotspot-analytics:`, error);
+        res.status(500).json({ success: false, message: 'Erro ao buscar análise de clientes Hotspot.' });
     }
 });
 
