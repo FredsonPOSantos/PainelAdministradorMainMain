@@ -73,6 +73,15 @@ document.addEventListener('DOMContentLoaded', () => {
         // Carregar dados de clientes
         loadClientsData();
 
+        // NOVO: Carregar análise de clientes Wi-Fi
+        loadWifiAnalytics();
+
+        // NOVO: Carregar análise de clientes DHCP
+        loadDhcpAnalytics();
+
+        // NOVO: Carregar análise de clientes Hotspot
+        loadHotspotAnalytics();
+
         // NOVO: Carregar dados de disponibilidade
         loadAvailabilityData();
     }
@@ -90,14 +99,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             if (apiData && apiData.clients) {
-                const wifiCount = apiData.clients.wifi?.count || 0;
-                const dhcpCount = apiData.clients.dhcp?.count || 0;
-                const hotspotCount = apiData.clients.hotspot?.count || 0;
-
-                document.getElementById('wifi-clients-count').textContent = wifiCount;
-                document.getElementById('dhcp-clients-count').textContent = dhcpCount;
-                document.getElementById('hotspot-clients-count').textContent = hotspotCount;
-
                 // Armazenar dados para exibição no modal
                 metricsData.wifiClients = apiData.clients.wifi?.details || [];
                 metricsData.dhcpClients = apiData.clients.dhcp?.details || [];
@@ -105,9 +106,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         } catch (error) {
             console.error('Erro ao carregar dados de clientes:', error);
-            document.getElementById('wifi-clients-count').textContent = '-';
-            document.getElementById('dhcp-clients-count').textContent = '-';
-            document.getElementById('hotspot-clients-count').textContent = '-';
         }
     }
 
@@ -147,6 +145,97 @@ document.addEventListener('DOMContentLoaded', () => {
             // Lidar com o estado de erro na UI, se necessário
         }
     }
+
+    /**
+     * NOVO: Carrega e exibe a análise de clientes Wi-Fi
+     */
+    async function loadWifiAnalytics() {
+        try {
+            const response = await apiRequest(`/api/monitoring/router/${routerId}/wifi-analytics`);
+            if (!response.success) {
+                throw new Error(response.message);
+            }
+
+            const wifiData = response.data.data;
+            
+            // Armazena os dados para o gráfico de pizza
+            metricsData.wifiAnalytics = wifiData;
+
+            // Atualiza o card
+            document.getElementById('wifi-clients-count').textContent = wifiData.current;
+            document.getElementById('wifi-clients-1h').textContent = wifiData.last_1h;
+            document.getElementById('wifi-clients-7d').textContent = wifiData.last_7d;
+            document.getElementById('wifi-clients-30d').textContent = wifiData.last_30d;
+
+        } catch (error) {
+            console.error('Erro ao carregar análise Wi-Fi:', error);
+            document.getElementById('wifi-clients-count').textContent = 'Erro';
+            // Limpar outros campos se necessário
+        }
+    }
+
+    /**
+     * NOVO: Carrega e exibe a análise de clientes DHCP
+     */
+    async function loadDhcpAnalytics() {
+        try {
+            const response = await apiRequest(`/api/monitoring/router/${routerId}/dhcp-analytics`);
+            if (!response.success) {
+                throw new Error(response.message);
+            }
+
+            const dhcpData = response.data.data;
+            
+            // Armazena os dados para o gráfico
+            metricsData.dhcpAnalytics = dhcpData;
+
+            // Atualiza o card
+            document.getElementById('dhcp-clients-count').textContent = dhcpData.current;
+
+            // Mostra uma breve distribuição no card
+            const distributionEl = document.getElementById('dhcp-clients-distribution');
+            if (distributionEl && dhcpData.distribution.labels.length > 0) {
+                distributionEl.textContent = dhcpData.distribution.labels.map((label, index) => 
+                    `${label}: ${dhcpData.distribution.series[index]}`
+                ).join(' | ');
+            }
+
+        } catch (error) {
+            console.error('Erro ao carregar análise DHCP:', error);
+            document.getElementById('dhcp-clients-count').textContent = 'Erro';
+        }
+    }
+
+    /**
+     * NOVO: Carrega e exibe a análise de clientes Hotspot
+     */
+    async function loadHotspotAnalytics() {
+        try {
+            const response = await apiRequest(`/api/monitoring/router/${routerId}/hotspot-analytics`);
+            if (!response.success) {
+                throw new Error(response.message);
+            }
+
+            const hotspotData = response.data.data;
+            
+            // Armazena os dados para o gráfico
+            metricsData.hotspotAnalytics = hotspotData;
+
+            // Atualiza o card
+            document.getElementById('hotspot-clients-count').textContent = hotspotData.current;
+            document.getElementById('hotspot-clients-1h').textContent = hotspotData.last_1h;
+            document.getElementById('hotspot-clients-24h').textContent = hotspotData.last_24h;
+            document.getElementById('hotspot-clients-7d').textContent = hotspotData.last_7d;
+            // O de 15 dias não tem campo no card, mas será usado no gráfico
+            document.getElementById('hotspot-clients-30d').textContent = hotspotData.last_30d;
+
+        } catch (error) {
+            console.error('Erro ao carregar análise Hotspot:', error);
+            document.getElementById('hotspot-clients-count').textContent = 'Erro';
+            // Limpar outros campos se necessário
+        }
+    }
+
 
     /**
      * Atualiza as estatísticas de um card
@@ -491,7 +580,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 const clientData = metricsData[`${clientType}Clients`];
                 if (clientData && clientData.length > 0) {
                     createClientList(chartContainer, clientData, clientType);
-                } else {
+                } else if (clientType === 'wifi' && metricsData.wifiAnalytics) { // Gráfico Wi-Fi
+                    createGenericPieChart(chartContainer, 'Distribuição de Clientes Wi-Fi', metricsData.wifiAnalytics);
+                } else if (clientType === 'dhcp' && metricsData.dhcpAnalytics) { // Gráfico DHCP
+                    createGenericDistributionChart(chartContainer, 'Distribuição de Clientes DHCP', metricsData.dhcpAnalytics);
+                } else if (clientType === 'hotspot' && metricsData.hotspotAnalytics) { // Gráfico Hotspot
+                    createHotspotBarChart(chartContainer, 'Clientes Hotspot Únicos', metricsData.hotspotAnalytics);
+                }
+                else {
                     chartContainer.innerHTML = `<p style="color: #f0f0f0; padding: 20px;">Nenhum cliente ${clientType} encontrado.</p>`;
                 }
             }
@@ -525,7 +621,10 @@ document.addEventListener('DOMContentLoaded', () => {
             }],
             xaxis: {
                 type: 'datetime',
-                labels: { style: { colors: '#a0a0a0' } }
+                labels: { 
+                    style: { colors: '#a0a0a0' },
+                    datetimeUTC: false 
+                }
             },
             yaxis: {
                 labels: { style: { colors: '#a0a0a0' } }
@@ -590,36 +689,39 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const options = {
             chart: {
-                type: currentChartVisualization,
-                height: 500,
-                zoom: { enabled: true },
-                toolbar: { show: true }
+            type: currentChartVisualization,
+            height: 500,
+            zoom: { enabled: true },
+            toolbar: { show: true }
             },
             series: series,
             xaxis: {
-                type: 'datetime',
-                labels: { style: { colors: '#a0a0a0' } }
+            type: 'datetime',
+            labels: { 
+                style: { colors: '#a0a0a0' },
+                datetimeUTC: false
+            }
             },
             yaxis: {
-                labels: { 
-                    style: { colors: '#a0a0a0' },
-                    formatter: function(value) {
-                        return formatBytes(value);
-                    }
+            labels: { 
+                style: { colors: '#a0a0a0' },
+                formatter: function(value) {
+                return formatBytes(value);
                 }
+            }
             },
             stroke: { curve: 'smooth', width: 2 },
             colors: currentChartType === 'rx' ? ['#3b82f6'] : currentChartType === 'tx' ? ['#10b981'] : ['#3b82f6', '#10b981'],
             theme: { mode: 'dark' },
             dataLabels: { enabled: false },
             tooltip: {
-                x: { format: 'dd MMM yyyy - HH:mm' },
-                y: {
-                    formatter: function(value) {
-                        return formatBytes(value);
-                    }
-                },
-                theme: 'dark'
+            x: { format: 'dd MMM yyyy - HH:mm' },
+            y: {
+                formatter: function(value) {
+                return formatBytes(value);
+                }
+            },
+            theme: 'dark'
             }
         };
 
@@ -670,6 +772,135 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         container.appendChild(table);
+    }
+
+    /**
+     * NOVO: Cria um gráfico de pizza para a análise de clientes Wi-Fi
+     */
+    function createGenericDistributionChart(container, title, analyticsData) {
+        container.innerHTML = ''; // Limpa o container
+        const chartDiv = document.createElement('div');
+        chartDiv.id = 'expandedChartContent';
+        chartDiv.style.width = '100%';
+        chartDiv.style.height = '500px';
+        container.appendChild(chartDiv);
+        
+        // A visualização padrão é pizza, mas pode ser alterada pelos filtros
+        let chartType = 'pie';
+        if (currentChartVisualization === 'bar') chartType = 'bar';
+        if (currentChartVisualization === 'line') chartType = 'line';
+
+        const options = {
+            chart: {
+                type: chartType,
+                height: 500,
+                toolbar: { show: true }
+            },
+            series: analyticsData.distribution.series,
+            labels: analyticsData.distribution.labels,
+            colors: ['#3b82f6', '#10b981', '#e48315'],
+            theme: { mode: 'dark' },
+            legend: {
+                position: 'bottom',
+                labels: {
+                    colors: '#a0a0a0'
+                }
+            },
+            tooltip: {
+                y: {
+                    formatter: function (val) {
+                        return val + " clientes"
+                    }
+                },
+                theme: 'dark'
+            },
+            xaxis: { // Usado para gráficos de barra
+                categories: analyticsData.distribution.labels,
+                labels: { style: { colors: '#a0a0a0' } }
+            },
+            plotOptions: { // Usado para gráficos de barra
+                bar: {
+                    horizontal: currentChartVisualization === 'bar-horizontal', // Lógica para barras horizontais
+                    distributed: chartType === 'bar' // Cores diferentes por barra
+                }
+            },
+            responsive: [{
+                breakpoint: 480,
+                options: {
+                    chart: {
+                        width: 200
+                    },
+                    legend: {
+                        position: 'bottom'
+                    }
+                }
+            }]
+        };
+
+        if (expandedChartInstance) {
+            expandedChartInstance.destroy();
+        }
+
+        expandedChartInstance = new ApexCharts(chartDiv, options);
+        expandedChartInstance.render();
+
+        // Mostra os filtros de visualização para este tipo de gráfico
+        const chartVisualizationFilters = document.getElementById('chartVisualizationFilters');
+        chartVisualizationFilters.style.display = 'flex';
+    }
+
+    /**
+     * NOVO: Cria um gráfico de barras para a análise de clientes Hotspot
+     */
+    function createHotspotBarChart(container, title, analyticsData) {
+        container.innerHTML = ''; // Limpa o container
+        const chartDiv = document.createElement('div');
+        chartDiv.id = 'expandedChartContent';
+        chartDiv.style.width = '100%';
+        chartDiv.style.height = '500px';
+        container.appendChild(chartDiv);
+
+        const seriesData = [
+            analyticsData.last_1h,
+            analyticsData.last_24h,
+            analyticsData.last_7d,
+            analyticsData.last_15d,
+            analyticsData.last_30d
+        ];
+        const labels = ['Última 1h', 'Últimas 24h', 'Últimos 7d', 'Últimos 15d', 'Últimos 30d'];
+
+        const options = {
+            chart: {
+                type: 'bar',
+                height: 500,
+                toolbar: { show: true }
+            },
+            series: [{
+                name: 'Clientes Únicos',
+                data: seriesData
+            }],
+            plotOptions: {
+                bar: {
+                    distributed: true, // Cores diferentes por barra
+                    horizontal: false,
+                }
+            },
+            xaxis: {
+                categories: labels,
+                labels: { style: { colors: '#a0a0a0' } }
+            },
+            yaxis: {
+                labels: { style: { colors: '#a0a0a0' } }
+            },
+            colors: ['#3b82f6', '#10b981', '#e48315', '#9333ea', '#f59e0b'],
+            theme: { mode: 'dark' },
+            legend: { show: false }, // Não precisa de legenda para uma única série
+            tooltip: { theme: 'dark' }
+        };
+
+        if (expandedChartInstance) expandedChartInstance.destroy();
+        expandedChartInstance = new ApexCharts(chartDiv, options);
+        expandedChartInstance.render();
     }
 
     /**

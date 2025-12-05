@@ -132,14 +132,26 @@
                     <h3>Clientes Wi-Fi</h3>
                 </div>
                 <div class="card-stats">
-                    <div class="stat-row">
+                    <div class="stat-row main-stat">
                         <span class="stat-label">Conectados:</span>
                         <span class="stat-value" id="wifi-clients-count">-</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">Únicos (1h):</span>
+                        <span class="stat-value" id="wifi-clients-1h">-</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">Únicos (7d):</span>
+                        <span class="stat-value" id="wifi-clients-7d">-</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">Únicos (30d):</span>
+                        <span class="stat-value" id="wifi-clients-30d">-</span>
                     </div>
                 </div>
                 <div class="card-footer">
                     <button class="btn-expand" onclick="expandMetric('wifi-clients')">
-                        <i class="fas fa-list"></i> Detalhes
+                        <i class="fas fa-chart-pie"></i> Análise
                     </button>
                 </div>
             </div>
@@ -152,14 +164,18 @@
                     <h3>Clientes DHCP</h3>
                 </div>
                 <div class="card-stats">
-                    <div class="stat-row">
+                    <div class="stat-row main-stat">
                         <span class="stat-label">Conectados:</span>
                         <span class="stat-value" id="dhcp-clients-count">-</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label"></span>
+                        <span class="stat-value" id="dhcp-clients-distribution"></span>
                     </div>
                 </div>
                 <div class="card-footer">
                     <button class="btn-expand" onclick="expandMetric('dhcp-clients')">
-                        <i class="fas fa-list"></i> Detalhes
+                        <i class="fas fa-chart-pie"></i> Análise
                     </button>
                 </div>
             </div>
@@ -172,14 +188,30 @@
                     <h3>Hotspot Ativos</h3>
                 </div>
                 <div class="card-stats">
-                    <div class="stat-row">
+                    <div class="stat-row main-stat">
                         <span class="stat-label">Conectados:</span>
                         <span class="stat-value" id="hotspot-clients-count">-</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">Únicos (1h):</span>
+                        <span class="stat-value" id="hotspot-clients-1h">-</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">Únicos (24h):</span>
+                        <span class="stat-value" id="hotspot-clients-24h">-</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">Únicos (7d):</span>
+                        <span class="stat-value" id="hotspot-clients-7d">-</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">Únicos (30d):</span>
+                        <span class="stat-value" id="hotspot-clients-30d">-</span>
                     </div>
                 </div>
                 <div class="card-footer">
                     <button class="btn-expand" onclick="expandMetric('hotspot-clients')">
-                        <i class="fas fa-list"></i> Detalhes
+                        <i class="fas fa-chart-bar"></i> Análise
                     </button>
                 </div>
             </div>

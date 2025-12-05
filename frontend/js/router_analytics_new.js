@@ -42,7 +42,11 @@ document.addEventListener('DOMContentLoaded', () => {
             theme: { mode: 'dark' },
             xaxis: {
                 type: 'datetime',
-                labels: { style: { colors: '#a0a0a0' } }
+                labels: { 
+                    style: { colors: '#a0a0a0' },
+                    // CORREÇÃO: Garante que o gráfico interprete os dados como UTC e exiba no fuso horário local.
+                    datetimeUTC: false
+                }
             },
             yaxis: {
                 labels: { style: { colors: '#a0a0a0' } }
