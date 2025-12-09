@@ -1,11 +1,30 @@
 // Ficheiro: controllers/routerController.js
 const pool = require('../connection');
-const ping = require('ping'); // Importa a biblioteca de ping
+const ping = require('ping');
 const { logAction } = require('../services/auditLogService');
+// [NOVO] Adicionar dependências e configuração para InfluxDB
+const { InfluxDB } = require('@influxdata/influxdb-client');
+require('dotenv').config();
 
+// [NOVO] Configuração do InfluxDB a partir de variáveis de ambiente
+const influxUrl = process.env.INFLUXDB_URL;
+const influxToken = process.env.INFLUXDB_TOKEN;
+const influxOrg = process.env.INFLUXDB_ORG;
+const influxBucket = process.env.INFLUXDB_BUCKET;
+
+let queryApi = null;
+if (influxUrl && influxToken && influxOrg && influxBucket) {
+    const influxDB = new InfluxDB({ url: influxUrl, token: influxToken });
+    queryApi = influxDB.getQueryApi(influxOrg);
+    console.log('Conexão com InfluxDB estabelecida para métricas em tempo real.');
+} else {
+    console.warn('Variáveis de ambiente da InfluxDB não configuradas. As métricas em tempo real não estarão disponíveis.');
+}
 // --- Funções de Roteadores Individuais ---
 
 const getAllRouters = async (req, res) => {
+  // [MODIFICADO] Esta rota agora é usada apenas para a lista simples na gestão.
+  // A nova rota /status é usada para a página de monitoramento.
   try {
     const allRouters = await pool.query('SELECT id, name, status, observacao, group_id, ip_address FROM routers ORDER BY name ASC');
     res.json(allRouters.rows);
@@ -13,6 +32,195 @@ const getAllRouters = async (req, res) => {
     console.error('Erro ao listar roteadores:', error);
     res.status(500).json({ message: "Erro interno do servidor." });
   }
+};
+
+/**
+ * [MODIFICADO] Obtém o status detalhado de todos os roteadores, buscando métricas em tempo real do InfluxDB.
+ */
+const getRoutersStatus = async (req, res) => {
+    try {
+        // 1. Obter dados base dos roteadores do PostgreSQL
+        const pgQuery = `
+            SELECT 
+                r.id,
+                r.name,
+                r.ip_address AS ip,
+                r.status,
+                rg.name AS group_name
+            FROM routers r
+            LEFT JOIN router_groups rg ON r.group_id = rg.id
+            ORDER BY r.name ASC
+        `;
+        const { rows: routers } = await pool.query(pgQuery);
+
+        // 2. Enriquecer cada roteador com dados de ping e InfluxDB em paralelo
+        const enrichedRouters = await Promise.all(routers.map(async (router) => {
+            let latency = null;
+            let connected_clients = 0;
+            let interface_traffic = {};
+            let interfaces = [];
+            let default_interface = null;
+
+            // Ping para obter latência real
+            // [MODIFICADO] Adicionado .trim() para remover espaços em branco do IP vindo do banco de dados.
+            const cleanIp = router.ip ? router.ip.trim() : null;
+
+            if (cleanIp) {
+                try {
+                    const pingResult = await ping.promise.probe(cleanIp, { timeout: 2 });
+                    latency = pingResult.alive ? Math.round(pingResult.time) : null;
+                } catch (e) {
+                    latency = null;
+                }
+            }
+
+            // Se o InfluxDB estiver configurado, buscar métricas
+            if (queryApi && cleanIp) { // [MODIFICADO] Apenas executa se houver um IP limpo.
+                try {
+                    // [MODIFICADO] Adiciona queries para múltiplas fontes de contagem de clientes
+                    let hotspot_clients = 0;
+                    let dhcp_clients = 0;
+                    let wifi_clients = 0;
+
+                    // Query para clientes do Hotspot
+                    const hotspotQuery = `
+                        from(bucket: "${influxBucket}")
+                          |> range(start: -10m)
+                          |> filter(fn: (r) => r._measurement == "hotspot_active" and r.router_host == "${cleanIp}")
+                          |> group(columns: ["mac_address"])
+                          |> last(column: "_time") // Pega o registo mais recente para cada MAC
+                          |> group() // Desagrupa para contar
+                          |> count() // [CORRIGIDO] A função count() não aceita parâmetros de coluna.
+                    `;
+                    const hotspotResult = await queryApi.collectRows(hotspotQuery);
+                    if (hotspotResult.length > 0) {
+                        hotspot_clients = hotspotResult[0]._value || 0;
+                    }
+
+                    // Query para clientes DHCP
+                    const dhcpQuery = `
+                        from(bucket: "${influxBucket}")
+                          |> range(start: -24h)
+                          |> filter(fn: (r) => r._measurement == "ip_dhcp_server_lease" and r.router_host == "${cleanIp}")
+                          |> filter(fn: (r) => r._field == "status")
+                          |> group(columns: ["mac_address"])
+                          |> last()
+                          |> filter(fn: (r) => r._value == "bound")
+                          |> group()
+                          |> count()
+                    `;
+                    const dhcpResult = await queryApi.collectRows(dhcpQuery);
+                    if (dhcpResult.length > 0) {
+                        dhcp_clients = dhcpResult[0]._value || 0;
+                    }
+
+                    // Query para clientes Wi-Fi
+                    const wifiQuery = `
+                        from(bucket: "${influxBucket}")
+                          |> range(start: -10m)
+                          |> filter(fn: (r) => r._measurement == "interface_wireless_registration_table" and r.router_host == "${cleanIp}")
+                          |> group(columns: ["mac_address"])
+                          |> last(column: "_time") // Pega o registo mais recente para cada MAC
+                          |> group() // Desagrupa para contar
+                          |> count() // [CORRIGIDO] A função count() não aceita parâmetros de coluna.
+                    `;
+                    const wifiResult = await queryApi.collectRows(wifiQuery);
+                    if (wifiResult.length > 0) {
+                        wifi_clients = wifiResult[0]._value || 0;
+                    }
+
+                    // [NOVO] Log de depuração para contagem de clientes
+                    console.log(`[CLIENT-COUNT-DEBUG] Roteador: ${router.name}, Hotspot: ${hotspot_clients}, DHCP: ${dhcp_clients}, Wi-Fi: ${wifi_clients}`);
+
+                    // [MODIFICADO] A contagem de clientes agora prioriza os usuários ativos do hotspot, com fallback para Wi-Fi e DHCP.
+                    connected_clients = hotspot_clients > 0 ? hotspot_clients : (wifi_clients > 0 ? wifi_clients : dhcp_clients);
+
+                    // Query para tráfego de todas as interfaces
+                    const trafficQuery = `
+                        from(bucket: "${influxBucket}")
+                          |> range(start: -1m)
+                          |> filter(fn: (r) => r._measurement == "interface_stats" and r.router_host == "${cleanIp}")
+                          |> filter(fn: (r) => r._field == "rx_bits_per_second" or r._field == "tx_bits_per_second")
+                          |> group(columns: ["interface_name"]) |> last() |> group()`;
+                    const trafficResult = await queryApi.collectRows(trafficQuery);
+                    
+                    const trafficData = {};
+                    trafficResult.forEach(row => {
+                        const ifaceName = row.interface_name;
+                        if (!trafficData[ifaceName]) trafficData[ifaceName] = 0;
+                        trafficData[ifaceName] += row._value;
+                    });
+                    interface_traffic = trafficData;
+
+                    // [NOVO] Lógica para determinar uma interface padrão para exibir no gráfico.
+                    if (Object.keys(interface_traffic).length > 0) {
+                        // 1. Prioriza interfaces com nomes comuns de WAN/Gateway.
+                        const wanInterface = Object.keys(interface_traffic).find(iface => /wan|gateway/i.test(iface));
+                        if (wanInterface) {
+                            default_interface = wanInterface;
+                        } else {
+                            // 2. Se não encontrar, escolhe a interface com o maior tráfego.
+                            default_interface = Object.entries(interface_traffic).reduce((a, b) => a[1] > b[1] ? a : b)[0];
+                        }
+                    }
+                    // [NOVO] Log para depuração da interface padrão
+                    console.log(`[ROUTER-STATUS-DEBUG] Roteador: ${router.name}, IP: ${cleanIp}, Interface Padrão Escolhida: ${default_interface}`);
+
+                    // Query para obter a lista de interfaces existentes
+                    // [CORRIGIDO] Usando `schema.tagValues` e o predicado correto, exatamente como funciona em `monitoring.js`.
+                    const interfaceListQuery = `
+                        import "influxdata/influxdb/schema"
+                        schema.tagValues(
+                            bucket: "${influxBucket}",
+                            tag: "interface_name",
+                            start: -24h,
+                            predicate: (r) => r._measurement == "interface_stats" and r.router_host == "${cleanIp}"
+                        )`;
+                    const interfaceResult = await queryApi.collectRows(interfaceListQuery);
+                    interfaces = interfaceResult.map(row => ({ name: row._value }));
+
+                } catch (influxError) {
+                    console.error(`Erro ao consultar InfluxDB para o roteador ${router.name} (IP: ${cleanIp}):`, influxError);
+                }
+            }
+
+            return {
+                ...router,
+                latency,
+                connected_clients,
+                interface_traffic, // Objeto com tráfego por interface
+                interfaces: interfaces.length > 0 ? interfaces : [], // Lista real de interfaces
+                default_interface: default_interface, // [NOVO] Sugestão de interface padrão
+                bandwidth_limit: 10000000, // Limite simulado (10 Mbps)
+            };
+        }));
+
+        // [NOVO] 3. Ordena os resultados antes de enviar para o frontend.
+        // Ordem: 1. Online, 2. Warning (Latência Alta), 3. Offline.
+        // Desempate por nome.
+        enrichedRouters.sort((a, b) => {
+            const getSortOrder = (r) => {
+                if (r.status === 'online') {
+                    // O frontend usa 150ms como limite para 'warning'
+                    return (r.latency !== null && r.latency > 150) ? 2 : 1;
+                }
+                return 3; // 'offline'
+            };
+
+            const orderA = getSortOrder(a);
+            const orderB = getSortOrder(b);
+
+            if (orderA !== orderB) {
+                return orderA - orderB;
+            }
+            return a.name.localeCompare(b.name);
+        });
+
+        res.json(enrichedRouters);
+    } catch (error) {
+        console.error('Erro ao obter status dos roteadores:', error);
+        res.status(500).json({ message: "Erro interno do servidor ao obter status dos roteadores." });
+    }
 };
 
 const updateRouter = async (req, res) => {
@@ -434,6 +642,7 @@ const deleteRouterGroup = async (req, res) => {
 
 
 module.exports = {
+  getRoutersStatus, // Exporta a nova função
   getAllRouters,
   updateRouter,
   deleteRouter,

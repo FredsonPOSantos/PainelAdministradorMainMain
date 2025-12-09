@@ -53,9 +53,14 @@
 <div class="content-section">
     <div class="section-header">
         <h3>Roteadores Individuais</h3>
-        <button id="discoverRoutersBtn" class="btn-secondary">Verificar Roteadores Novos</button>
-        <button id="checkStatusBtn" class="btn-primary">Verificar Status</button>
-
+        <!-- [MODIFICADO] Botões agrupados e adicionado o link para a página de Status Geral -->
+        <div class="header-actions">
+            <a href="/pages/router_status.html" class="btn-secondary" title="Ver o painel de status de todos os roteadores">
+                <i class="fas fa-network-wired"></i> Status Geral
+            </a>
+            <button id="discoverRoutersBtn" class="btn-secondary">Verificar Roteadores Novos</button>
+            <button id="checkStatusBtn" class="btn-primary">Verificar Status</button>
+        </div>
     </div>
     <div class="table-container">
         <table id="routersTable">
@@ -158,4 +163,3 @@
         </form>
     </div>
 </div>
-

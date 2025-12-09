@@ -872,4 +872,114 @@ router.get('/router/:id/hotspot-analytics', async (req, res) => {
     }
 });
 
+/**
+ * @route   GET /api/monitoring/all-routers-status
+ * @desc    [NOVO] Busca um resumo do estado atual de todos os roteadores para o dashboard NOC.
+ * @access  Private
+ */
+router.get('/all-routers-status', /* seuMiddlewareDeAuth, */ async (req, res) => {
+    try {
+        // 1. Buscar todos os roteadores ativos do PostgreSQL
+        const routerQuery = await pool.query(
+            "SELECT id, name, ip_address FROM routers" // Busca todos os roteadores; o status será determinado pelo InfluxDB
+        );
+        const allRouters = routerQuery.rows;
+
+        if (!allRouters || allRouters.length === 0) {
+            return res.json([]);
+        }
+
+        // 2. Buscar os últimos dados da InfluxDB para TODOS os roteadores de uma vez
+        const fluxQuery = `
+            from(bucket: "${influxBucket}")
+              |> range(start: -5m) // Busca nos últimos 5 minutos, conforme o guia
+              |> filter(fn: (r) => r._measurement == "system_resource")
+              |> filter(fn: (r) => r._field == "uptime_seconds" or r._field == "cpu_load")
+              |> last()
+              |> pivot(rowKey:["router_host"], columnKey: ["_field"], valueColumn: "_value")
+              |> keep(columns: ["router_host", "uptime_seconds", "cpu_load"])
+        `;
+
+        const influxData = {};
+        await new Promise((resolve, reject) => {
+            queryApi.queryRows(fluxQuery, {
+                next(row, tableMeta) {
+                    const o = tableMeta.toObject(row);
+                    influxData[o.router_host] = o;
+                },
+                error: reject,
+                complete: resolve,
+            });
+        });
+
+        // 3. Combinar os dados do PostgreSQL com os dados da InfluxDB
+        const responseData = allRouters.map(router => {
+            const ip = router.ip_address;
+            const liveData = influxData[ip];
+
+            return { id: router.id, name: router.name, ip: ip, status: liveData ? 'online' : 'offline', cpu_load: liveData ? liveData.cpu_load : null, uptime_seconds: liveData ? liveData.uptime_seconds : null, };
+        });
+
+        res.json(responseData);
+
+    } catch (error) {
+        console.error('Erro na rota /api/monitoring/all-routers-status:', error);
+        res.status(500).json({ success: false, message: 'Erro ao buscar status de todos os roteadores.' });
+    }
+});
+
+/**
+ * @route   GET /api/monitoring/router/:id/interface-traffic
+ * @desc    [NOVO] Busca o histórico de tráfego (RX/TX) para uma interface específica.
+ * @access  Private
+ * @query   interface - O nome da interface (obrigatório).
+ * @query   range - O período de tempo (ex: '15m', '1h'). Padrão: '15m'.
+ */
+router.get('/router/:id/interface-traffic', /* seuMiddlewareDeAuth, */ async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { interface: interfaceName, range = '15m' } = req.query;
+
+        if (!interfaceName) {
+            return res.status(400).json({ success: false, message: 'O nome da interface é obrigatório.' });
+        }
+
+        // 1. Buscar o IP do roteador no PostgreSQL
+        const routerQuery = await pool.query("SELECT ip_address FROM routers WHERE id = $1", [id]);
+        if (routerQuery.rows.length === 0) {
+            return res.status(404).json({ success: false, message: 'Roteador não encontrado.' });
+        }
+        const routerIp = routerQuery.rows[0].ip_address;
+
+        // 2. Query para buscar dados de RX e TX
+        const trafficQuery = `
+            from(bucket: "${influxBucket}")
+              |> range(start: -${range})
+              |> filter(fn: (r) => r._measurement == "interface_stats")
+              |> filter(fn: (r) => r.router_host == "${routerIp}")
+              |> filter(fn: (r) => r.interface_name == "${decodeURIComponent(interfaceName)}")
+              |> filter(fn: (r) => r._field == "rx_bits_per_second" or r._field == "tx_bits_per_second")
+              |> aggregateWindow(every: 1m, fn: mean, createEmpty: false)
+              |> pivot(rowKey:["_time"], columnKey: ["_field"], valueColumn: "_value")
+        `;
+
+        const data = [];
+        await new Promise((resolve, reject) => {
+            queryApi.queryRows(trafficQuery, {
+                next(row, tableMeta) {
+                    const o = tableMeta.toObject(row);
+                    data.push({ time: o._time, rx: o['rx_bits_per_second'], tx: o['tx_bits_per_second'] });
+                },
+                error: reject,
+                complete: resolve,
+            });
+        });
+
+        res.json({ success: true, data });
+    } catch (error) {
+        console.error(`Erro na rota /api/monitoring/router/${req.params.id}/interface-traffic:`, error);
+        res.status(500).json({ success: false, message: 'Erro ao buscar dados de tráfego da interface.' });
+    }
+});
+
 module.exports = router;
