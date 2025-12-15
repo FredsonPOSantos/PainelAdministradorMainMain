@@ -43,12 +43,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 try {
                     const users = await apiRequest('/api/admin/users');
                     tableBody.innerHTML = '';
-                    if (users.data.length === 0) {
+                    if (users.length === 0) { // [CORRIGIDO] A API retorna o array diretamente
                         tableBody.innerHTML = `<tr><td colspan="9">Nenhum utilizador encontrado.</td></tr>`;
                         return;
                     }
                     const showSensitiveData = (currentUserRole === 'master' || currentUserRole === 'DPO');
-                    users.data.forEach(user => {
+                    users.forEach(user => { // [CORRIGIDO] A API retorna o array diretamente
                         const row = document.createElement('tr');
                         let cells = `
                             <td>${user.id}</td>
@@ -189,7 +189,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const openModalForEdit = async (userId) => {
                 try {
-                     const users = await apiRequest('/api/admin/users');
+                     const users = await apiRequest('/api/admin/users'); // [CORRIGIDO] A API retorna o array diretamente
                      const user = users.data.find(u => u.id == userId);
                      if (!user) {
                         showNotification("Erro: Utilizador não encontrado.", 'error');

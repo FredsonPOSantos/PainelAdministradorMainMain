@@ -18,101 +18,6 @@ const showForcePasswordChangeModal = () => {
     }
 };
 
-// [ATUALIZADO V13] Adiciona cache busting simples para GET
-const apiRequest = async (endpoint, method = 'GET', body = null) => {
-    // Define a URL base da API
-    const API_ADMIN_URL = `http://${window.location.hostname}:3000`;
-    const token = localStorage.getItem('adminToken');
-    const options = {
-        method,
-        headers: {
-            'Authorization': `Bearer ${token}`,
-            'Cache-Control': 'no-cache' // Tenta evitar cache da API
-        }
-    };
-
-    let url = `${API_ADMIN_URL}${endpoint}`;
-
-    // Adiciona timestamp para GET para evitar cache do browser (cache busting)
-    if (method === 'GET') {
-        url += (url.includes('?') ? '&' : '?') + `_=${Date.now()}`;
-    }
-
-    if (body instanceof FormData) {
-        // Se for FormData, o browser define o Content-Type automaticamente
-        options.body = body;
-    } else if (body) {
-        // Se for um objeto JSON
-        options.headers['Content-Type'] = 'application/json';
-        options.body = JSON.stringify(body);
-    }
-
-    try {
-        const response = await fetch(url, options); 
-        console.log(`[apiRequest] Recebida resposta para ${endpoint} com status: ${response.status}`);
-        
-        if (!response.ok) {
-            let errorData = {};
-            try {
-                errorData = await response.json();
-            } catch (e) {
-                errorData.message = `O servidor respondeu com um erro (${response.status}) mas a resposta não pôde ser lida.`;
-                console.error(`[apiRequest] Erro de parsing JSON para ${endpoint}`, e);
-            }
-
-            // Tratamento de erros específicos
-            if (response.status === 401) {
-                console.warn("Token inválido/expirado (V13.1.3). Deslogando...");
-                localStorage.removeItem('adminToken');
-                window.currentUserProfile = null;
-                isProfileLoaded = false;
-                window.systemSettings = null;
-                window.location.href = 'admin_login.html';
-                throw new Error('Não autorizado.'); // Ainda lança para redirecionamento crítico
-            } else if (errorData.code === 'PASSWORD_CHANGE_REQUIRED') {
-                console.warn("API bloqueada (V13.1.3). Troca de senha obrigatória.");
-                showForcePasswordChangeModal();
-                throw new Error(errorData.message || "Troca de senha obrigatória."); // Ainda lança para modal crítico
-            } else {
-                // Outros erros (403, 404, 500, etc.) - Retorna um objeto de erro estruturado
-                return {
-                    success: false,
-                    message: errorData.message || `Erro ${response.status}`,
-                    status: response.status,
-                    code: errorData.code // Se houver um código de erro específico da API
-                };
-            }
-        }
-        
-        // Trata respostas sem conteúdo (ex: 204 No Content)
-        if (response.status === 204) {
-            return { success: true, data: null, message: "Operação realizada com sucesso." };
-        }
-
-        // Verifica o tipo de conteúdo da resposta
-        const contentType = response.headers.get("content-type");
-        if (contentType && contentType.includes("application/json")) {
-            console.log(`[apiRequest] Resposta para ${endpoint} é JSON. A processar...`);
-            const data = await response.json();
-            const returnObject = { success: true, data: data, message: data.message || "Operação realizada com sucesso." };
-            console.log(`[apiRequest] A retornar para ${endpoint}:`, returnObject);
-            return returnObject;
-        } else {
-            const textData = await response.text();
-            return { success: true, data: textData || null, message: "Operação realizada com sucesso." };
-        }
-
-    } catch (error) {
-        // Este bloco 'catch' captura erros de rede (ex: servidor offline) ou erros de parsing do JSON.
-        console.error(`[apiRequest] FALHA CRÍTICA (rede/fetch) para ${method} ${endpoint}:`, error);
-        return {
-            success: false,
-            message: 'Falha de comunicação com o servidor. Verifique a sua ligação ou o estado do servidor.'
-        };
-    }
-};
-
-
 // [NOVO V13.1] Função para aplicar configurações visuais (Nome, Logo, Cor)
 window.applyVisualSettings = (settings) => {
     if (!settings) {
@@ -240,8 +145,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     const fetchUnreadCount = async () => {
         try {
             const response = await apiRequest('/api/notifications/unread-count');
-            if (response.success) {
-                const count = response.data.data.count;
+            // [CORRIGIDO] A API retorna { success: true, data: { count: X } }.
+            // O acesso correto é response.data.count, não response.data.data.count.
+            if (response.success && response.data) {
+                const count = response.data.count;
                 if (count > 0) {
                     notificationBadge.textContent = count;
                     notificationBadge.classList.remove('hidden');
@@ -289,12 +196,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         try {
             const response = await apiRequest('/api/notifications/unread');
             if (response.success) {
-                const notifications = response.data.data;
+                // [CORRIGIDO] A API retorna { success: true, data: [...] }. O acesso correto é response.data.
+                const notifications = response.data;
                 const dropdown = document.createElement('div');
                 dropdown.id = 'notification-dropdown';
                 dropdown.classList.add('notification-dropdown');
 
-                if (notifications.length === 0) {
+                if (!notifications || notifications.length === 0) {
                     dropdown.innerHTML = '<p>Nenhuma notificação nova.</p>';
                 } else {
                     notifications.forEach(notification => {
@@ -768,8 +676,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         // LOG ADICIONADO: Mostra a resposta completa da API
         console.log('%c[Dashboard Init] Resposta da API /api/settings/general:', 'color: orange;', settingsResponse);
 
-        if (settingsResponse?.data) {
-            window.systemSettings = settingsResponse.data;
+        // [CORRIGIDO] A API pode retornar o objeto de configurações diretamente ou dentro de uma propriedade 'data'.
+        const settings = settingsResponse.data || settingsResponse;
+        if (settings && Object.keys(settings).length > 0) {
+            window.systemSettings = settings;
             applyVisualSettings(window.systemSettings);
             console.log("%c[Dashboard Init] Configurações visuais aplicadas com sucesso.", "color: green;");
         } else {

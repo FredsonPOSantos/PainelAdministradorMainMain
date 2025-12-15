@@ -95,11 +95,11 @@ if (window.initCampaignsPage) {
             try {
                 const campaigns = await apiRequest('/api/campaigns');
                 tableBody.innerHTML = '';
-                if (campaigns.data.length === 0) {
+                if (campaigns.length === 0) { // [CORRIGIDO] A API retorna o array diretamente
                     tableBody.innerHTML = '<tr><td colspan="6">Nenhuma campanha encontrada.</td></tr>';
                     return;
                 }
-                campaigns.data.forEach(campaign => {
+                campaigns.forEach(campaign => { // [CORRIGIDO] A API retorna o array diretamente
                     const row = document.createElement('tr');
                     // Ajustado para mostrar as novas colunas
                     row.innerHTML = `

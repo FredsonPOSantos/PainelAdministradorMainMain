@@ -5,10 +5,10 @@ document.addEventListener('DOMContentLoaded', () => {
         tableBody.innerHTML = `<tr><td colspan="6" style="text-align:center;">A carregar pedidos...</td></tr>`;
         try {
             const response = await apiRequest('/api/lgpd/requests');
-            if (!response.success || !response.data || !Array.isArray(response.data.data)) {
+            if (!response.success || !response.data || !Array.isArray(response.data)) { // [CORRIGIDO] A API retorna o array em 'data'
                 throw new Error(response.message || 'Resposta inválida da API de pedidos LGPD.');
             }
-            const requests = response.data.data;
+            const requests = response.data; // [CORRIGIDO]
             tableBody.innerHTML = '';
             if (requests.length === 0) {
                 tableBody.innerHTML = `<tr><td colspan="6" style="text-align:center;">Nenhum pedido de exclusão de dados encontrado.</td></tr>`;
@@ -69,10 +69,10 @@ document.addEventListener('DOMContentLoaded', () => {
         tableBody.innerHTML = `<tr><td colspan="6" style="text-align:center;">A pesquisar...</td></tr>`;
         try {
             const response = await apiRequest(`/api/lgpd/search-users?searchTerm=${searchTerm}&searchType=${searchType}`);
-            if (!response.success || !response.data || !Array.isArray(response.data.data)) {
+            if (!response.success || !response.data || !Array.isArray(response.data)) { // [CORRIGIDO] A API retorna o array em 'data'
                 throw new Error(response.message || 'Resposta inválida da API de pesquisa de utilizadores.');
             }
-            const users = response.data.data;
+            const users = response.data; // [CORRIGIDO]
             tableBody.innerHTML = '';
             if (users.length === 0) {
                 tableBody.innerHTML = `<tr><td colspan="6" style="text-align:center;">Nenhum utilizador encontrado.</td></tr>`;

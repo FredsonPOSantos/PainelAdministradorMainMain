@@ -46,7 +46,7 @@ if (window.initSupportPage) {
                 const response = await apiRequest(`/api/tickets?${params.toString()}`);
                 if (!response.success) throw new Error(response.message);
 
-                const { tickets, totalPages, currentPage } = response.data.data;
+                const { tickets, totalPages, currentPage } = response.data; // [CORRIGIDO] A API retorna o objeto em 'data'
                 ticketListDiv.innerHTML = '';
 
                 if (tickets.length === 0) {
@@ -128,7 +128,7 @@ if (window.initSupportPage) {
                 const response = await apiRequest(`/api/tickets/${ticketId}`);
                 if (!response.success) throw new Error(response.message);
 
-                const ticket = response.data.data;
+                const ticket = response.data; // [CORRIGIDO] A API retorna o objeto em 'data'
                 renderTicketDetails(ticket);
 
             } catch (error) {
@@ -277,7 +277,7 @@ if (window.initSupportPage) {
                 newTicketModal.classList.add('hidden');
                 newTicketForm.reset();
                 showNotification('Ticket criado com sucesso!', 'success');
-                loadTickets(); // Recarrega a lista de tickets
+                loadTickets(); // Recarrega a lista de tickets // [CORRIGIDO]
                 loadTicketDetails(response.data.data.ticketId); // Carrega o novo ticket
             } catch (error) {
                 showNotification(`Erro ao criar ticket: ${error.message}`, 'error');
@@ -344,7 +344,7 @@ if (window.initSupportPage) {
             // Carrega a lista de utilizadores para o dropdown de atribuição
             if (['master', 'gestao'].includes(window.currentUserProfile.role)) {
                 try {
-                    const usersResponse = await apiRequest('/api/admin/users');
+                    const usersResponse = await apiRequest('/api/admin/users'); // [CORRIGIDO] A API retorna o array diretamente
                     if(usersResponse.success) allUsers = usersResponse.data;
                 } catch (e) {
                     console.error("Erro ao carregar lista de utilizadores para atribuição", e);

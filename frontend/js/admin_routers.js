@@ -41,12 +41,12 @@ if (window.initRoutersPage) {
                     apiRequest('/api/routers/groups'),
                     apiRequest('/api/routers')
                 ]);
-                allGroups = groupsResponse.data;
-                allRouters = routersResponse.data;
+                allGroups = groupsResponse; // [CORRIGIDO] A API retorna o array diretamente
+                allRouters = routersResponse; // [CORRIGIDO] A API retorna o array diretamente
 
                 // [ADICIONADO] Atualiza os cartões de estatísticas
-                totalRoutersCard.textContent = allRouters.length;
-                totalGroupsCard.textContent = allGroups.length;
+                totalRoutersCard.textContent = allRouters.length; // [CORRIGIDO]
+                totalGroupsCard.textContent = allGroups.length; // [CORRIGIDO]
 
                 // Continua a carregar o resto da página
                 displayGroups();
@@ -206,14 +206,16 @@ if (window.initRoutersPage) {
                 try {
                     // Atualiza o objeto 'router' na cache 'allRouters'
                     const routerInCache = allRouters.find(r => r.id === routerId);
-                    const response = await apiRequest(`/api/routers/${routerId}/ping`, 'POST');
-                    
-                    if (!response.success) {
-                        throw new Error(response.message || "Erro desconhecido ao verificar status.");
-                    }
+                    const pingResponse = await apiRequest(`/api/routers/${routerId}/ping`, 'POST');
 
-                    statusCell.innerHTML = `<span class="status-dot status-${response.data.status}"></span> ${response.data.status}`;
-                    if (routerInCache) routerInCache.status = response.data.status; // Atualiza cache
+                    // [CORRIGIDO] A API de ping retorna { status: 'online' } diretamente.
+                    // A verificação de 'success' e 'data' não se aplica aqui.
+                    if (pingResponse && pingResponse.status) {
+                        statusCell.innerHTML = `<span class="status-dot status-${pingResponse.status}"></span> ${pingResponse.status}`;
+                        if (routerInCache) routerInCache.status = pingResponse.status; // Atualiza cache
+                    } else {
+                        throw new Error("Resposta inválida da API de ping.");
+                    }
 
                 } catch (error) {
                     statusCell.innerHTML = `<span class="status-dot status-offline"></span> erro`;
@@ -237,7 +239,8 @@ if (window.initRoutersPage) {
                 if (!response.success) throw new Error(response.message);
 
                 // [CORRIGIDO] A resposta da API está aninhada. O array está em response.data.data.
-                const newRouters = response.data.data;
+                // [CORRIGIDO] Torna a verificação mais robusta, usando um array vazio como fallback se 'data' não existir.
+                const newRouters = response.data || [];
 
                 const discoveredRouterList = document.getElementById('discoveredRouterList');
                 discoveredRouterList.innerHTML = '';

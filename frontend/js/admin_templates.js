@@ -59,11 +59,11 @@ if (window.initTemplatesPage) {
             try {
                 const templates = await apiRequest('/api/templates');
                 tableBody.innerHTML = '';
-                if (templates.data.length === 0) {
+                if (templates.length === 0) { // [CORRIGIDO] A API retorna o array diretamente
                     tableBody.innerHTML = '<tr><td colspan="5">Nenhum template encontrado.</td></tr>';
                     return;
                 }
-                templates.data.forEach(template => {
+                templates.forEach(template => { // [CORRIGIDO] A API retorna o array diretamente
                     const row = document.createElement('tr');
                     row.innerHTML = `
                         <td>${template.id}</td>
@@ -182,7 +182,7 @@ if (window.initTemplatesPage) {
                     console.error("Erro ao carregar banners: ", response.message);
                     return;
                 }
-                const banners = response.data;
+                const banners = response; // [CORRIGIDO] A API retorna o array diretamente
                 // Limpa ambos os selects
                 preLoginBannerSelect.innerHTML = '<option value="">Nenhum</option>';
                 postLoginBannerSelect.innerHTML = '<option value="">Nenhum</option>';

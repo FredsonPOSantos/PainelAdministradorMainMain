@@ -36,7 +36,7 @@ if (window.initNetworkStatusPage) {
                 throw new Error(response.message || 'Falha ao carregar dados da API.');
             }
 
-            const routers = response.data;
+            const routers = response; // [CORRIGIDO] A API retorna o array diretamente
             tableBody.innerHTML = ''; // Limpa a mensagem "A carregar dados..."
 
             if (routers.length === 0) {

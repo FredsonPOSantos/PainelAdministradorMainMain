@@ -9,7 +9,9 @@ if (window.initHomePage) {
         const fetchCardData = async (endpoint, totalId, activeId = null, inactiveId = null) => {
             try {
                 const response = await apiRequest(endpoint);
-                const data = response.data;
+                // [CORRIGIDO] Algumas rotas da API retornam o array diretamente, outras dentro de um objeto { data: [...] }.
+                // Esta linha lida com ambos os casos de forma robusta.
+                const data = response.data || response;
                 
                 if (document.getElementById(totalId)) {
                     document.getElementById(totalId).textContent = data.length;
@@ -41,9 +43,9 @@ if (window.initHomePage) {
         const fetchHotspotUsers = async () => {
             try {
                 const response = await apiRequest('/api/hotspot/total-users');
-                // [CORRIGIDO] A API retorna um objeto aninhado { success: true, data: { total: X, last30days: Y } }
-                // É preciso aceder a response.data.data
-                const stats = response.data.data;
+                // [CORRIGIDO] A API pode retornar o objeto de estatísticas diretamente ou dentro de 'data'.
+                // Esta abordagem lida com ambos os casos.
+                const stats = response.data || response;
                 // [CORRIGIDO] Usa os IDs corretos do HTML e preenche ambos os campos
                 const totalElement = document.getElementById('usersTotal');
                 const last30DaysElement = document.getElementById('usersLast30Days');

@@ -39,7 +39,6 @@ if (window.initHotspotPage) {
 
 
             try {
-                // Utilizadores 'master' e 'gestao' veem todos os filtros
                 if (userRole === 'master' || userRole === 'gestao') {
                     const [routers, groups, campaigns] = await Promise.all([
                         apiRequest('/api/routers'),
@@ -47,32 +46,29 @@ if (window.initHotspotPage) {
                         apiRequest('/api/campaigns')
                     ]);
 
-                    routers.data.forEach(r => {
+                    routers.forEach(r => { // [CORRIGIDO] A API retorna o array diretamente
                         routerSelect.innerHTML += `<option value="${r.id}">${r.name}</option>`;
                     });
 
-                    groups.data.forEach(g => {
+                    groups.forEach(g => { // [CORRIGIDO] A API retorna o array diretamente
                         groupSelect.innerHTML += `<option value="${g.id}">${g.name}</option>`;
                     });
 
                     const campaignsResponse = await apiRequest('/api/campaigns');
-                    campaignsResponse.data.forEach(c => {
+                    campaignsResponse.forEach(c => { // [CORRIGIDO] A API retorna o array diretamente
                         campaignSelect.innerHTML += `<option value="${c.id}">${c.name}</option>`;
                     });
-                }
-                // Utilizador 'estetica' vê apenas o filtro de campanhas
-                else if (userRole === 'estetica') {
+                } else if (userRole === 'estetica') {
                     
-                    // Esconde e desativa os filtros de router e grupo
                     if (routerFilterGroup) routerFilterGroup.style.display = 'none';
                     if (routerSelect) routerSelect.disabled = true;
                     
                     if (groupFilterGroup) groupFilterGroup.style.display = 'none';
                     if (groupSelect) groupSelect.disabled = true;
 
-                    // Busca apenas as campanhas (que 'estetica' tem permissão)
                     const campaignsResponse = await apiRequest('/api/campaigns');
-                    campaignsResponse.data.forEach(c => {                        campaignSelect.innerHTML += `<option value="${c.id}">${c.name}</option>`;
+                    campaignsResponse.forEach(c => { // [CORRIGIDO] A API retorna o array diretamente
+                        campaignSelect.innerHTML += `<option value="${c.id}">${c.name}</option>`;
                     });
                 }
 
@@ -112,9 +108,11 @@ if (window.initHotspotPage) {
 
             try {
                 // A rota /api/hotspot/users já foi corrigida no backend para aceitar 'estetica'
-                const resultsResponse = await apiRequest(`/api/hotspot/users?${params.toString()}`);
-                currentResults = resultsResponse.data; // Guarda os resultados para exportação
-                displayResults(resultsResponse.data);
+                const response = await apiRequest(`/api/hotspot/users?${params.toString()}`);
+                // [CORRIGIDO] A API pode retornar o array diretamente ou dentro de 'data'.
+                const results = response.data || response;
+                currentResults = results; // Guarda os resultados para exportação
+                displayResults(results);
             } catch (error) {
                 console.error("Erro na pesquisa:", error);
                 resultsBody.innerHTML = `<tr><td colspan="10" style="text-align:center;">Erro ao realizar a pesquisa.</td></tr>`;

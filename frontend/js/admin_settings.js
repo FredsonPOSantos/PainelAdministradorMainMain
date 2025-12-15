@@ -199,10 +199,11 @@ window.initSettingsPage = () => {
 
             try {
                 const response = await apiRequest('/api/permissions/matrix');
-                if (!response.success) {
-                    throw new Error(response.message || "Erro desconhecido ao carregar matriz de permissões.");
+                // [CORRIGIDO] Torna a verificação mais robusta, aceitando o objeto de dados diretamente ou dentro de uma propriedade 'data'.
+                const matrixData = response.data || response;
+                if (!matrixData || !matrixData.roles || !matrixData.permissions) {
+                    throw new Error(response.message || "Dados da matriz de permissões estão incompletos ou em formato inválido.");
                 }
-                const matrixData = response.data;
                 permissionsGridContainer.innerHTML = ''; // Limpa o "A carregar..."
 
                 // Cria o seletor de Role
@@ -467,11 +468,12 @@ window.initSettingsPage = () => {
         const loadGeneralSettings = async () => {
             try {
                 const response = await apiRequest('/api/settings/general');
-                if (!response || !response.data) {
+                // [CORRIGIDO] A API pode retornar o objeto de configurações diretamente ou dentro de uma propriedade 'data'.
+                const settings = response.data || response;
+                if (!settings || Object.keys(settings).length === 0) {
                     showNotification('Não foi possível carregar as configurações de aparência.', 'error');
                     return;
                 }
-                const settings = response.data;
                 
                 // LOG ADICIONADO: Mostra os dados que serão usados para preencher o formulário
                 console.log('%c[loadGeneralSettings] Configurações recebidas para preencher o formulário:', 'color: orange;', settings);
@@ -583,11 +585,13 @@ window.initSettingsPage = () => {
 
                 const response = await apiRequest(endpoint);
 
-                if (!response.success || !Array.isArray(response.data)) {
+                // [CORRIGIDO] Torna a verificação mais robusta, aceitando um array direto ou um objeto com a propriedade 'data'.
+                const logs = response.data || response;
+                if (!Array.isArray(logs)) {
                     throw new Error(response.message || 'Resposta inválida da API de logs.');
                 }
 
-                auditLogs = response.data; // Armazena os logs na variável
+                auditLogs = logs; // Armazena os logs na variável
                 tableBody.innerHTML = ''; // Limpa a tabela
 
                 if (auditLogs.length === 0) {

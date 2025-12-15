@@ -18,9 +18,9 @@ window.initRafflesPage = () => {
                 apiRequest('/api/raffles/data/routers')
             ]);
 
-            if (campaignsRes.success) {
+            if (campaignsRes.success && campaignsRes.data) { // [CORRIGIDO] Verifica se 'data' existe
                 const campaignSelect = document.getElementById('filterCampaign');
-                campaignsRes.data.data.forEach(campaign => {
+                campaignsRes.data.forEach(campaign => { // [CORRIGIDO] A API retorna o array em 'data'
                     const option = document.createElement('option');
                     option.value = campaign.id;
                     option.textContent = campaign.name;
@@ -28,9 +28,9 @@ window.initRafflesPage = () => {
                 });
             }
 
-            if (routersRes.success) {
+            if (routersRes.success && routersRes.data) { // [CORRIGIDO] Verifica se 'data' existe
                 const routerSelect = document.getElementById('filterRouter');
-                routersRes.data.data.forEach(router => {
+                routersRes.data.forEach(router => { // [CORRIGIDO] A API retorna o array em 'data'
                     const option = document.createElement('option');
                     option.value = router.id;
                     option.textContent = router.name;
@@ -74,8 +74,8 @@ window.initRafflesPage = () => {
     async function loadRaffles() {
         try {
             const response = await apiRequest('/api/raffles');
-            if (response.success) {
-                renderRaffles(response.data.data);
+            if (response.success && response.data) { // [CORRIGIDO] Verifica se 'data' existe
+                renderRaffles(response.data); // [CORRIGIDO] A API retorna o array em 'data'
             } else {
                 alert('Erro ao carregar sorteios: ' + response.message);
             }
@@ -106,8 +106,8 @@ window.initRafflesPage = () => {
     async function viewRaffle(id) {
         try {
             const response = await apiRequest(`/api/raffles/${id}`);
-            if (response.success) {
-                const raffle = response.data.data;
+            if (response.success && response.data) { // [CORRIGIDO] Verifica se 'data' existe
+                const raffle = response.data; // [CORRIGIDO] A API retorna o objeto em 'data'
                 let participantsList = '';
                 if (raffle.participants.length > 0) {
                     participantsList = raffle.participants.map(p => `<li>${p.email}</li>`).join('');
@@ -148,8 +148,8 @@ window.initRafflesPage = () => {
 
         try {
             const response = await apiRequest(`/api/raffles/${id}/draw`, 'POST');
-            if (response.success) {
-                alert(`O vencedor é: ${response.data.data.winner.email}`);
+            if (response.success && response.data && response.data.winner) { // [CORRIGIDO] Verifica se 'data' e 'winner' existem
+                alert(`O vencedor é: ${response.data.winner.email}`); // [CORRIGIDO] A API retorna o objeto em 'data'
                 loadRaffles(); // Recarregar a lista de sorteios
             } else {
                 alert('Erro ao realizar o sorteio: ' + response.message);
@@ -163,8 +163,8 @@ window.initRafflesPage = () => {
     async function exportRaffleResults(id) {
         try {
             const response = await apiRequest(`/api/raffles/${id}`);
-            if (response.success) {
-                const raffle = response.data.data;
+            if (response.success && response.data) { // [CORRIGIDO] Verifica se 'data' existe
+                const raffle = response.data; // [CORRIGIDO] A API retorna o objeto em 'data'
                 const results = [];
 
                 results.push([
@@ -216,8 +216,8 @@ window.initRafflesPage = () => {
 async function viewRaffle(id) {
     try {
         const response = await apiRequest(`/api/raffles/${id}`);
-        if (response.success) {
-            const raffle = response.data.data;
+        if (response.success && response.data) { // [CORRIGIDO] Verifica se 'data' existe
+            const raffle = response.data; // [CORRIGIDO] A API retorna o objeto em 'data'
             let participantsList = '';
             if (raffle.participants.length > 0) {
                 participantsList = raffle.participants.map(p => `<li>${p.email}</li>`).join('');
@@ -258,8 +258,8 @@ async function drawRaffle(id) {
 
     try {
         const response = await apiRequest(`/api/raffles/${id}/draw`, 'POST');
-        if (response.success) {
-            alert(`O vencedor é: ${response.data.data.winner.email}`);
+        if (response.success && response.data && response.data.winner) { // [CORRIGIDO] Verifica se 'data' e 'winner' existem
+            alert(`O vencedor é: ${response.data.winner.email}`); // [CORRIGIDO] A API retorna o objeto em 'data'
             loadRaffles(); // Recarregar a lista de sorteios
         } else {
             alert('Erro ao realizar o sorteio: ' + response.message);
@@ -273,8 +273,8 @@ async function drawRaffle(id) {
 async function exportRaffleResults(id) {
     try {
         const response = await apiRequest(`/api/raffles/${id}`);
-        if (response.success) {
-            const raffle = response.data.data;
+        if (response.success && response.data) { // [CORRIGIDO] Verifica se 'data' existe
+            const raffle = response.data; // [CORRIGIDO] A API retorna o objeto em 'data'
             const results = [];
 
             results.push([
@@ -306,5 +306,3 @@ async function exportRaffleResults(id) {
         alert('Erro ao conectar com o servidor.');
     }
 }
-
-

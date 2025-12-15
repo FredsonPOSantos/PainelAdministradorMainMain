@@ -37,11 +37,12 @@ if (window.initBannersPage) {
             tableBody.innerHTML = '<tr><td colspan="5">A carregar...</td></tr>';
             try {
                 const response = await apiRequest('/api/banners');
-                if (!response.success) {
-                    throw new Error(response.message || "Erro desconhecido ao carregar banners.");
+                // [CORRIGIDO] Torna a verificação mais robusta, aceitando um array direto ou um objeto com a propriedade 'data'.
+                const banners = response.data || response;
+                if (!Array.isArray(banners)) {
+                     throw new Error(response.message || "Erro desconhecido ao carregar banners.");
                 }
-                allBannersData = response.data; // Armazena os dados no cache
-                const banners = allBannersData;
+                allBannersData = banners; // Armazena os dados no cache
                 tableBody.innerHTML = '';
                 if (banners.length === 0) {
                     tableBody.innerHTML = '<tr><td colspan="5">Nenhum banner encontrado.</td></tr>';

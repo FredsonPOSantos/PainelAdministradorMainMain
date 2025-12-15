@@ -4,9 +4,16 @@
 document.addEventListener('DOMContentLoaded', () => {
     // ===== VARIÁVEIS GLOBAIS =====
     const routerId = window.location.hash.substring(1);
-    let currentRange = '1h';
+    // [CORRIGIDO] Define o range padrão para o modal. O range do dashboard principal agora é fixo.
+    let currentRange = '1h'; 
+    const DASHBOARD_SUMMARY_RANGE = '24h'; // [NOVO] Range fixo para os cards de resumo da página principal.
+    let cpuChartInstance = null;
+    let memoryChartInstance = null;
+    let trafficDistributionChartInstance = null;
     let metricsData = {};
     let expandedChartInstance = null;
+    let liveUpdateInterval = null; // [NOVO] Para controlar o intervalo de atualização
+    const liveUpdateToggle = document.getElementById('liveUpdateToggle'); // [NOVO] Botão de toggle
     let currentExpandedMetric = null;
     let currentChartType = 'both'; // 'rx', 'tx', 'both'
     let currentChartVisualization = 'area'; // 'area', 'bar', 'line'
@@ -18,8 +25,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ===== INICIALIZAÇÃO =====
-    loadMetrics(currentRange);
+    // [CORRIGIDO] Carrega os dados de resumo com o range fixo de 24h para garantir que os valores de MÍN/MÁX/MÉD sejam consistentes.
+    loadMetrics(DASHBOARD_SUMMARY_RANGE);
     setupEventListeners();
+    startLiveUpdates(); // [NOVO] Inicia as atualizações em tempo real por padrão
 
     // ===== FUNÇÕES PRINCIPAIS =====
 
@@ -30,10 +39,8 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const response = await apiRequest(`/api/monitoring/router/${routerId}/detailed-metrics?range=${range}`);
 
-            let apiData = response.data;
-            if (apiData && apiData.data) {
-                apiData = apiData.data;
-            }
+            // [CORRIGIDO] A API retorna { success: true, data: { ... } }. O objeto de dados está em response.data.
+            let apiData = response.data; // [CORRIGIDO]
 
             if (!apiData) {
                 throw new Error('Dados vazios retornados da API');
@@ -44,6 +51,10 @@ document.addEventListener('DOMContentLoaded', () => {
             // Atualizar header
             document.getElementById('routerNameTitle').textContent = metricsData.routerName || 'Roteador Desconhecido';
             document.getElementById('routerIpDisplay').textContent = `IP: ${metricsData.routerIp || 'Desconhecido'}`;
+            
+            // [NOVO] Preenche os valores iniciais do cabeçalho de tempo real
+            document.getElementById('liveCpu').textContent = metricsData.system?.cpu?.stats?.current.toFixed(2) + '%' || '0%';
+            document.getElementById('liveMemory').textContent = metricsData.system?.memory?.stats?.current.toFixed(2) + '%' || '0%';
 
             // Atualizar cards
             updateCards();
@@ -59,15 +70,16 @@ document.addEventListener('DOMContentLoaded', () => {
      */
     function updateCards() {
         // Sistema
-        if (metricsData.system) {
-            updateCardStats('cpu', metricsData.system.cpu);
-            updateCardStats('memory', metricsData.system.memory);
+        if (metricsData.system) {            
+            renderCpuChart(metricsData.system.cpu);
+            renderMemoryChart(metricsData.system.memory);
             updateCardStats('uptime', metricsData.system.uptime);
         }
 
         // Interfaces
         if (metricsData.interfaces) {
             renderInterfaceCards();
+            renderTrafficDistributionChart(metricsData.interfaces);
         }
 
         // Carregar dados de clientes
@@ -87,22 +99,65 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     /**
+     * [NOVO] Busca e atualiza os dados do cabeçalho em tempo real.
+     */
+    async function fetchLiveSummary() {
+        try {
+            const response = await apiRequest(`/api/monitoring/router/${routerId}/live-summary`);
+            if (response.success && response.data) {
+                const liveData = response.data; // [CORRIGIDO] A API retorna { success: true, data: {...} }.
+                document.getElementById('liveCpu').textContent = liveData.cpu.toFixed(2) + '%';
+                document.getElementById('liveMemory').textContent = liveData.memory.toFixed(2) + '%';
+                document.getElementById('liveClients').textContent = liveData.clients;
+            }
+        } catch (error) {
+            console.warn('Falha ao buscar live summary:', error.message);
+            // Opcional: mostrar um indicador de erro no cabeçalho
+        }
+    }
+
+    /**
+     * [NOVO] Inicia o polling para atualizações em tempo real.
+     */
+    function startLiveUpdates() {
+        if (liveUpdateInterval) clearInterval(liveUpdateInterval); // Limpa qualquer intervalo anterior
+        fetchLiveSummary(); // Busca imediatamente
+        liveUpdateInterval = setInterval(fetchLiveSummary, 5000); // Atualiza a cada 5 segundos
+        if (liveUpdateToggle) liveUpdateToggle.checked = true;
+        console.log("Live updates iniciados.");
+    }
+
+    /**
+     * [NOVO] Para o polling de atualizações em tempo real.
+     */
+    function stopLiveUpdates() {
+        if (liveUpdateInterval) {
+            clearInterval(liveUpdateInterval);
+            liveUpdateInterval = null;
+        }
+        if (liveUpdateToggle) liveUpdateToggle.checked = false;
+        console.log("Live updates parados.");
+    }
+
+    /**
      * Carrega dados de clientes (Wi-Fi e DHCP)
      */
     async function loadClientsData() {
         try {
             const response = await apiRequest(`/api/monitoring/router/${routerId}/clients`);
 
-            let apiData = response.data;
-            if (apiData && apiData.data) {
-                apiData = apiData.data;
-            }
+            // [CORRIGIDO] A API retorna { success: true, data: { ... } }. O objeto de dados está em response.data.
+            let apiData = response.data; // [CORRIGIDO]
 
             if (apiData && apiData.clients) {
                 // Armazenar dados para exibição no modal
                 metricsData.wifiClients = apiData.clients.wifi?.details || [];
                 metricsData.dhcpClients = apiData.clients.dhcp?.details || [];
                 metricsData.hotspotClients = apiData.clients.hotspot?.details || [];
+
+                // [NOVO] Atualiza a contagem de clientes no cabeçalho com a lógica unificada
+                const clientCardCount = apiData.clients.hotspot?.count || apiData.clients.wifi?.count || apiData.clients.dhcp?.count || 0;
+                document.getElementById('liveClients').textContent = clientCardCount;
             }
         } catch (error) {
             console.error('Erro ao carregar dados de clientes:', error);
@@ -119,7 +174,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 throw new Error(response.message);
             }
 
-            const availability = response.data.data;
+            // [CORRIGIDO] A API retorna { success: true, data: {...} }. O acesso correto é response.data.
+            const availability = response.data;
             
             const statusEl = document.getElementById('uptime-status');
             const offlineEventsEl = document.getElementById('uptime-offline-events');
@@ -146,6 +202,165 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    function renderCpuChart(cpuData) {
+        const container = document.getElementById('cpu-chart-container');
+        if (!container || !cpuData || !cpuData.stats) return;
+    
+        // Update text stats
+        document.getElementById('cpu-min').textContent = formatValue(cpuData.stats.min, 'cpu');
+        document.getElementById('cpu-avg').textContent = formatValue(cpuData.stats.avg, 'cpu');
+        document.getElementById('cpu-max').textContent = formatValue(cpuData.stats.max, 'cpu');
+    
+        const options = {
+            chart: { type: 'radialBar', height: '100%', sparkline: { enabled: false }, background: 'transparent' },
+            series: [cpuData.stats.current],
+            plotOptions: {
+                radialBar: {
+                    startAngle: -90,
+                    endAngle: 90,
+                    hollow: { margin: 20, size: '50%' }, // [CORRIGIDO] Unificado com o gráfico de memória para um visual consistente.
+                    track: { background: '#374151' },
+                    offsetY: 15, // [CORRIGIDO] Desloca o gráfico para baixo para melhor centralização vertical.
+                    dataLabels: {
+                        name: { show: false },
+                        value: {
+                            offsetY: -2,
+                            fontSize: '22px',
+                            color: '#E5E7EB',
+                            formatter: (val) => val.toFixed(1) + '%'
+                        }
+                    }
+                }
+            },
+            // [REMOVIDO] A propriedade grid.padding não é mais necessária com o ajuste de offsetY.
+            fill: {
+                type: 'gradient',
+                gradient: {
+                    shade: 'dark',
+                    type: 'horizontal',
+                    shadeIntensity: 0.5,
+                    gradientToColors: ['#e48315'],
+                    inverseColors: true,
+                    opacityFrom: 1,
+                    opacityTo: 1,
+                    stops: [0, 100]
+                }
+            },
+            stroke: { lineCap: 'round' },
+            labels: ['CPU'],
+        };
+    
+        if (cpuChartInstance) {
+            cpuChartInstance.updateSeries([cpuData.stats.current]);
+        } else {
+            cpuChartInstance = new ApexCharts(container, options);
+            cpuChartInstance.render();
+        }
+    }
+
+    function renderMemoryChart(memoryData) {
+        const container = document.getElementById('memory-chart-container');
+        if (!container || !memoryData || !memoryData.stats) return;
+    
+        document.getElementById('memory-min').textContent = formatValue(memoryData.stats.min, 'memory');
+        document.getElementById('memory-avg').textContent = formatValue(memoryData.stats.avg, 'memory');
+        document.getElementById('memory-max').textContent = formatValue(memoryData.stats.max, 'memory');
+    
+        const options = {
+            chart: { type: 'radialBar', height: '100%', sparkline: { enabled: false }, background: 'transparent' },
+            series: [memoryData.stats.current],
+            plotOptions: {
+                radialBar: {
+                    startAngle: -90,
+                    endAngle: 90,
+                    hollow: { margin: 20, size: '50%' },
+                    track: { background: '#374151' },
+                    offsetY: 15, // [CORRIGIDO] Desloca o gráfico para baixo para melhor centralização vertical.
+                    dataLabels: {
+                        name: { show: false },
+                        value: {
+                            offsetY: -2,
+                            fontSize: '22px',
+                            color: '#E5E7EB',
+                            formatter: (val) => val.toFixed(1) + '%'
+                        }
+                    }
+                }
+            },
+            // [REMOVIDO] A propriedade grid.padding não é mais necessária com o ajuste de offsetY.
+            fill: {
+                type: 'gradient',
+                gradient: {
+                    shade: 'dark',
+                    type: 'horizontal',
+                    shadeIntensity: 0.5,
+                    gradientToColors: ['#3b82f6'], // Blue color for memory
+                    inverseColors: true,
+                    opacityFrom: 1,
+                    opacityTo: 1,
+                    stops: [0, 100]
+                }
+            },
+            stroke: { lineCap: 'round' },
+            labels: ['Memory'],
+        };
+        
+        if (memoryChartInstance) {
+            memoryChartInstance.updateSeries([memoryData.stats.current]);
+        } else {
+            memoryChartInstance = new ApexCharts(container, options);
+            memoryChartInstance.render();
+        }
+    }
+
+    function renderTrafficDistributionChart(interfacesData) {
+        const container = document.getElementById('traffic-distribution-chart-container');
+        if (!container) return;
+    
+        const etherInterfaces = Object.entries(interfacesData)
+            // [CORRIGIDO] Filtra por interfaces físicas e pontes, excluindo virtuais como WireGuard.
+            .filter(([name]) => ['ether', 'wifi', 'bridge'].some(type => name.toLowerCase().includes(type)))
+            .map(([name, data]) => ({
+                name: getInterfaceDisplayName(name),
+                traffic: (data.rx?.stats?.avg || 0) + (data.tx?.stats?.avg || 0)
+            }))
+            .filter(item => item.traffic > 0);
+    
+        if (etherInterfaces.length === 0) {
+            container.innerHTML = '<p style="text-align: center; color: #9CA3AF; font-size: 0.9em; padding: 20px;">Sem dados de tráfego nas interfaces "ether" para exibir.</p>';
+            return;
+        }
+    
+        const series = etherInterfaces.map(item => item.traffic);
+        const labels = etherInterfaces.map(item => item.name);
+    
+        const options = {
+            chart: { type: 'donut', height: 400, background: 'transparent' }, // [CORRIGIDO] Define uma altura fixa para o gráfico para evitar que ele transborde e sobreponha o título.
+            series: series,
+            labels: labels,
+            // [CORRIGIDO] Remove o tema 'dark' que estava a forçar um fundo cinzento no SVG, ignorando a opção 'transparent'.
+            colors: ['#5470C6', '#215f05ff', '#f0a80cff', '#e01010ff', '#17a9e2ff', '#5132daff', '#9311cfff'], // [NOVO] Paleta de cores com melhor visibilidade e contraste.
+            legend: {
+                position: 'bottom',
+                fontSize: '16px', // [NOVO] Reduz o tamanho da fonte da legenda para melhor ajuste.
+                labels: { colors: '#E5E7EB' }
+            },
+            tooltip: { y: { formatter: (val) => formatBytes(val) + '/s' } },
+            // [MODIFICADO] Simplifica os rótulos para mostrar apenas a percentagem,
+            // o que é mais limpo e evita sobreposição no gráfico.
+            dataLabels: {
+                formatter: (val) => val.toFixed(1) + '%'
+            }
+        };
+    
+        if (trafficDistributionChartInstance) {
+            trafficDistributionChartInstance.updateOptions(options);
+        } else {
+            trafficDistributionChartInstance = new ApexCharts(container, options);
+            trafficDistributionChartInstance.render();
+        }
+    }
+
     /**
      * NOVO: Carrega e exibe a análise de clientes Wi-Fi
      */
@@ -156,7 +371,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 throw new Error(response.message);
             }
 
-            const wifiData = response.data.data;
+            // [CORRIGIDO] A API retorna { success: true, data: {...} }. O acesso correto é response.data.
+            const wifiData = response.data;
             
             // Armazena os dados para o gráfico de pizza
             metricsData.wifiAnalytics = wifiData;
@@ -184,7 +400,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 throw new Error(response.message);
             }
 
-            const dhcpData = response.data.data;
+            // [CORRIGIDO] A API retorna { success: true, data: {...} }. O acesso correto é response.data.
+            const dhcpData = response.data;
             
             // Armazena os dados para o gráfico
             metricsData.dhcpAnalytics = dhcpData;
@@ -216,7 +433,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 throw new Error(response.message);
             }
 
-            const hotspotData = response.data.data;
+            // [CORRIGIDO] A API retorna { success: true, data: {...} }. O acesso correto é response.data.
+            const hotspotData = response.data;
             
             // Armazena os dados para o gráfico
             metricsData.hotspotAnalytics = hotspotData;
@@ -241,9 +459,6 @@ document.addEventListener('DOMContentLoaded', () => {
      * Atualiza as estatísticas de um card
      */
     function updateCardStats(metric, data) {
-        if (!data || !data.stats) return;
-
-        const stats = data.stats;
         const minEl = document.getElementById(`${metric}-min`);
         const maxEl = document.getElementById(`${metric}-max`);
         const avgEl = document.getElementById(`${metric}-avg`);
@@ -284,15 +499,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     /**
-     * Formata bytes para formato legível
+     * [REMOVIDO] A função formatBytes foi movida para o ficheiro global utils.js
      */
-    function formatBytes(bytes) {
-        if (bytes === 0) return '0 B';
-        const k = 1024;
-        const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
-        const i = Math.floor(Math.log(Math.abs(bytes)) / Math.log(k));
-        return (bytes / Math.pow(k, i)).toFixed(2) + ' ' + sizes[i];
-    }
 
     /**
      * Renderiza os cards das interfaces
@@ -337,30 +545,30 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div class="stat-group-title">RX (Recebido)</div>
                     <div class="stat-row">
                         <span class="stat-label">Mín:</span>
-                        <span class="stat-value">${formatBytes(rxStats.min)}</span>
+                        <span class="stat-value">${formatBitsPerSecond(rxStats.min)}</span>
                     </div>
                     <div class="stat-row">
                         <span class="stat-label">Máx:</span>
-                        <span class="stat-value">${formatBytes(rxStats.max)}</span>
+                        <span class="stat-value">${formatBitsPerSecond(rxStats.max)}</span>
                     </div>
                     <div class="stat-row">
                         <span class="stat-label">Média:</span>
-                        <span class="stat-value">${formatBytes(rxStats.avg)}</span>
+                        <span class="stat-value">${formatBitsPerSecond(rxStats.avg)}</span>
                     </div>
                 </div>
                 <div class="stat-group">
                     <div class="stat-group-title">TX (Enviado)</div>
                     <div class="stat-row">
                         <span class="stat-label">Mín:</span>
-                        <span class="stat-value">${formatBytes(txStats.min)}</span>
+                        <span class="stat-value">${formatBitsPerSecond(txStats.min)}</span>
                     </div>
                     <div class="stat-row">
                         <span class="stat-label">Máx:</span>
-                        <span class="stat-value">${formatBytes(txStats.max)}</span>
+                        <span class="stat-value">${formatBitsPerSecond(txStats.max)}</span>
                     </div>
                     <div class="stat-row">
                         <span class="stat-label">Média:</span>
-                        <span class="stat-value">${formatBytes(txStats.avg)}</span>
+                        <span class="stat-value">${formatBitsPerSecond(txStats.avg)}</span>
                     </div>
                 </div>
             </div>
@@ -537,11 +745,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 throw new Error(response.message);
             }
 
-            // Extrair dados corretamente
-            let apiData = response.data;
-            if (apiData && apiData.data) {
-                apiData = apiData.data;
-            }
+            // [CORRIGIDO] A API retorna { success: true, data: {...} }. O acesso correto é response.data.
+            const apiData = response.data;
 
             const chartContainer = document.getElementById('expandedChart');
             chartContainer.innerHTML = '';
@@ -581,7 +786,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (clientData && clientData.length > 0) {
                     createClientList(chartContainer, clientData, clientType);
                 } else if (clientType === 'wifi' && metricsData.wifiAnalytics) { // Gráfico Wi-Fi
-                    createGenericPieChart(chartContainer, 'Distribuição de Clientes Wi-Fi', metricsData.wifiAnalytics);
+                    // [CORREÇÃO] A chamada estava para uma função de gráfico de pizza que não existe (`createGenericPieChart`) e os dados não são para pizza.
+                    // A chamada correta é para o gráfico de barras de Wi-Fi, que já está definido.
+                    createWifiBarChart(chartContainer, 'Clientes Wi-Fi Únicos', metricsData.wifiAnalytics);
                 } else if (clientType === 'dhcp' && metricsData.dhcpAnalytics) { // Gráfico DHCP
                     createGenericDistributionChart(chartContainer, 'Distribuição de Clientes DHCP', metricsData.dhcpAnalytics);
                 } else if (clientType === 'hotspot' && metricsData.hotspotAnalytics) { // Gráfico Hotspot
@@ -775,6 +982,58 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     /**
+     * NOVO: Cria um gráfico de barras para a análise de clientes Wi-Fi
+     */
+    function createWifiBarChart(container, title, analyticsData) {
+        container.innerHTML = ''; // Limpa o container
+        const chartDiv = document.createElement('div');
+        chartDiv.id = 'expandedChartContent';
+        chartDiv.style.width = '100%';
+        chartDiv.style.height = '500px';
+        container.appendChild(chartDiv);
+
+        const seriesData = [
+            analyticsData.last_1h,
+            analyticsData.last_7d,
+            analyticsData.last_30d
+        ];
+        const labels = ['Última 1h', 'Últimos 7d', 'Últimos 30d'];
+
+        const options = {
+            chart: {
+                type: 'bar',
+                height: 500,
+                toolbar: { show: true }
+            },
+            series: [{
+                name: 'Clientes Únicos',
+                data: seriesData
+            }],
+            plotOptions: {
+                bar: {
+                    distributed: true, // Cores diferentes por barra
+                    horizontal: false,
+                }
+            },
+            xaxis: {
+                categories: labels,
+                labels: { style: { colors: '#a0a0a0' } }
+            },
+            yaxis: {
+                labels: { style: { colors: '#a0a0a0' } }
+            },
+            colors: ['#3b82f6', '#10b981', '#e48315'],
+            theme: { mode: 'dark' },
+            legend: { show: false }, // Não precisa de legenda para uma única série
+            tooltip: { theme: 'dark' }
+        };
+
+        if (expandedChartInstance) expandedChartInstance.destroy();
+        expandedChartInstance = new ApexCharts(chartDiv, options);
+        expandedChartInstance.render();
+    }
+
+    /**
      * NOVO: Cria um gráfico de pizza para a análise de clientes Wi-Fi
      */
     function createGenericDistributionChart(container, title, analyticsData) {
@@ -785,20 +1044,17 @@ document.addEventListener('DOMContentLoaded', () => {
         chartDiv.style.height = '500px';
         container.appendChild(chartDiv);
         
-        // A visualização padrão é pizza, mas pode ser alterada pelos filtros
-        let chartType = 'pie';
-        if (currentChartVisualization === 'bar') chartType = 'bar';
-        if (currentChartVisualization === 'line') chartType = 'line';
-
+        // [CORREÇÃO] Simplificado para ser sempre um gráfico de pizza, que é o ideal para distribuição.
+        // A complexidade de tentar mudar o tipo de gráfico estava a causar o erro "Cannot read properties of null (reading 'hidden')".
         const options = {
             chart: {
-                type: chartType,
+                type: 'pie', // Força o tipo para 'pie'
                 height: 500,
                 toolbar: { show: true }
             },
             series: analyticsData.distribution.series,
             labels: analyticsData.distribution.labels,
-            colors: ['#3b82f6', '#10b981', '#e48315'],
+            colors: ['#3b82f6', '#10b981', '#e48315', '#f59e0b', '#ec4899'], // Mais cores
             theme: { mode: 'dark' },
             legend: {
                 position: 'bottom',
@@ -813,16 +1069,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 },
                 theme: 'dark'
-            },
-            xaxis: { // Usado para gráficos de barra
-                categories: analyticsData.distribution.labels,
-                labels: { style: { colors: '#a0a0a0' } }
-            },
-            plotOptions: { // Usado para gráficos de barra
-                bar: {
-                    horizontal: currentChartVisualization === 'bar-horizontal', // Lógica para barras horizontais
-                    distributed: chartType === 'bar' // Cores diferentes por barra
-                }
             },
             responsive: [{
                 breakpoint: 480,
@@ -845,8 +1091,8 @@ document.addEventListener('DOMContentLoaded', () => {
         expandedChartInstance.render();
 
         // Mostra os filtros de visualização para este tipo de gráfico
-        const chartVisualizationFilters = document.getElementById('chartVisualizationFilters');
-        chartVisualizationFilters.style.display = 'flex';
+        // [CORREÇÃO] Esconde os filtros de visualização, já que o gráfico agora é sempre de pizza.
+        document.getElementById('chartVisualizationFilters').style.display = 'none';
     }
 
     /**
@@ -916,6 +1162,12 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     /**
+     * [REMOVIDO] As funções `togglePeriodSelector` e `setupPeriodSelectors` foram removidas.
+     * A interação de filtro de período foi centralizada no modal principal, que é aberto
+     * ao clicar no ícone de engrenagem ou no botão "Ver Gráfico"/"Análise".
+     */
+
+    /**
      * Configura os event listeners
      */
     function setupEventListeners() {
@@ -925,6 +1177,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 closeExpandedChart();
             }
         });
+
+        // [NOVO] Listener para o botão de toggle de live update
+        if (liveUpdateToggle) {
+            liveUpdateToggle.addEventListener('change', () => {
+                if (liveUpdateToggle.checked) {
+                    startLiveUpdates();
+                } else {
+                    stopLiveUpdates();
+                }
+            });
+        }
     }
 
     /**

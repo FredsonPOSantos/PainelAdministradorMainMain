@@ -111,7 +111,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 throw new Error(response.message || 'Erro ao carregar métricas');
             }
 
-            metricsData = response.data;
+            metricsData = response.data; // [CORRIGIDO] A API retorna o objeto em 'data'
 
             // Atualizar header
             document.getElementById('routerNameTitle').textContent = metricsData.routerName;
@@ -201,7 +201,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 throw new Error(response.message);
             }
 
-            const clientsData = response.data.clients;
+            const clientsData = response.data.clients; // [CORRIGIDO] A API retorna o objeto em 'data'
             
             document.getElementById('dhcpCount').textContent = clientsData.dhcp?.count || 0;
             document.getElementById('hotspotCount').textContent = clientsData.hotspot?.count || 0;

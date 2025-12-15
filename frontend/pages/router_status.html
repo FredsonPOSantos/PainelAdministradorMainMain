@@ -5,351 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Status dos Roteadores - Rota Hotspot</title>
     <!-- [CORRIGIDO] O caminho para o CSS deve ser absoluto para o servidor backend (porta 3000) para funcionar com o servidor de desenvolvimento do frontend. -->
-    <!-- [NOVO] Adiciona a biblioteca de gráficos ApexCharts -->
+    <!-- [NOVO] Adiciona o ficheiro de utilitários para ter acesso às funções de formatação. Usando caminho absoluto para maior robustez. -->
+    <script src="/js/utils.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
-    <link rel="stylesheet" href="http://127.0.0.1:3000/css/style.css">
+    <!-- [UNIFICADO] Adiciona a nova folha de estilos partilhada para as páginas de monitoramento. -->
+    <link rel="stylesheet" href="/css/monitoring_styles.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        body {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            margin: 0;
-            padding: 20px;
-        }
-
-        .header {
-            text-align: center;
-            color: white;
-            margin-bottom: 30px;
-        }
-
-        .header h1 {
-            margin: 0;
-            font-size: 2.5em;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
-        }
-
-        .router-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-            gap: 20px;
-            max-width: 1400px;
-            margin: 0 auto;
-        }
-
-        .router-card {
-            background: white;
-            border-radius: 15px;
-            padding: 20px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            transition: all 0.3s ease;
-            cursor: pointer;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .router-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 8px 15px rgba(0,0,0,0.2);
-        }
-
-        .router-card.online {
-            border-left: 5px solid #10b981;
-        }
-
-        .router-card.offline {
-            border-left: 5px solid #ef4444;
-        }
-
-        .router-card.warning {
-            border-left: 5px solid #f59e0b;
-        }
-
-        .router-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 15px;
-            position: relative; /* Para posicionar o ícone de configuração */
-        }
-
-        .settings-icon {
-            position: absolute;
-            top: -10px;
-            right: -10px;
-            font-size: 1.1em;
-            color: #9ca3af;
-            cursor: pointer;
-            padding: 10px;
-            transition: color 0.2s ease;
-            z-index: 10; /* Para ficar acima do ping-indicator */
-        }
-
-        .settings-icon:hover {
-            color: #374151;
-        }
-
-        /* [NOVO] Estilos para o Modal de Interfaces */
-        .modal-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.6);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 1000;
-            opacity: 0;
-            visibility: hidden;
-            transition: opacity 0.3s, visibility 0.3s;
-        }
-
-        .modal-overlay.visible {
-            opacity: 1;
-            visibility: visible;
-        }
-
-        .modal-content {
-            background: white;
-            padding: 30px;
-            border-radius: 10px;
-            width: 90%;
-            max-width: 500px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-            position: relative;
-        }
-
-        .modal-close-btn {
-            position: absolute;
-            top: 10px;
-            right: 15px;
-            font-size: 1.8em;
-            background: none;
-            border: none;
-            cursor: pointer;
-            color: #9ca3af;
-        }
-        
-        .modal-content h3 {
-            margin-top: 0;
-            margin-bottom: 20px;
-            color: #1f2937;
-        }
-
-        .interface-list {
-            max-height: 250px;
-            overflow-y: auto;
-            border: 1px solid #e5e7eb;
-            border-radius: 5px;
-            padding: 10px;
-        }
-
-        .interface-item {
-            display: block;
-            padding: 10px;
-            cursor: pointer;
-        }
-        .interface-item:not(:last-child) {
-            border-bottom: 1px solid #f3f4f6;
-        }
-        .interface-item:hover {
-            background-color: #f9fafb;
-        }
-        .interface-item input {
-            margin-right: 10px;
-        }
-
-        .modal-actions {
-            margin-top: 25px;
-            text-align: right;
-        }
-
-        .btn-primary, .refresh-button {
-            background-color: #667eea;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 5px;
-            cursor: pointer;
-            font-weight: 600;
-        }
-
-        .btn-secondary {
-            background-color: #e5e7eb;
-            color: #374151;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 5px;
-            cursor: pointer;
-            margin-right: 10px;
-            font-weight: 600;
-        }
-        .router-name {
-            font-size: 1.3em;
-            font-weight: bold;
-            color: #1f2937;
-        }
-
-        .status-badge {
-            padding: 5px 12px;
-            border-radius: 20px;
-            font-size: 0.85em;
-            font-weight: 600;
-            text-transform: uppercase;
-        }
-
-        .status-badge.online {
-            background: #d1fae5;
-            color: #065f46;
-        }
-
-        .status-badge.offline {
-            background: #fee2e2;
-            color: #991b1b;
-        }
-
-        .status-badge.warning {
-            background: #fef3c7;
-            color: #92400e;
-        }
-
-        .router-info {
-            margin: 10px 0;
-        }
-
-        .info-row {
-            display: flex;
-            justify-content: space-between;
-            padding: 8px 0;
-            border-bottom: 1px solid #f3f4f6;
-        }
-
-        .info-label {
-            color: #6b7280;
-            font-size: 0.9em;
-        }
-
-        .info-value {
-            color: #1f2937;
-            font-weight: 600;
-        }
-
-        .bandwidth-bar {
-            margin-top: 15px;
-        }
-
-        .bandwidth-label {
-            font-size: 0.85em;
-            color: #6b7280;
-            margin-bottom: 5px;
-        }
-
-        .progress-bar {
-            width: 100%;
-            height: 8px;
-            background: #e5e7eb;
-            border-radius: 10px;
-            overflow: hidden;
-        }
-
-        .progress-fill {
-            height: 100%;
-            background: linear-gradient(90deg, #10b981, #059669);
-            border-radius: 10px;
-            transition: width 0.5s ease;
-        }
-
-        /* [NOVO] Estilos para o container do gráfico de tráfego */
-        .traffic-chart-container {
-            margin-top: 15px;
-            min-height: 120px; /* Garante espaço mesmo antes do gráfico carregar */
-        }
-
-        .ping-indicator {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            animation: pulse 2s infinite;
-        }
-
-        .ping-indicator.online {
-            background: #10b981;
-            box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
-        }
-
-        .ping-indicator.offline {
-            background: #ef4444;
-        }
-
-        .ping-indicator.warning {
-            background: #f59e0b;
-        }
-
-        @keyframes pulse {
-            0% {
-                box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
-            }
-            70% {
-                box-shadow: 0 0 0 10px rgba(16, 185, 129, 0);
-            }
-            100% {
-                box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
-            }
-        }
-
-        .loading {
-            text-align: center;
-            color: white;
-            font-size: 1.5em;
-            margin-top: 50px;
-        }
-
-        .back-button {
-            position: fixed;
-            top: 20px;
-            left: 20px;
-            background: white;
-            color: #667eea;
-            padding: 10px 20px;
-            border-radius: 10px;
-            text-decoration: none;
-            font-weight: 600;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            transition: all 0.3s ease;
-        }
-
-        .back-button:hover {
-            background: #667eea;
-            color: white;
-            transform: scale(1.05);
-        }
-
-        .refresh-button {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background: white;
-            color: #667eea;
-            padding: 10px 20px;
-            border-radius: 10px;
-            border: none;
-            font-weight: 600;
-            cursor: pointer;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            transition: all 0.3s ease;
-        }
-
-        .refresh-button:hover {
-            background: #667eea;
-            color: white;
-            transform: scale(1.05);
-        }
-    </style>
 </head>
 <body>
     <a href="/admin_dashboard.html" class="back-button">
@@ -406,7 +67,7 @@
                      return;
                  }
  
-                 const response = await fetch(`${API_URL}/api/routers/status`, {
+                 const response = await fetch(`${API_URL}/api/monitoring/all-routers-status`, {
                      headers: { 'Authorization': `Bearer ${token}` }
                  });
  
@@ -416,6 +77,21 @@
                  }
  
                  const routers = await response.json();
+
+                 // [NOVO] Ordena a lista de roteadores para mostrar 'online' primeiro.
+                 routers.sort((a, b) => {
+                     // 'online' vem antes de 'offline'
+                     if (a.status === 'online' && b.status !== 'online') {
+                         return -1; // a vem primeiro
+                     }
+                     if (a.status !== 'online' && b.status === 'online') {
+                         return 1; // b vem primeiro
+                     }
+                     // Se ambos tiverem o mesmo status, ordena por nome alfabeticamente
+                     return a.name.localeCompare(b.name);
+                 });
+
+                 // [REMOVIDO] A lógica de 'default_interface' foi removida pois a coluna não existe no banco de dados.
                  currentRouters = routers;
  
                  const grid = document.getElementById('routerGrid');
@@ -467,12 +143,12 @@
 
             const selectedInterface = localStorage.getItem(`selectedInterface_${routerId}`);
 
-            router.interfaces.forEach(iface => {
-                const checked = (iface.name === selectedInterface) ? 'checked' : '';
+            router.interfaces.forEach(ifaceObj => {
+                const checked = (ifaceObj.name === selectedInterface) ? 'checked' : '';
                 const itemHtml = `
                     <label class="interface-item">
-                        <input type="radio" name="selectedInterface" value="${iface.name}" ${checked}>
-                        ${iface.name}
+                        <input type="radio" name="selectedInterface" value="${ifaceObj.name}" ${checked}>
+                        ${ifaceObj.name}
                     </label>
                 `;
                 listDiv.innerHTML += itemHtml;
@@ -488,11 +164,14 @@
         // [NOVO] Lógica para salvar a seleção do modal
         document.getElementById('interfaceForm').addEventListener('submit', function(event) {
             event.preventDefault();
-            const routerId = document.getElementById('modalRouterId').value;
+            const routerId = String(document.getElementById('modalRouterId').value); // [CORREÇÃO] Força string
             const selectedRadio = document.querySelector('input[name="selectedInterface"]:checked');
             
             if (selectedRadio) {
-                localStorage.setItem(`selectedInterface_${routerId}`, selectedRadio.value);
+                // [DIAGNÓSTICO] Adiciona log para verificar a seleção
+                const interfaceSelecionada = selectedRadio.value;
+                console.log(`[DIAGNÓSTICO] Salvando interface para router ID '${routerId}': ${interfaceSelecionada}`);
+                localStorage.setItem(`selectedInterface_${routerId}`, interfaceSelecionada);
             }
 
             closeInterfaceModal();
@@ -524,34 +203,18 @@
                 window.location.href = `/pages/router_dashboard.html#${router.id}`;
             };
 
+            // [REFEITO] Estrutura do card simplificada para focar no essencial
             card.innerHTML = `
-                <div class="ping-indicator ${pingClass}"></div>
-                <i class="fas fa-cog settings-icon" onclick="openInterfaceModal(${router.id}, event)"></i>
-                
+                ${router.status === 'online' ? `<i class="fas fa-cog settings-icon" onclick="openInterfaceModal(${router.id}, event)"></i>` : ''}
                 <div class="router-header">
                     <div class="router-name">${router.name || 'N/A'}</div>
                     <div class="status-badge ${statusClass}">${statusText}</div>
                 </div>
 
-                <div class="router-info">
-                    <div class="info-row">
-                        <span class="info-label"><i class="fas fa-network-wired"></i> IP</span>
-                        <span class="info-value">${router.ip || 'N/A'}</span>
-                    </div>
-                    <div class="info-row">
-                        <span class="info-label"><i class="fas fa-clock"></i> Ping</span>
-                         <span class="info-value">${router.latency !== null ? router.latency + ' ms' : 'N/A'}</span>
-                    </div>
-                    <div class="info-row">
-                        <span class="info-label"><i class="fas fa-users"></i> Clientes</span>
-                         <span class="info-value">${router.connected_clients}</span>
-                    </div>
-                    <div class="info-row">
-                        <span class="info-label"><i class="fas fa-map-marker-alt"></i> Grupo</span>
-                        <span class="info-value">${router.group_name || 'Nenhum'}</span>
-                    </div>
+                <div class="router-sub-info">
+                    <span><i class="fas fa-network-wired"></i> ${router.ip || 'N/A'}</span>
+                    <span><i class="fas fa-users"></i> ${router.connected_clients} Clientes</span>
                 </div>
-
             `;
 
             // [NOVO] Cria o container do gráfico explicitamente e o anexa ao card
@@ -566,12 +229,13 @@
 
         // [NOVO] Função para renderizar ou atualizar o gráfico de tráfego
         async function renderOrUpdateChart(router) {
+            const routerIdStr = String(router.id); // [CORREÇÃO] Garante ID como string
             // [MODIFICADO] Usa a interface do localStorage OU a default_interface vinda da API.
-            let selectedInterface = localStorage.getItem(`selectedInterface_${router.id}`);
+            let selectedInterface = localStorage.getItem(`selectedInterface_${routerIdStr}`);
             if (!selectedInterface && router.default_interface) {
                 selectedInterface = router.default_interface;
                 // Salva a interface padrão no localStorage para que a escolha seja mantida nas próximas atualizações.
-                localStorage.setItem(`selectedInterface_${router.id}`, selectedInterface);
+                localStorage.setItem(`selectedInterface_${routerIdStr}`, selectedInterface);
             }
 
             const chartContainer = document.getElementById(`chart-container-${router.id}`);
@@ -581,6 +245,8 @@
                 if (chartContainer) chartContainer.innerHTML = '<p style="text-align: center; color: #9ca3af; font-size: 0.9em; padding-top: 30px;">Selecione uma interface na <i class="fas fa-cog"></i> para ver o tráfego.</p>'; 
                 return;
             }
+            
+            // console.log(`[FRONTEND] Renderizando gráfico para ${router.name} (${router.id}) usando interface: ${selectedInterface}`);
 
             try {
                 const API_URL = `http://${window.location.hostname}:3000`;
@@ -623,30 +289,42 @@
                     },
                     xaxis: {
                         type: 'datetime',
-                        labels: { show: false },
+                        labels: { 
+                            show: false,
+                            datetimeUTC: false // [CORREÇÃO] Garante que o gráfico exiba a hora local, não UTC.
+                        },
                         axisBorder: { show: false },
                         axisTicks: { show: false }
                     },
                     yaxis: {
                         labels: {
-                            formatter: (value) => formatBandwidth(value)
+                            formatter: (value) => formatBitsPerSecond(value), // Usa a função global
+                            style: {
+                                colors: '#E5E7EB' // [NOVO] Define a cor do texto do eixo Y para ser visível no tema escuro.
+                            }
                         }
                     },
                     tooltip: {
                         x: { format: 'HH:mm' },
-                        y: { formatter: (value) => formatBandwidth(value) }
+                        y: { formatter: (value) => formatBitsPerSecond(value) }, // Garante que a função correta é chamada
+                        theme: 'dark' // [NOVO] Garante que o tooltip seja legível no tema escuro.
                     },
                     legend: {
                         show: true,
                         position: 'top',
                         horizontalAlign: 'left',
                         fontSize: '10px',
-                        markers: { width: 8, height: 8 }
+                        markers: { width: 8, height: 8 },
+                        labels: {
+                            colors: '#E5E7EB' // [NOVO] Define a cor do texto da legenda.
+                        }
                     },
                     grid: {
                         show: false,
                         padding: { left: 0, right: 0 }
-                    }
+                    },
+                    // [NOVO] Define o tema geral do gráfico para garantir a consistência.
+                    theme: { mode: 'dark' }
                 };
 
                 if (charts[router.id]) {
@@ -659,15 +337,6 @@
                 console.error(`Erro ao renderizar gráfico para ${router.name}:`, error);
                 chartContainer.innerHTML = `<p style="color: #ef4444; text-align: center;">Erro ao carregar gráfico.</p>`;
             }
-        }
-
-        // [MODIFICADO] Formatar bandwidth para usar unidades de rede (bits por segundo)
-        function formatBandwidth(bits) {
-            if (bits === null || bits === undefined) return 'N/A';
-            if (bits < 1000) return bits.toFixed(0) + ' bps';
-            if (bits < 1000 * 1000) return (bits / 1000).toFixed(2) + ' Kbps';
-            if (bits < 1000 * 1000 * 1000) return (bits / (1000 * 1000)).toFixed(2) + ' Mbps';
-            return (bits / (1000 * 1000 * 1000)).toFixed(2) + ' Gbps';
         }
 
         // Inicializar

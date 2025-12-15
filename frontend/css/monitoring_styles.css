@@ -1,0 +1,808 @@
+/* ==========================================================================
+   Estilos Unificados para Páginas de Monitoramento
+   - router_status.html
+   - router_dashboard.html
+   ========================================================================== */
+
+/* --- Base e Tipografia --- */
+body {
+    /* [UNIFICADO] Fundo gradiente e fonte Arial, conforme solicitado. */
+    background: linear-gradient(135deg, #1F2937 0%, #111827 100%);
+    font-family: Arial, 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    margin: 0;
+    padding: 20px;
+    color: #E5E7EB; /* Cor de texto base clara */
+}
+
+/* [NOVO] Título de secção para o dashboard */
+.section-title {
+    font-size: 1.5em;
+    color: #9CA3AF;
+    margin-top: 40px;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #4B5563;
+}
+
+/* --- Estilos do Cabeçalho (de router_dashboard.html e router_status.html) --- */
+.header, .dashboard-header {
+    text-align: center;
+    color: white;
+    margin-bottom: 30px;
+}
+
+.header h1, .dashboard-header h1 {
+    margin: 0;
+    font-size: 2.5em;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+}
+
+.dashboard-header {
+    padding: 20px;
+    background-color: rgba(31, 41, 55, 0.5);
+    border-radius: 15px;
+    margin-bottom: 2rem;
+    border: 1px solid rgba(75, 85, 99, 0.5);
+}
+
+.dashboard-header .header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+}
+
+.dashboard-header .header-info h1 {
+    font-size: 1.8em;
+    margin: 0;
+    text-shadow: none;
+}
+
+.dashboard-header .header-info p {
+    margin: 5px 0 0;
+    color: #9CA3AF;
+}
+
+.live-stats-header {
+    display: flex;
+    gap: 40px;
+    align-items: center;
+    justify-content: center;
+    flex-grow: 1;
+}
+
+.live-stat {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+}
+
+.live-stat-label {
+    font-size: 0.8em;
+    color: #a0aec0;
+    margin-bottom: 5px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.live-stat-value {
+    font-size: 1.5em;
+    font-weight: 600;
+    color: #e2e8f0;
+}
+
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+/* --- Estilos do Grid de Roteadores (de router_status.html) --- */
+/* [UNIFICADO] Aplica o mesmo estilo de grid para ambas as páginas de monitoramento. */
+.router-grid,
+.metrics-grid {
+    display: grid;
+    /* [MODIFICADO] Aumenta a largura mínima dos cards em 10% para um visual mais espaçoso. */
+    grid-template-columns: repeat(auto-fill, minmax(352px, 1fr));
+    gap: 20px;
+    max-width: 1600px; /* Aumentado para acomodar melhor em telas largas */
+    margin: 0 auto;
+}
+
+/* [NOVO] Layout específico para a grelha de resumo, forçando 3 colunas (aprox. 33% cada). */
+.summary-grid {
+    grid-template-columns: repeat(3, 1fr);
+    /* [CORRIGIDO] Remove 'align-items: start' para que o padrão 'stretch' seja aplicado, forçando todos os cards a terem a mesma altura. */
+}
+
+/* [NOVO] Media query para empilhar os cards de resumo em telas menores para melhor visualização. */
+@media (max-width: 900px) {
+    .summary-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* [UNIFICADO] Estilo base para todos os cards de monitoramento */
+.router-card,
+.metric-card {
+    background: #374151; /* Cor de fundo mais escura para contraste */
+    border-radius: 15px;
+    padding: 20px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+    border: 1px solid #4B5563;
+    display: flex;
+    flex-direction: column;
+}
+
+.router-card:hover,
+.metric-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 15px rgba(0,0,0,0.3);
+    border-color: #667eea;
+}
+
+.router-card { cursor: pointer; }
+.metric-card { cursor: default; } /* A maioria dos cards não é clicável, apenas os seus botões */
+
+.router-card.online { border-left: 5px solid #10b981; }
+.router-card.offline { border-left: 5px solid #ef4444; }
+.router-card.warning { border-left: 5px solid #f59e0b; }
+
+.router-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+    position: relative;
+}
+/* [MODIFICADO] Ajusta o cabeçalho para acomodar o ícone de configurações */
+.router-header .router-name {
+    font-size: 1.2em; /* Levemente menor para dar espaço */
+    font-weight: 600;
+    color: #f0f0f0;
+    flex-grow: 1; /* Permite que o nome ocupe o espaço disponível */
+}
+
+.status-badge {
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-size: 0.85em;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+/* [NOVO] Estilo para a linha de sub-informações (IP e Clientes) */
+.router-sub-info {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.85em;
+    color: #9CA3AF;
+    padding-bottom: 10px;
+    margin-bottom: 15px;
+    border-bottom: 1px solid #4B5563;
+}
+.router-sub-info span {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.status-badge.online { background-color: #10B981; color: white; }
+.status-badge.offline { background-color: #EF4444; color: white; }
+.status-badge.warning { background-color: #F59E0B; color: #111827; }
+
+.traffic-chart-container {
+    margin-top: 15px;
+    min-height: 120px;
+}
+
+.ping-indicator {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    animation: pulse 2s infinite;
+}
+.ping-indicator.online { background: #10b981; box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+.ping-indicator.offline { background: #ef4444; animation: none; }
+.ping-indicator.warning { background: #f59e0b; animation: none; }
+
+@keyframes pulse {
+    0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+    70% { box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+}
+
+/* --- Estilos do Modal (de router_status.html) --- */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s, visibility 0.3s;
+}
+.modal-overlay.visible { opacity: 1; visibility: visible; }
+.modal-content {
+    background: #1F2937;
+    padding: 30px;
+    border-radius: 10px;
+    width: 90%;
+    max-width: 500px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    position: relative;
+    border: 1px solid #4B5563;
+}
+.modal-close-btn {
+    position: absolute;
+    top: 10px;
+    right: 15px;
+    font-size: 1.8em;
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #9CA3AF;
+}
+.modal-content h3 { margin-top: 0; margin-bottom: 20px; color: #F3F4F6; }
+.interface-list {
+    max-height: 250px;
+    overflow-y: auto;
+    border: 1px solid #4B5563;
+    border-radius: 5px;
+    padding: 10px;
+}
+.interface-item { display: block; padding: 10px; cursor: pointer; color: #D1D5DB; }
+.interface-item:not(:last-child) { border-bottom: 1px solid #4B5563; }
+.interface-item:hover { background-color: #374151; }
+.interface-item input { margin-right: 10px; }
+.modal-actions { margin-top: 25px; text-align: right; }
+
+/* --- Botões e Elementos Comuns --- */
+.btn-primary, .refresh-button {
+    background-color: #667eea;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: background-color 0.2s;
+}
+.btn-primary:hover, .refresh-button:hover { background-color: #5a67d8; }
+
+.btn-secondary {
+    background-color: #4A5568;
+    color: #E2E8F0;
+    border: 1px solid #718096;
+    padding: 10px 20px;
+    border-radius: 5px;
+    cursor: pointer;
+    margin-right: 10px;
+    font-weight: 600;
+    transition: background-color 0.2s;
+}
+.btn-secondary:hover { background-color: #2D3748; }
+
+/* [NOVO] Estilo para o botão de voltar no cabeçalho do dashboard */
+.btn-back {
+    background-color: #4A5568;
+    color: #E2E8F0;
+    border: 1px solid #718096;
+    padding: 10px 20px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: background-color 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.btn-back:hover { background-color: #2D3748; }
+
+.settings-icon {
+    position: absolute;
+    top: 15px; /* [CORRIGIDO] Move o ícone para DENTRO do canto superior direito do seu container parente. */
+    right: 10px; /* [CORRIGIDO] Ajusta a posição horizontal. */
+    font-size: 1.1em;
+    color: #9ca3af;
+    cursor: pointer;
+    padding: 10px;
+    transition: color 0.2s ease;
+    z-index: 10;
+}
+.settings-icon:hover { color: #E5E7EB; }
+
+/* [NOVO] Estilo específico para o ícone na página de status do roteador, para evitar conflito com o dashboard. */
+.router-card .settings-icon {
+    color: #FBBF24; /* Cor amarelada para melhor visibilidade. */
+    top: 14px; /* [CORRIGIDO] Move o ícone ainda mais para cima, aproximando-o do topo do card para evitar sobreposição. */
+    right: 110px; /* [CORRIGIDO] Ajusta a posição para o canto. */
+}
+.router-card .settings-icon:hover {
+    color: #FCD34D; /* Amarelo mais claro no hover. */
+}
+
+.loading { text-align: center; color: white; font-size: 1.5em; margin-top: 50px; }
+
+.back-button, .refresh-button {
+    position: fixed;
+    top: 20px;
+    background: #374151;
+    color: #E5E7EB;
+    padding: 10px 20px;
+    border-radius: 10px;
+    text-decoration: none;
+    font-weight: 600;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    transition: all 0.3s ease;
+    border: 1px solid #4B5563;
+}
+.back-button { left: 20px; }
+.refresh-button { right: 20px; }
+
+.back-button:hover, .refresh-button:hover {
+    background: #4A5568;
+    color: white;
+    transform: scale(1.05);
+}
+
+/* --- Estilos do Toggle Switch (de router_dashboard.html) --- */
+.live-update-toggle { display: flex; align-items: center; gap: 10px; }
+.toggle-label { font-size: 0.9em; color: #cbd5e0; font-weight: 500; }
+.switch { position: relative; display: inline-block; width: 50px; height: 24px; }
+.switch input { opacity: 0; width: 0; height: 0; }
+.slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #4a5568; transition: .4s; }
+.slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; transition: .4s; }
+input:checked + .slider { background-color: #38a169; }
+input:checked + .slider:before { transform: translateX(26px); }
+.slider.round { border-radius: 24px; }
+.slider.round:before { border-radius: 50%; }
+
+/* [NOVO] Estilos para os cards de resumo (transparentes) */
+.summary-grid .metric-card {
+    /* [REFEITO] Reverte para um fundo sólido e usa flexbox para um layout mais estável */
+    background: #2D3748;
+    border: 1px solid #4A5568;
+    min-height: 400px; /* [AUMENTADO] Aumenta a altura dos cards de resumo em ~10%. */
+    justify-content: flex-start; /* [CORRIGIDO] Alinha os itens no topo para um controle melhor com margens. */
+}
+
+.summary-grid .metric-card:hover {
+    /* Mantém o efeito de hover padrão do card */
+    transform: translateY(-5px);
+    box-shadow: 0 8px 15px rgba(0,0,0,0.3);
+}
+
+.summary-grid .card-header {
+    display: flex; /* [NOVO] Agrupa ícone e título horizontalmente. */
+    align-items: center; /* [NOVO] Alinha verticalmente o conteúdo do cabeçalho. */
+    gap: 15px; /* [NOVO] Adiciona espaço entre o ícone e o título. */
+    flex-shrink: 0; /* Impede que o cabeçalho encolha */
+    margin-bottom: 20px; /* [AJUSTADO] Reduz a margem inferior para um layout mais compacto. */
+    position: relative; /* [NOVO] Garante que o z-index funcione. */
+    z-index: 2; /* [NOVO] Coloca o cabeçalho na frente do conteúdo do gráfico para evitar sobreposição. */
+}
+
+.summary-grid .card-header .card-actions {
+    position: static; /* [NOVO] Traz as ações de volta para o fluxo do flexbox. */
+    margin-left: auto; /* [NOVO] Empurra as ações para a direita. */
+}
+
+.summary-grid .card-header h3 {
+    color: #E5E7EB;
+}
+
+.summary-grid .card-chart-container {
+    /* [REFEITO] Define uma altura fixa para o gráfico, evitando que ele cresça demais. */
+    height: 220px;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.summary-grid .card-stats-summary {
+    width: 100%;
+    flex-shrink: 0; /* Impede que o rodapé encolha */
+    margin-top: auto; /* [CORRIGIDO] Empurra o sumário para o fundo do card, garantindo alinhamento vertical. */
+    padding-top: 10px; /* Adiciona espaço acima do sumário. */
+}
+
+/* [NOVO] Ajuste específico para o gráfico de distribuição (donut) para dar espaço à legenda */
+/* [REFEITO] Reduz a altura do container do gráfico de donut para evitar sobreposição com o título. */
+.metric-card[data-metric="traffic-distribution"] .card-chart-container {
+    height: 180px; /* [AJUSTADO] Reduz ainda mais a altura para garantir que não haja sobreposição. */
+    margin-top: 20px; /* [NOVO] Adiciona uma margem no topo para afastar o gráfico do título. */
+}
+
+/* [NOVO] Estilos para os cards de métricas (movidos de router_dashboard.css) */
+.card-icon {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    flex-shrink: 0;
+}
+
+.cpu-icon {
+    background-color: rgba(228, 131, 21, 0.2);
+    color: #e48315;
+}
+
+.memory-icon {
+    background-color: rgba(59, 130, 246, 0.2);
+    color: #3b82f6;
+}
+
+.uptime-icon {
+    background-color: rgba(16, 185, 129, 0.2);
+    color: #10b981;
+}
+
+.interface-icon {
+    background-color: rgba(168, 85, 247, 0.2);
+    color: #a855f7;
+}
+
+.wifi-icon {
+    background-color: rgba(59, 130, 246, 0.2);
+    color: #3b82f6;
+}
+
+.dhcp-icon {
+    background-color: rgba(34, 197, 94, 0.2);
+    color: #22c55e;
+}
+
+.hotspot-icon {
+    background-color: rgba(236, 72, 153, 0.2);
+    color: #ec4899;
+}
+
+.card-header h3 {
+    font-size: 1.1rem;
+    color: #f0f0f0;
+    margin: 0;
+}
+
+.card-stats {
+    flex: 1;
+    margin-bottom: 15px;
+}
+
+.card-footer {
+    display: flex;
+    gap: 10px;
+    margin-top: auto; /* Empurra o footer para o fundo do card */
+}
+
+.btn-expand {
+    flex: 1;
+    background-color: #667eea;
+    color: white;
+    border: none;
+    padding: 10px 15px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: background-color 0.3s ease;
+}
+
+.btn-expand:hover {
+    background-color: #5a67d8;
+}
+
+/* [NOVO] Estilos para linhas de estatísticas (usado em router_dashboard.html) */
+.stat-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 0;
+    border-bottom: 1px solid rgba(75, 85, 99, 0.4);
+}
+
+.stat-row:last-child {
+    border-bottom: none;
+}
+
+.stat-label {
+    color: #9CA3AF;
+    font-size: 0.9em;
+}
+
+.stat-value {
+    color: #E5E7EB;
+    font-weight: 600;
+}
+
+.main-stat {
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #4B5563;
+}
+
+.main-stat .stat-value {
+    font-size: 1.5em;
+    color: #F3F4F6;
+}
+
+/* [NOVO] Estilos para grupos de estatísticas (usado em cards de interface) */
+.stat-group {
+    margin-bottom: 15px;
+    background: rgba(0, 0, 0, 0.2);
+    padding: 12px;
+    border-radius: 8px;
+}
+
+.stat-group:last-child {
+    margin-bottom: 0;
+}
+
+.stat-group-title {
+    font-size: 0.8em;
+    text-transform: uppercase;
+    color: #9CA3AF;
+    margin-bottom: 8px;
+    font-weight: bold;
+    letter-spacing: 0.05em;
+    border-bottom: 1px solid rgba(75, 85, 99, 0.4);
+    padding-bottom: 4px;
+}
+
+/* [NOVO] Cores de status para texto */
+.status-online { color: #10B981; }
+.status-offline { color: #EF4444; }
+.status-warning { color: #F59E0B; }
+
+/* [NOVO] Estilos para os novos cards de resumo com gráficos */
+.card-header {
+    position: relative; /* Para o posicionamento do seletor de período */
+}
+
+.card-actions {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+}
+
+.card-actions .settings-icon {
+    position: static; /* Reseta o posicionamento absoluto anterior */
+    padding: 10px;
+    font-size: 1em;
+}
+
+.period-selector {
+    position: absolute;
+    top: 35px;
+    right: 0;
+    background-color: #4A5568;
+    border-radius: 5px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.4);
+    z-index: 100;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.period-selector.hidden {
+    display: none;
+}
+
+.period-selector button {
+    background: none;
+    border: none;
+    color: #E5E7EB;
+    padding: 8px 15px;
+    text-align: left;
+    cursor: pointer;
+    width: 100%;
+    font-size: 0.9em;
+}
+
+.period-selector button:hover {
+    background-color: #667eea;
+}
+
+.card-chart-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    /* [CORRIGIDO] Define uma altura fixa para o container do gráfico.
+       A propriedade 'flex-grow: 1' anterior fazia com que o card crescesse verticalmente sem parar. */
+    height: 180px;
+    margin: 10px 0;
+}
+
+.card-stats-summary {
+    display: flex;
+    justify-content: space-around;
+    text-align: center;
+    padding-top: 10px;
+    border-top: 1px solid #4B5563;
+}
+
+.card-stats-summary div {
+    display: flex;
+    flex-direction: column;
+}
+
+.card-stats-summary span {
+    font-size: 0.75em;
+    color: #9CA3AF;
+    margin-bottom: 3px;
+}
+
+.card-stats-summary strong {
+    font-size: 1.1em;
+    color: #F3F4F6;
+}
+
+/* Ajuste para o card de uptime que não tem gráfico */
+.metric-card[data-metric="uptime"] .card-stats {
+    padding-top: 20px;
+}
+
+/* --- [NOVO] Estilos para o Modal Expandido --- */
+.expanded-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(17, 24, 39, 0.9);
+    z-index: 2000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+
+.expanded-modal:not(.hidden) {
+    opacity: 1;
+    visibility: visible;
+}
+
+.expanded-modal .modal-content {
+    background-color: #1F2937;
+    width: 90%;
+    max-width: 1200px;
+    height: 90%;
+    border-radius: 15px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border: 1px solid #4B5563;
+}
+
+.expanded-modal .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 25px;
+    border-bottom: 1px solid #4B5563;
+}
+
+.expanded-modal .btn-close {
+    background: none;
+    border: none;
+    color: #9CA3AF;
+    font-size: 1.5rem;
+    cursor: pointer;
+    transition: color 0.2s ease;
+}
+
+.expanded-modal .btn-close:hover {
+    color: white;
+}
+
+.modal-filters {
+    padding: 15px 25px;
+    border-bottom: 1px solid #4B5563;
+    background-color: #2d3748;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.filter-row {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    flex-wrap: wrap;
+}
+
+.filter-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.filter-label {
+    font-size: 0.9em;
+    color: #9CA3AF;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.filter-btn {
+    background-color: #4A5568;
+    color: #E2E8F0;
+    border: 1px solid #718096;
+    padding: 6px 12px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 0.85em;
+    font-weight: 600;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.filter-btn:hover {
+    background-color: #667eea;
+    border-color: #667eea;
+    color: white;
+}
+
+.filter-btn.active {
+    background-color: #667eea;
+    border-color: #5a67d8;
+    color: white;
+    box-shadow: 0 0 10px rgba(102, 126, 234, 0.5);
+}
+
+.expanded-modal .expanded-chart {
+    flex-grow: 1;
+    padding: 20px;
+    overflow: auto;
+}
+
+/* [NOVO] Estilo para a tabela de clientes no modal */
+.client-table {
+    width: 100%;
+    border-collapse: collapse;
+    color: #E5E7EB;
+    font-size: 0.9em;
+}
+
+.client-table th, .client-table td {
+    padding: 12px 15px;
+    text-align: left;
+    border-bottom: 1px solid #4B5563;
+}
+
+.client-table th {
+    background-color: #374151;
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.8em;
+    letter-spacing: 0.05em;
+}
+
+.client-table tbody tr:hover {
+    background-color: #2D3748;
+}

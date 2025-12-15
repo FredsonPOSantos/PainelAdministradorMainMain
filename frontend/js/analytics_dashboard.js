@@ -142,11 +142,8 @@ if (window.initAnalyticsDashboard) {
                     throw new Error(response.message || 'Falha ao carregar dados analíticos.');
                 }
                 
-                // [CORRIGIDO] A função apiRequest aninha a resposta da API.
-                // A resposta de /api/dashboard/analytics é { success: true, data: { ... } }
-                // O apiRequest transforma isso em { success: true, data: { success: true, data: { ... } } }
-                // Portanto, precisamos aceder a response.data.data para obter os dados dos cards.
-                const data = response.data.data;
+                // [CORRIGIDO] A API retorna { success: true, data: { ... } }. O objeto de dados está em response.data.
+                const data = response.data;
                 console.log('[loadAnalyticsData] Dados extraídos com sucesso:', data);
 
                 // Preenche os cards principais

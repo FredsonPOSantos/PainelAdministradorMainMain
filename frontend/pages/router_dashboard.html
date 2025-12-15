@@ -6,7 +6,8 @@
     <title>Dashboard de Roteador</title>
     
     <!-- CSS -->
-    <link rel="stylesheet" href="../css/router_dashboard.css">
+    <!-- [UNIFICADO] Usa apenas a folha de estilos partilhada para um visual consistente. -->
+    <link rel="stylesheet" href="/css/monitoring_styles.css">
     
     <!-- Biblioteca de Gráficos ApexCharts.js -->
     <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
@@ -17,78 +18,96 @@
 <body>
     <div class="dashboard-container">
         <!-- Header -->
+        <!-- [MODIFICADO] Cabeçalho com métricas em tempo real -->
         <header class="dashboard-header">
             <div class="header-content">
-                <div>
-                    <h1 id="routerNameTitle">A carregar dados do roteador...</h1>
+                <div class="header-info">
+                    <h1 id="routerNameTitle">A carregar...</h1>
                     <p id="routerIpDisplay">IP: -</p>
                 </div>
-                <button class="btn-back" onclick="window.history.back()">
-                    <i class="fas fa-arrow-left"></i> Voltar
-                </button>
+                <div class="live-stats-header">
+                    <div class="live-stat">
+                        <span class="live-stat-label"><i class="fas fa-microchip"></i> CPU</span>
+                        <span class="live-stat-value" id="liveCpu">-</span>
+                    </div>
+                    <div class="live-stat">
+                        <span class="live-stat-label"><i class="fas fa-memory"></i> Memória</span>
+                        <span class="live-stat-value" id="liveMemory">-</span>
+                    </div>
+                    <div class="live-stat">
+                        <span class="live-stat-label"><i class="fas fa-users"></i> Clientes</span>
+                        <span class="live-stat-value" id="liveClients">-</span>
+                    </div>
+                </div>
+                <div class="header-actions">
+                    <div class="live-update-toggle">
+                        <label for="liveUpdateToggle" class="toggle-label">Live Update</label>
+                        <label class="switch">
+                            <input type="checkbox" id="liveUpdateToggle">
+                            <span class="slider round"></span>
+                        </label>
+                    </div>
+                    <button class="btn-back" onclick="window.history.back()">
+                        <i class="fas fa-arrow-left"></i> Voltar
+                    </button>
+                </div>
             </div>
         </header>
+
+        <!-- [NOVO] Secção de Resumo com Gráficos -->
+        <h2 class="section-title">Resumo</h2>
+        <!-- [MODIFICADO] Adiciona a classe 'summary-grid' para aplicar estilos transparentes. -->
+        <div class="metrics-grid summary-grid">
+            <!-- Card de CPU com Gráfico Radial -->
+            <div class="metric-card" data-metric="cpu">
+                <div class="card-header">
+                    <div class="card-icon cpu-icon"><i class="fas fa-microchip"></i></div>
+                    <h3>CPU</h3>
+                    <div class="card-actions">
+                        <!-- [CORRIGIDO] O ícone de engrenagem agora abre o modal principal, como os outros botões de análise. -->
+                        <i class="fas fa-cog settings-icon" onclick="expandMetric('cpu')"></i>
+                    </div>
+                </div>
+                <div id="cpu-chart-container" class="card-chart-container"></div>
+                <div class="card-stats-summary">
+                    <div><span>MÍN</span><strong id="cpu-min">-</strong></div>
+                    <div><span>MÉD</span><strong id="cpu-avg">-</strong></div>
+                    <div><span>MÁX</span><strong id="cpu-max">-</strong></div>
+                </div>
+            </div>
+
+            <!-- Card de Memória com Gráfico Radial -->
+            <div class="metric-card" data-metric="memory">
+                <div class="card-header">
+                    <div class="card-icon memory-icon"><i class="fas fa-memory"></i></div>
+                    <h3>Memória</h3>
+                    <div class="card-actions">
+                        <!-- [CORRIGIDO] O ícone de engrenagem agora abre o modal principal, como os outros botões de análise. -->
+                        <i class="fas fa-cog settings-icon" onclick="expandMetric('memory')"></i>
+                    </div>
+                </div>
+                <div id="memory-chart-container" class="card-chart-container"></div>
+                <div class="card-stats-summary">
+                    <div><span>MÍN</span><strong id="memory-min">-</strong></div>
+                    <div><span>MÉD</span><strong id="memory-avg">-</strong></div>
+                    <div><span>MÁX</span><strong id="memory-max">-</strong></div>
+                </div>
+            </div>
+
+            <!-- Card de Distribuição de Tráfego -->
+            <div class="metric-card" data-metric="traffic-distribution">
+                <div class="card-header">
+                    <div class="card-icon interface-icon"><i class="fas fa-network-wired"></i></div>
+                    <h3>Distribuição de Tráfego (Ether)</h3>
+                </div>
+                <div id="traffic-distribution-chart-container" class="card-chart-container"></div>
+            </div>
+        </div>
 
         <!-- Cards de Métricas - Sistema -->
         <h2 class="section-title">Sistema</h2>
         <div class="metrics-grid">
-            <!-- Sistema -->
-            <div class="metric-card" data-metric="cpu">
-                <div class="card-header">
-                    <div class="card-icon cpu-icon">
-                        <i class="fas fa-microchip"></i>
-                    </div>
-                    <h3>CPU</h3>
-                </div>
-                <div class="card-stats">
-                    <div class="stat-row">
-                        <span class="stat-label">Mín:</span>
-                        <span class="stat-value" id="cpu-min">-</span>
-                    </div>
-                    <div class="stat-row">
-                        <span class="stat-label">Máx:</span>
-                        <span class="stat-value" id="cpu-max">-</span>
-                    </div>
-                    <div class="stat-row">
-                        <span class="stat-label">Média:</span>
-                        <span class="stat-value" id="cpu-avg">-</span>
-                    </div>
-                </div>
-                <div class="card-footer">
-                    <button class="btn-expand" onclick="expandMetric('cpu')">
-                        <i class="fas fa-chart-line"></i> Ver Gráfico
-                    </button>
-                </div>
-            </div>
-
-            <div class="metric-card" data-metric="memory">
-                <div class="card-header">
-                    <div class="card-icon memory-icon">
-                        <i class="fas fa-memory"></i>
-                    </div>
-                    <h3>Memória</h3>
-                </div>
-                <div class="card-stats">
-                    <div class="stat-row">
-                        <span class="stat-label">Mín:</span>
-                        <span class="stat-value" id="memory-min">-</span>
-                    </div>
-                    <div class="stat-row">
-                        <span class="stat-label">Máx:</span>
-                        <span class="stat-value" id="memory-max">-</span>
-                    </div>
-                    <div class="stat-row">
-                        <span class="stat-label">Média:</span>
-                        <span class="stat-value" id="memory-avg">-</span>
-                    </div>
-                </div>
-                <div class="card-footer">
-                    <button class="btn-expand" onclick="expandMetric('memory')">
-                        <i class="fas fa-chart-line"></i> Ver Gráfico
-                    </button>
-                </div>
-            </div>
-
+            <!-- O card de Uptime permanece aqui -->
             <div class="metric-card" data-metric="uptime">
                 <div class="card-header">
                     <div class="card-icon uptime-icon">
@@ -99,11 +118,11 @@
                 <div class="card-stats">
                     <div class="stat-row main-stat">
                         <span class="stat-label">Status Atual:</span>
-                        <span class="stat-value" id="uptime-status">-</span>
+                        <span id="uptime-status" class="stat-value">-</span>
                     </div>
                     <div class="stat-row">
                         <span class="stat-label">Quedas (24h):</span>
-                        <span class="stat-value" id="uptime-offline-events">-</span>
+                        <span id="uptime-offline-events" class="stat-value">-</span>
                     </div>
                     <div class="stat-row">
                         <span class="stat-label">Online (7d):</span>
@@ -275,7 +294,8 @@
     </div>
 
     <!-- Scripts -->
-    <script src="../js/admin_dashboard.js" defer></script>
-    <script src="../js/router_dashboard.js" defer></script>
+    <!-- [CORRIGIDO] Carrega o ficheiro de utilitários em vez do script do dashboard principal -->
+    <script src="/js/utils.js" defer></script>
+    <script src="/js/router_dashboard.js" defer></script>
 </body>
 </html>
