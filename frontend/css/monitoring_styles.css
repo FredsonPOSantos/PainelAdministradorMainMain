@@ -329,7 +329,7 @@ body {
 /* [NOVO] Estilo específico para o ícone na página de status do roteador, para evitar conflito com o dashboard. */
 .router-card .settings-icon {
     color: #FBBF24; /* Cor amarelada para melhor visibilidade. */
-    top: 14px; /* [CORRIGIDO] Move o ícone ainda mais para cima, aproximando-o do topo do card para evitar sobreposição. */
+    top: 14px; /* [CORRIGIDO] Move o ícone para o mais próximo possível do topo para evitar sobreposição com o badge. */
     right: 110px; /* [CORRIGIDO] Ajusta a posição para o canto. */
 }
 .router-card .settings-icon:hover {
