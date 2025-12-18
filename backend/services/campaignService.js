@@ -2,12 +2,11 @@
 const pool = require('../connection');
 
 const getActiveCampaignData = async (routerName) => {
-    const admServerUrl = `http://${process.env.SERVER_IP || '127.0.0.1'}:${process.env.PORT || 3000}`;
 
     let campaignData = {
         use_default: true,
         template: null, // [NOVO]
-        postLoginBanner: null,
+        postLoginBanners: [], // [CORRIGIDO] Padronizado para array (plural)
     };
 
     const routerResult = await pool.query('SELECT id, group_id FROM routers WHERE name = $1', [routerName]);
@@ -60,31 +59,20 @@ const getActiveCampaignData = async (routerName) => {
             statusTitle: templateData.status_title,
             statusMessage: templateData.status_message,
             // Constrói a URL completa para o logo de status, com fallback para o logo principal
-            statusLogoUrl: (templateData.status_logo_url || templateData.logo_url)
-                ? ((templateData.status_logo_url || templateData.logo_url).startsWith('http')
-                    ? (templateData.status_logo_url || templateData.logo_url)
-                    : `${admServerUrl}${(templateData.status_logo_url || templateData.logo_url)}`)
-                : null,
+            statusLogoUrl: templateData.status_logo_url || templateData.logo_url || null,
             // [NOVO] Adiciona os novos campos de personalização
             statusBgColor: templateData.status_bg_color,
-            statusBgImageUrl: templateData.status_bg_image_url
-                ? (templateData.status_bg_image_url.startsWith('http')
-                    ? templateData.status_bg_image_url
-                    : `${admServerUrl}${templateData.status_bg_image_url}`)
-                : null,
+            statusBgImageUrl: templateData.status_bg_image_url || null,
             statusH1FontSize: templateData.status_h1_font_size,
             statusPFontSize: templateData.status_p_font_size,
         };
 
         if (templateData.post_login_banner_url) {
-            const imageUrl = templateData.post_login_banner_url.startsWith('http')
-                ? templateData.post_login_banner_url
-                : `${admServerUrl}${templateData.post_login_banner_url}`;
-
-            campaignData.postLoginBanner = {
-                imageUrl: imageUrl,
+            // [CORRIGIDO] Envolve em array para padronizar com o frontend
+            campaignData.postLoginBanners = [{
+                imageUrl: templateData.post_login_banner_url,
                 targetUrl: templateData.post_login_target_url
-            };
+            }];
         }
     }
 
@@ -97,12 +85,17 @@ const getActiveCampaignData = async (routerName) => {
  * @param {number} campaignId - O ID da campanha a ser pré-visualizada.
  */
 const getCampaignPreviewData = async (campaignId) => {
-    const admServerUrl = `http://${process.env.SERVER_IP || '127.0.0.1'}:${process.env.PORT || 3000}`;
+
+    // [CORRIGIDO] Busca configurações gerais para evitar erro no frontend (loginPageSettings)
+    const settingsResult = await pool.query('SELECT * FROM system_settings WHERE id = 1');
+    const loginPageSettings = settingsResult.rows[0] || {};
 
     let campaignData = {
         use_default: true,
         template: null,
-        postLoginBanner: null,
+        postLoginBanners: [], // [CORRIGIDO] Array para compatibilidade com o loader
+        loginPageSettings: loginPageSettings, // [CORRIGIDO] Necessário para o loader
+        campaign: null // [CORRIGIDO] Necessário para o loader
     };
 
     const campaignResult = await pool.query('SELECT * FROM campaigns WHERE id = $1', [campaignId]);
@@ -113,6 +106,7 @@ const getCampaignPreviewData = async (campaignId) => {
     }
 
     const campaign = campaignResult.rows[0];
+    campaignData.campaign = { id: campaign.id, name: campaign.name }; // [CORRIGIDO] Preenche dados da campanha
 
     const templateQuery = `
         SELECT 
@@ -135,7 +129,7 @@ const getCampaignPreviewData = async (campaignId) => {
         // [CORRIGIDO] Adiciona a lógica para o banner de PRÉ-LOGIN na pré-visualização
         if (templateData.pre_login_banner_url) {
             campaignData.preLoginBanner = {
-                imageUrl: templateData.pre_login_banner_url.startsWith('http') ? templateData.pre_login_banner_url : `${admServerUrl}${templateData.pre_login_banner_url}`,
+                imageUrl: templateData.pre_login_banner_url,
                 targetUrl: templateData.pre_login_target_url
             };
         }
@@ -149,32 +143,25 @@ const getCampaignPreviewData = async (campaignId) => {
             fontSize: templateData.font_size,
             formBackgroundColor: templateData.form_background_color,
             fontFamily: templateData.font_family,
-            backgroundUrl: templateData.login_background_url 
-                ? (templateData.login_background_url.startsWith('http') 
-                    ? templateData.login_background_url 
-                    : `${admServerUrl}${templateData.login_background_url}`)
-                : null,
-            logoUrl: templateData.logo_url
-                ? (templateData.logo_url.startsWith('http')
-                    ? templateData.logo_url
-                    : `${admServerUrl}${templateData.logo_url}`)
-                : null,
+            backgroundUrl: templateData.login_background_url || null,
+            logoUrl: templateData.logo_url || null,
 
             // --- Dados para a página de STATUS ---
             statusTitle: templateData.status_title,
             statusMessage: templateData.status_message,
-            statusLogoUrl: (templateData.status_logo_url || templateData.logo_url) ? `${admServerUrl}${(templateData.status_logo_url || templateData.logo_url)}` : null,
+            statusLogoUrl: templateData.status_logo_url || templateData.logo_url || null,
             statusBgColor: templateData.status_bg_color,
-            statusBgImageUrl: templateData.status_bg_image_url ? `${admServerUrl}${templateData.status_bg_image_url}` : null,
+            statusBgImageUrl: templateData.status_bg_image_url || null,
             statusH1FontSize: templateData.status_h1_font_size,
             statusPFontSize: templateData.status_p_font_size,
         };
 
         if (templateData.post_login_banner_url) {
-            campaignData.postLoginBanner = {
-                imageUrl: templateData.post_login_banner_url.startsWith('http') ? templateData.post_login_banner_url : `${admServerUrl}${templateData.post_login_banner_url}`,
+            // [CORRIGIDO] Envolve em array para corresponder à expectativa do frontend (postLoginBanners)
+            campaignData.postLoginBanners = [{
+                imageUrl: templateData.post_login_banner_url,
                 targetUrl: templateData.post_login_target_url
-            };
+            }];
         }
     }
     return campaignData;

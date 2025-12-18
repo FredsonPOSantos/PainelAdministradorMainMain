@@ -3,6 +3,7 @@
 
 const { query } = require('express');
 const pool = require('../connection');
+const { getCampaignPreviewData } = require('../services/campaignService');
 
 /**
  * @description Obtém a campanha ativa, o template e os banners para um roteador específico.
@@ -142,6 +143,25 @@ const getActiveCampaign = async (req, res) => {
     }
 };
 
+/**
+ * @description Obtém os dados de pré-visualização de uma campanha.
+ * @route GET /api/public/campaign-preview?campaignId=ID
+ */
+const getCampaignPreview = async (req, res) => {
+    const { campaignId } = req.query;
+    if (!campaignId) {
+        return res.status(400).json({ message: 'Campaign ID is required' });
+    }
+    try {
+        const campaignData = await getCampaignPreviewData(campaignId);
+        res.json(campaignData);
+    } catch (error) {
+        console.error('Erro ao buscar preview da campanha:', error);
+        res.status(500).json({ message: 'Erro interno ao gerar preview.' });
+    }
+};
+
 module.exports = {
-    getActiveCampaign
+    getActiveCampaign,
+    getCampaignPreview
 };

@@ -54,8 +54,17 @@ app.use(methodOverride(function (req, res) {
 // --- Servir Ficheiros Estáticos ---
 // Torna a pasta 'public' (e subpastas como 'uploads') acessível via URL
 // Ex: http://localhost:3000/uploads/logos/company_logo.png
-// [CORRIGIDO] O caminho deve apontar para a pasta 'public' na raiz do projeto, um nível acima da pasta 'backend'.
+// [CORRIGIDO] Aponta para a pasta 'public' dentro de 'backend' onde estão os uploads.
+app.use(express.static(path.join(__dirname, 'public')));
+
+// [MELHORIA] Mapeamento explícito da rota '/uploads' para garantir que os caminhos do banco
+// (que começam com /uploads/) sejam sempre resolvidos corretamente, independente da origem.
+app.use('/uploads', express.static(path.join(__dirname, 'public/uploads')));
+
+// [SEGURANÇA] Adiciona fallback para a pasta 'public' na raiz do projeto, caso as imagens
+// estejam lá (como sugerido pelo script.js que usa '../public').
 app.use(express.static(path.join(__dirname, '../public')));
+app.use('/uploads', express.static(path.join(__dirname, '../public/uploads')));
 
 // [NOVO] Serve ficheiros estáticos da pasta 'Rede'
 // Torna a pasta 'Rede' acessível via URL

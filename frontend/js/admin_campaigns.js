@@ -36,12 +36,8 @@ if (window.initCampaignsPage) {
                     : '/api/campaigns/available-targets';
                 
                 const response = await apiRequest(endpoint);
-                if (!response.success) {
-                    console.error("Erro ao carregar alvos: ", response.message);
-                    targetIdSelect.innerHTML = '<option value="">Erro ao carregar</option>';
-                    return;
-                }
-                const availableData = response.data;
+                // [CORRIGIDO] A API retorna o objeto { routers: [], groups: [] } diretamente.
+                const availableData = response.data || response;
 
                 let targets = [];
                 if (targetType === 'group') {
@@ -59,7 +55,15 @@ if (window.initCampaignsPage) {
                 targets.forEach(target => {
                     const option = document.createElement('option');
                     option.value = target.id;
-                    option.textContent = `${target.name} (ID: ${target.id})`;
+                    
+                    // Validação: Se for roteador individual e pertencer a um grupo, desativa e avisa
+                    if (targetType === 'single_router' && target.group_name) {
+                        option.textContent = `${target.name} (Pertence ao grupo: ${target.group_name})`;
+                        option.disabled = true; // Impede a seleção
+                        option.style.color = '#888'; // Visual indicativo de desativado
+                    } else {
+                        option.textContent = `${target.name} (ID: ${target.id})`;
+                    }
                     targetIdSelect.appendChild(option);
                 });
 
@@ -73,11 +77,8 @@ if (window.initCampaignsPage) {
         const loadTemplatesIntoSelect = async () => {
             try {
                 const response = await apiRequest('/api/templates');
-                if (!response.success) {
-                    console.error("Erro ao carregar templates: ", response.message);
-                    return;
-                }
-                const templates = response.data;
+                // [CORRIGIDO] A API retorna o array diretamente.
+                const templates = Array.isArray(response) ? response : (response.data || []);
                 templateSelect.innerHTML = '<option value="">Selecione um Template</option>';
                 templates.forEach(template => {
                     const option = document.createElement('option');

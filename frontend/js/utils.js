@@ -59,8 +59,13 @@ async function apiRequest(endpoint, method = 'GET', body = null) {
     };
 
     if (body) {
-        options.headers['Content-Type'] = 'application/json';
-        options.body = JSON.stringify(body);
+        if (body instanceof FormData) {
+            // Se for FormData (upload de arquivos), o navegador define o Content-Type automaticamente
+            options.body = body;
+        } else {
+            options.headers['Content-Type'] = 'application/json';
+            options.body = JSON.stringify(body);
+        }
     }
 
     const response = await fetch(`${API_ADMIN_URL}${endpoint}`, options);

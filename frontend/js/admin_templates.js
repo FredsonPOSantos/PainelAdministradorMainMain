@@ -178,11 +178,8 @@ if (window.initTemplatesPage) {
         const loadBannersIntoSelect = async () => {
             try {
                 const response = await apiRequest('/api/banners');
-                if (!response.success) {
-                    console.error("Erro ao carregar banners: ", response.message);
-                    return;
-                }
-                const banners = response; // [CORRIGIDO] A API retorna o array diretamente
+                // [CORRIGIDO] A API retorna o array diretamente. Removemos a verificação de .success que falha para arrays.
+                const banners = Array.isArray(response) ? response : (response.data || []);
                 // Limpa ambos os selects
                 preLoginBannerSelect.innerHTML = '<option value="">Nenhum</option>';
                 postLoginBannerSelect.innerHTML = '<option value="">Nenhum</option>';

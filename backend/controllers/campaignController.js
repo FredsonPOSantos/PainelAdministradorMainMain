@@ -272,12 +272,19 @@ const getAvailableTargets = async (req, res) => {
         let availableRouters;
         if (occupiedRouterIds.size > 0) {
             const availableRoutersResult = await pool.query(
-                'SELECT id, name FROM routers WHERE id <> ALL($1::int[])',
+                `SELECT r.id, r.name, rg.name as group_name 
+                 FROM routers r 
+                 LEFT JOIN router_groups rg ON r.group_id = rg.id 
+                 WHERE r.id <> ALL($1::int[]) ORDER BY r.name ASC`,
                 [Array.from(occupiedRouterIds)]
             );
             availableRouters = availableRoutersResult.rows;
         } else {
-            const availableRoutersResult = await pool.query('SELECT id, name FROM routers');
+            const availableRoutersResult = await pool.query(
+                `SELECT r.id, r.name, rg.name as group_name 
+                 FROM routers r 
+                 LEFT JOIN router_groups rg ON r.group_id = rg.id ORDER BY r.name ASC`
+            );
             availableRouters = availableRoutersResult.rows;
         }
 
