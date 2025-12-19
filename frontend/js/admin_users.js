@@ -39,6 +39,7 @@ document.addEventListener('DOMContentLoaded', () => {
             };
 
             const loadUsers = async () => {
+                window.showPagePreloader('A carregar utilizadores...');
                 tableBody.innerHTML = `<tr><td colspan="9">A carregar...</td></tr>`;
                 try {
                     const users = await apiRequest('/api/admin/users');
@@ -76,6 +77,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 } catch (error) {
                     tableBody.innerHTML = `<tr><td colspan="9">Erro ao carregar utilizadores.</td></tr>`;
                     console.error("Erro ao carregar utilizadores:", error);
+                } finally {
+                    window.hidePagePreloader();
                 }
             };
 

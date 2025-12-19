@@ -28,6 +28,7 @@ if (window.initNetworkStatusPage) {
 
     // Função principal para buscar e renderizar os dados
     async function fetchAndRenderRouterStatus() {
+        window.showPagePreloader('A atualizar status da rede...');
         try {
             // CORREÇÃO: Usa a função global 'apiRequest' que já trata da URL da API e da autenticação.
             const response = await apiRequest('/api/monitoring/router-status');
@@ -69,6 +70,8 @@ if (window.initNetworkStatusPage) {
         } catch (error) {
             console.error('Falha ao buscar status dos roteadores:', error);
             tableBody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: red;">Falha ao carregar dados. Verifique a consola.</td></tr>`;
+        } finally {
+            window.hidePagePreloader();
         }
     }
 

@@ -341,6 +341,7 @@ if (window.initRoutersPage) {
 
         const handleGroupFormSubmit = async (event) => {
             event.preventDefault();
+            window.showPagePreloader('A salvar grupo...');
             const groupId = document.getElementById('groupId').value;
             const selectedCheckboxes = groupModal.querySelectorAll('input[name="routerIds"]:checked');
             const routerIds = Array.from(selectedCheckboxes).map(cb => parseInt(cb.value));
@@ -363,6 +364,8 @@ if (window.initRoutersPage) {
                 loadPageData(); // Recarrega tudo
             } catch (error) {
                 showNotification(`Erro: ${error.message}`, 'error');
+            } finally {
+                window.hidePagePreloader();
             }
         };
 

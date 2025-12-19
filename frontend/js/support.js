@@ -36,6 +36,7 @@ if (window.initSupportPage) {
         // Carrega todos os tickets e os exibe na lista
         const loadTickets = async (search = '', status = '', page = 1) => {
             if (!ticketListDiv) return;
+            window.showPagePreloader('A carregar tickets...');
             ticketListDiv.innerHTML = '<p>A carregar tickets...</p>';
             try {
                 const params = new URLSearchParams();
@@ -79,6 +80,8 @@ if (window.initSupportPage) {
             } catch (error) {
                 ticketListDiv.innerHTML = '<p style="color: red;">Erro ao carregar tickets.</p>';
                 console.error(error);
+            } finally {
+                window.hidePagePreloader();
             }
         };
 

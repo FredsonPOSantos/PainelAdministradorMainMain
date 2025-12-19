@@ -85,6 +85,7 @@ if (window.initHotspotPage) {
 
         const handleSearch = async (event) => {
             event.preventDefault();
+            window.showPagePreloader('A pesquisar dados...');
             const formData = new FormData(filterForm);
             const params = new URLSearchParams();
 
@@ -116,6 +117,8 @@ if (window.initHotspotPage) {
             } catch (error) {
                 console.error("Erro na pesquisa:", error);
                 resultsBody.innerHTML = `<tr><td colspan="10" style="text-align:center;">Erro ao realizar a pesquisa.</td></tr>`;
+            } finally {
+                window.hidePagePreloader();
             }
         };
 

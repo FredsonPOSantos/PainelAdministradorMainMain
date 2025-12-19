@@ -327,6 +327,7 @@ window.initSettingsPage = () => {
 
         const handleUnifiedAppearance = async (e) => {
             e.preventDefault();
+            window.showPagePreloader('A aplicar nova aparência...');
             const submitButton = document.getElementById('saveAppearanceBtn');
             if (!submitButton) return;
 
@@ -408,6 +409,7 @@ window.initSettingsPage = () => {
             // 4. Se não houver alterações, notifica e pára
             if (!hasChanges) {
                 showNotification("Nenhuma alteração detectada.", "info");
+                window.hidePagePreloader();
                 return;
             }
 
@@ -429,6 +431,7 @@ window.initSettingsPage = () => {
             } catch (error) {
                 showNotification(`Erro: ${error.message}`, 'error');
             } finally {
+                window.hidePagePreloader();
                 submitButton.disabled = false;
                 submitButton.textContent = 'Guardar Todas as Alterações de Aparência';
                 delete unifiedAppearanceForm.dataset.removeBackground;
@@ -566,6 +569,7 @@ window.initSettingsPage = () => {
         let auditLogs = []; // Variável para armazenar os logs carregados
 
         const loadAuditLogs = async (filters = {}) => {
+            window.showPagePreloader('A carregar logs de atividade...');
             const tableBody = document.getElementById('auditLogsTableBody');
             if (!tableBody) return;
 
@@ -635,6 +639,8 @@ window.initSettingsPage = () => {
             } catch (error) {
                 console.error("Erro ao carregar logs de auditoria:", error);
                 tableBody.innerHTML = `<tr><td colspan="6" style="text-align:center; color: var(--color-danger);">Falha ao carregar logs. Tente novamente.</td></tr>`;
+            } finally {
+                window.hidePagePreloader();
             }
         };
 
@@ -835,6 +841,7 @@ window.initSettingsPage = () => {
         };
 
         const handleSavePolicy = async () => {
+            window.showPagePreloader('A guardar política...');
             const saveBtn = document.getElementById('savePolicyBtn');
             saveBtn.disabled = true;
             saveBtn.textContent = 'A guardar...';
@@ -868,6 +875,7 @@ window.initSettingsPage = () => {
             } catch (error) {
                 showNotification(`Erro: ${error.message}`, 'error');
             } finally {
+                window.hidePagePreloader();
                 saveBtn.disabled = false;
                 saveBtn.textContent = 'Salvar Alterações';
             }

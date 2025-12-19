@@ -6,6 +6,24 @@ let isProfileLoaded = false;
 window.currentUserProfile = null;
 window.systemSettings = null; 
 
+// [NOVO] Funções Globais para o Preloader (Autocarro)
+window.showPagePreloader = (message = 'A carregar...') => {
+    const preloader = document.getElementById('page-preloader');
+    if (preloader) {
+        const textEl = preloader.querySelector('.loading-text');
+        if (textEl) textEl.textContent = message;
+        preloader.classList.remove('loaded');
+    }
+};
+
+window.hidePagePreloader = () => {
+    const preloader = document.getElementById('page-preloader');
+    if (preloader) {
+        // Delay reduzido para 300ms para uma sensação de maior velocidade
+        setTimeout(() => { preloader.classList.add('loaded'); }, 300);
+    }
+};
+
 // --- Funções Globais ---
 const showForcePasswordChangeModal = () => {
     const changePasswordModal = document.getElementById('forceChangePasswordModal');

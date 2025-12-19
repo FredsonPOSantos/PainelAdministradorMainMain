@@ -72,6 +72,7 @@ window.initRafflesPage = () => {
     });
 
     async function loadRaffles() {
+        window.showPagePreloader('A carregar sorteios...');
         try {
             const response = await apiRequest('/api/raffles');
             if (response.success && response.data) { // [CORRIGIDO] Verifica se 'data' existe
@@ -82,6 +83,8 @@ window.initRafflesPage = () => {
         } catch (error) {
             console.error('Erro ao carregar sorteios:', error);
             alert('Erro ao conectar com o servidor.');
+        } finally {
+            window.hidePagePreloader();
         }
     }
 
