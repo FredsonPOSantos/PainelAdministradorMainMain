@@ -11,6 +11,7 @@
  "description": "",
  "dependencies": {
   "@influxdata/influxdb-client": "^1.35.0",
+  "archiver": "^5.3.1",
   "bcrypt": "^6.0.0",
   "chalk": "^4.1.2",
   "cors": "^2.8.5",

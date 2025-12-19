@@ -6,6 +6,14 @@ if (window.initAnalyticsDashboard) {
     window.initAnalyticsDashboard = () => {
         console.log("A inicializar o Dashboard Analítico...");
 
+        // [NOVO] Reutiliza o Preloader (Autocarro) para mostrar carregamento
+        const preloader = document.getElementById('page-preloader');
+        if (preloader) {
+            const loadingText = preloader.querySelector('.loading-text');
+            if (loadingText) loadingText.textContent = 'A carregar dados analíticos...';
+            preloader.classList.remove('loaded'); // Mostra o preloader
+        }
+
         // [NOVO] Variável para guardar a instância do gráfico e evitar duplicados
         let loginsChartInstance = null;
         let hotspotActivityChartInstance = null; // Renomeado
@@ -134,6 +142,28 @@ if (window.initAnalyticsDashboard) {
 
         const loadAnalyticsData = async () => {
             try {
+                // [NOVO] Define indicadores de carregamento nos cards e tabelas
+                const loadingText = '...';
+                const cardsToLoad = [
+                    'loginsSuccess', 'loginsFailure', 'hotspotUsersTotal', 'hotspotUsersMarketing',
+                    'routersOnline', 'routersOffline', 'ticketsOpen', 'ticketsTotal',
+                    'lgpdPending', 'lgpdCompleted', 'adminActions24h', 'adminMostActive',
+                    'rafflesActive', 'rafflesParticipants30d', 'campaignsActive', 'campaignsTotalViews',
+                    'serverUptime'
+                ];
+                cardsToLoad.forEach(id => fillCard(id, loadingText));
+
+                const radiusStatusEl = document.getElementById('radiusStatus');
+                if (radiusStatusEl) {
+                    radiusStatusEl.textContent = loadingText;
+                    radiusStatusEl.className = '';
+                }
+
+                const routerActivityBody = document.getElementById('routerActivityBody');
+                if (routerActivityBody) {
+                    routerActivityBody.innerHTML = '<tr><td colspan="3" style="text-align: center;">A carregar dados...</td></tr>';
+                }
+
                 console.log('[loadAnalyticsData] A chamar apiRequest para /api/dashboard/analytics...');
                 const response = await apiRequest('/api/dashboard/analytics');
                 console.log('[loadAnalyticsData] Objeto recebido de apiRequest:', response);
@@ -173,7 +203,6 @@ if (window.initAnalyticsDashboard) {
                 const minutes = Math.floor((uptimeMs % (1000 * 60 * 60)) / (1000 * 60));
                 fillCard('serverUptime', `${days}d ${hours}h ${minutes}m`);
 
-                const radiusStatusEl = document.getElementById('radiusStatus');
                 if (radiusStatusEl) {
                     const status = data.serverHealth.radiusStatus;
                     radiusStatusEl.textContent = status;
@@ -195,6 +224,18 @@ if (window.initAnalyticsDashboard) {
             } catch (error) {
                 console.error('[loadAnalyticsData] ERRO FINAL:', error);
                 showNotification(`Erro ao carregar dados: ${error.message}`, 'error');
+            } finally {
+                // [NOVO] Esconde o Preloader após o carregamento (sucesso ou erro)
+                if (preloader) {
+                    setTimeout(() => {
+                        preloader.classList.add('loaded');
+                        // Restaura o texto original após a transição
+                        setTimeout(() => {
+                            const loadingText = preloader.querySelector('.loading-text');
+                            if (loadingText) loadingText.textContent = 'A carregar o sistema...';
+                        }, 800);
+                    }, 500); // Pequeno delay para garantir que o utilizador veja o autocarro
+                }
             }
         };
 

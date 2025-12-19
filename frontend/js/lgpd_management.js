@@ -126,5 +126,109 @@ document.addEventListener('DOMContentLoaded', () => {
         searchUserLgpdForm.addEventListener('submit', searchLgpdUsers);
     }
 
+    // [NOVO] Variável para armazenar os logs carregados para exportação
+    let lgpdActivityLogs = [];
+
+    // [NOVO] Função para carregar os logs de atividade LGPD
+    const loadLgpdActivityLogs = async () => {
+        const tableBody = document.getElementById('lgpdLogsTableBody');
+        if (!tableBody) return;
+
+        tableBody.innerHTML = `<tr><td colspan="3" style="text-align:center;">A carregar logs...</td></tr>`;
+
+        try {
+            const response = await apiRequest('/api/lgpd/logs');
+            if (!response.success || !Array.isArray(response.data)) {
+                throw new Error(response.message || 'Resposta inválida da API de logs LGPD.');
+            }
+
+            lgpdActivityLogs = response.data; // Armazena os logs
+            tableBody.innerHTML = ''; // Limpa a tabela
+
+            if (lgpdActivityLogs.length === 0) {
+                tableBody.innerHTML = `<tr><td colspan="3" style="text-align:center;">Nenhum log encontrado.</td></tr>`;
+                return;
+            }
+
+            lgpdActivityLogs.forEach(log => {
+                const row = document.createElement('tr');
+                const timestamp = new Date(log.timestamp).toLocaleString('pt-BR');
+                // Simplificamos a exibição para caber no painel lateral
+                const actionLabel = log.action === 'LGPD_REQUEST_COMPLETE' ? 'Conclusão' : 'Eliminação';
+                const user = log.user_email || 'Sistema';
+
+                row.innerHTML = `
+                    <td style="white-space: normal;">${timestamp}<br><small style="color: var(--text-secondary);">${user}</small></td>
+                    <td><span class="badge role-estetica">${actionLabel}</span></td>
+                    <td style="white-space: normal; font-size: 12px;">${log.description || ''}</td>
+                `;
+                tableBody.appendChild(row);
+            });
+
+        } catch (error) {
+            console.error("Erro ao carregar logs de atividade LGPD:", error);
+            tableBody.innerHTML = `<tr><td colspan="3" style="text-align:center; color: var(--color-danger);">Falha ao carregar logs.</td></tr>`;
+        }
+    };
+
+    // [NOVO] Funções de exportação
+    const exportLgpdLogsToCSV = () => {
+        if (lgpdActivityLogs.length === 0) {
+            showNotification('Não há logs para exportar.', 'info');
+            return;
+        }
+        const header = ["Data/Hora", "Administrador", "IP", "Ação", "Status", "Descrição"];
+        const csv = [
+            header.join(','),
+            ...lgpdActivityLogs.map(log => [
+                `"${new Date(log.timestamp).toLocaleString('pt-BR')}"`,
+                `"${log.user_email || 'N/A'}"`,
+                `"${log.ip_address || 'N/A'}"`,
+                `"${log.action}"`,
+                `"${log.status}"`,
+                `"${(log.description || '').replace(/"/g, '""')}"`
+            ].join(','))
+        ].join('\n');
+
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = 'logs_atividade_lgpd.csv';
+        link.click();
+    };
+
+    const exportLgpdLogsToExcel = () => {
+        if (lgpdActivityLogs.length === 0) {
+            showNotification('Não há logs para exportar.', 'info');
+            return;
+        }
+        const worksheet = XLSX.utils.json_to_sheet(lgpdActivityLogs.map(log => ({ "Data/Hora": new Date(log.timestamp).toLocaleString('pt-BR'), "Administrador": log.user_email || 'N/A', "IP": log.ip_address || 'N/A', "Ação": log.action, "Status": log.status, "Descrição": log.description || '' })));
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Logs LGPD");
+        XLSX.writeFile(workbook, "logs_atividade_lgpd.xlsx");
+    };
+
+    document.getElementById('exportLgpdCsvBtn')?.addEventListener('click', exportLgpdLogsToCSV);
+    document.getElementById('exportLgpdExcelBtn')?.addEventListener('click', exportLgpdLogsToExcel);
+
+    // [NOVO] Lógica do Painel Lateral
+    const logsSidebar = document.getElementById('logsSidebar');
+    const openLogsBtn = document.getElementById('openLogsBtn');
+    const closeLogsBtn = document.getElementById('closeLogsBtn');
+
+    if (openLogsBtn && logsSidebar) {
+        openLogsBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            logsSidebar.classList.add('open');
+            loadLgpdActivityLogs(); // Recarrega os logs ao abrir
+        });
+    }
+
+    if (closeLogsBtn && logsSidebar) {
+        closeLogsBtn.addEventListener('click', () => {
+            logsSidebar.classList.remove('open');
+        });
+    }
+
     loadLgpdRequests();
 });

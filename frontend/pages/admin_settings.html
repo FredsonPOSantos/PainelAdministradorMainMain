@@ -19,6 +19,7 @@
     <button class="tab-link admin-only" data-tab="tab-permissoes">Funções e Permissões</button>
     <button class="tab-link admin-only" data-tab="tab-politicas">Políticas</button> <!-- [NOVO] Aba de Políticas -->
     <button class="tab-link admin-only" data-tab="tab-logs">Logs de Atividade</button>
+    <button class="tab-link admin-only master-only" data-tab="tab-arquivos">Gestão de Arquivos</button> <!-- [NOVO] -->
     <button class="tab-link admin-only" data-tab="tab-lgpd">Gestão de Dados</button>
 </nav>
 
@@ -400,6 +401,39 @@
         </div>
     </div>
 
+    <!-- [NOVO] Aba 8: Gestão de Arquivos (Media Manager) -->
+    <div id="tab-arquivos" class="tab-content admin-only master-only">
+        <div class="content-section">
+            <div class="section-header">
+                <h4>Gestão de Arquivos (Imagens)</h4>
+                <p class="input-hint">Visualize e elimine permanentemente imagens do servidor. Cuidado: Esta ação é irreversível.</p>
+            </div>
+            
+            <div class="filters-container" style="margin-top: 20px; justify-content: flex-start;">
+                <div class="input-group">
+                    <label for="mediaTypeSelect">Tipo de Arquivo</label>
+                    <select id="mediaTypeSelect">
+                        <option value="banners">Banners</option>
+                        <option value="backgrounds">Planos de Fundo (Backgrounds)</option>
+                        <option value="logos">Logótipos</option>
+                        <!-- [NOVO] Opção para anexos de tickets -->
+                        <option value="ticket_attachments">Anexos de Tickets (Auditoria)</option>
+                    </select>
+                </div>
+                <div class="form-actions" style="margin-bottom: 20px; gap: 10px;">
+                    <button id="refreshMediaBtn" class="btn-secondary">Atualizar Lista</button>
+                    <!-- [NOVO] Botão de Arquivar (visível apenas para tickets) -->
+                    <button id="archiveMediaBtn" class="btn-primary hidden" style="background-color: #d69e2e; color: #fff;">📦 Arquivar e Limpar</button>
+                </div>
+            </div>
+
+            <div id="mediaGallery" class="media-grid">
+                <!-- As imagens serão carregadas aqui via JS -->
+                <p style="text-align:center; width:100%; color: var(--text-secondary);">Selecione um tipo para carregar.</p>
+            </div>
+        </div>
+    </div>
+
         <!-- Aba 6: Gestão LGPD (Fase 3.3) -->
         <div id="tab-lgpd" class="tab-content admin-only"> 
             <div class="content-section">
@@ -451,4 +485,3 @@
     </div>
 
 </div>
-

@@ -43,6 +43,12 @@ window.initSettingsPage = () => {
         const policyTypeField = document.getElementById('policyTypeField');
         const policyEditForm = document.getElementById('policyEditForm');
 
+        // [NOVO] Elementos da Aba de Arquivos
+        const mediaTypeSelect = document.getElementById('mediaTypeSelect');
+        const refreshMediaBtn = document.getElementById('refreshMediaBtn');
+        const archiveMediaBtn = document.getElementById('archiveMediaBtn'); // [NOVO]
+        const mediaGallery = document.getElementById('mediaGallery');
+
         // --- LÓGICA DA ABA DE PERMISSÕES (REFEITA) ---
 
         const handleSavePermissions = async () => {
@@ -729,6 +735,10 @@ window.initSettingsPage = () => {
                 if (tabId === 'tab-logs' && !isMaster && role !== 'DPO') { show = false; }
                 // [CORRIGIDO] Adiciona a verificação de permissão para a aba de Gestão de Dados (LGPD)
                 if (tabId === 'tab-lgpd' && !permissions['lgpd.read']) {
+                show = false;
+            }
+            // [NOVO] Aba de Arquivos apenas para Master
+            if (tabId === 'tab-arquivos' && !isMaster) {
                     show = false;
                 }
                 
@@ -749,6 +759,9 @@ window.initSettingsPage = () => {
             }
             if (document.getElementById('tab-logs')?.style.display !== 'none') {
                 loadAuditLogs();
+            }
+            if (document.getElementById('tab-arquivos')?.style.display !== 'none') {
+                loadMediaFiles(); // Carrega a aba de arquivos se visível
             }
 
             // [CORRIGIDO] Controla a visibilidade das seções de aparência
@@ -860,6 +873,85 @@ window.initSettingsPage = () => {
             }
         };
 
+        // --- [NOVO] Lógica de Gestão de Arquivos ---
+        const loadMediaFiles = async () => {
+            if (!mediaGallery || !mediaTypeSelect) return;
+            
+            const type = mediaTypeSelect.value;
+            
+            // [NOVO] Mostra o botão de arquivar apenas para tickets
+            if (archiveMediaBtn) {
+                archiveMediaBtn.classList.toggle('hidden', type !== 'ticket_attachments');
+            }
+
+            mediaGallery.innerHTML = '<p style="width:100%; text-align:center;">A carregar imagens...</p>';
+
+            try {
+                const response = await apiRequest(`/api/settings/media?type=${type}`);
+                const files = response.data || [];
+
+                mediaGallery.innerHTML = '';
+                if (files.length === 0) {
+                    mediaGallery.innerHTML = '<p style="width:100%; text-align:center;">Nenhuma imagem encontrada nesta pasta.</p>';
+                    return;
+                }
+
+                files.forEach(file => {
+                    const item = document.createElement('div');
+                    item.className = 'media-item';
+                    item.innerHTML = `
+                        <img src="http://${window.location.hostname}:3000${file.url}" alt="${file.name}" class="media-preview">
+                        <div class="media-info">
+                            <span class="media-name" title="${file.name}">${file.name}</span>
+                            <button class="btn-delete-media" data-filename="${file.name}">Excluir Permanentemente</button>
+                        </div>
+                    `;
+                    
+                    item.querySelector('.btn-delete-media').addEventListener('click', () => handleDeleteMedia(type, file.name));
+                    mediaGallery.appendChild(item);
+                });
+            } catch (error) {
+                console.error("Erro ao carregar mídia:", error);
+                mediaGallery.innerHTML = '<p style="width:100%; text-align:center; color: var(--error-text);">Erro ao carregar imagens.</p>';
+            }
+        };
+
+        const handleDeleteMedia = async (type, filename) => {
+            const confirmed = await showConfirmationModal(
+                `Tem a certeza que deseja excluir permanentemente o arquivo "${filename}"? Se ele estiver em uso por alguma campanha, ela ficará sem imagem.`,
+                'Exclusão Permanente'
+            );
+            if (!confirmed) return;
+
+            try {
+                const response = await apiRequest('/api/settings/media', 'DELETE', { type, filename });
+                showNotification(response.message, 'success');
+                loadMediaFiles(); // Recarrega a lista
+            } catch (error) {
+                showNotification(`Erro ao excluir: ${error.message}`, 'error');
+            }
+        };
+
+        // [NOVO] Lógica para Arquivar e Limpar
+        const handleArchiveMedia = async () => {
+            const type = mediaTypeSelect.value;
+            if (type !== 'ticket_attachments') return;
+
+            const confirmed = await showConfirmationModal(
+                'Esta ação irá COMPACTAR (ZIP) todos os anexos de tickets atuais e REMOVÊ-LOS desta pasta para libertar espaço. O ficheiro ZIP será salvo na pasta de arquivos do servidor. Deseja continuar?',
+                'Arquivar e Limpar Pasta'
+            );
+            if (!confirmed) return;
+
+            try {
+                const response = await apiRequest('/api/settings/media/archive', 'POST', { type });
+                showNotification(response.message, 'success');
+                loadMediaFiles(); // Recarrega a lista (que deve estar vazia agora)
+            } catch (error) {
+                showNotification(`Erro ao arquivar: ${error.message}`, 'error');
+            }
+        };
+
         const closePolicyModal = () => policyModal.classList.add('hidden');
 
         if (tabLinks.length > 0) { 
@@ -926,6 +1018,17 @@ window.initSettingsPage = () => {
         // [ADICIONADO] Listener para o formulário de aparência unificado
         if (unifiedAppearanceForm) {
             unifiedAppearanceForm.addEventListener('submit', handleUnifiedAppearance);
+        }
+
+        // [NOVO] Listeners para Gestão de Arquivos
+        if (mediaTypeSelect) {
+            mediaTypeSelect.addEventListener('change', loadMediaFiles);
+        }
+        if (refreshMediaBtn) {
+            refreshMediaBtn.addEventListener('click', loadMediaFiles);
+        }
+        if (archiveMediaBtn) {
+            archiveMediaBtn.addEventListener('click', handleArchiveMedia);
         }
 
         // --- [SOLUÇÃO DEFINITIVA PARA "MODAL FANTASMA"] ---

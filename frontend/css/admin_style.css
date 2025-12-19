@@ -504,3 +504,231 @@ trix-editor {
 }
 
 .policy-viewer h1, .policy-viewer h2 { margin-top: 0; }
+
+/* --- [NOVO] Painel Lateral de Logs (LGPD) --- */
+.logs-sidebar {
+    position: fixed;
+    top: 0;
+    right: -500px; /* Escondido fora da tela */
+    width: 500px;
+    height: 100vh;
+    background-color: var(--background-medium);
+    border-left: 1px solid var(--border-color);
+    box-shadow: -5px 0 15px rgba(0,0,0,0.5);
+    transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 1100;
+    display: flex;
+    flex-direction: column;
+}
+
+.logs-sidebar.open {
+    right: 0;
+}
+
+.logs-sidebar-header {
+    padding: 20px;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: var(--background-dark);
+}
+
+.logs-sidebar-content {
+    flex-grow: 1;
+    overflow-y: auto;
+    padding: 20px;
+}
+
+/* --- [NOVO] Preloader (Tela de Carregamento) --- */
+#page-preloader {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: var(--background-dark); /* Fundo igual ao tema */
+    z-index: 99999; /* Garante que fica acima de tudo */
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    transition: opacity 0.8s ease-out, visibility 0.8s ease-out;
+}
+
+#page-preloader.loaded {
+    opacity: 0;
+    visibility: hidden;
+}
+
+.bus-animation-wrapper {
+    position: relative;
+    width: 300px;
+    height: 150px;
+    overflow: hidden; /* Mantém o autocarro dentro desta área se quisermos limitar, ou removemos para tela toda */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.bus {
+    position: relative;
+    width: 140px;
+    height: 70px;
+    animation: bounce 0.5s infinite alternate ease-in-out;
+}
+
+/* Corpo do Autocarro: Lilás quase vermelho */
+.bus-body {
+    position: absolute;
+    bottom: 15px;
+    width: 100%;
+    height: 55px;
+    background-color: #C71585; /* MediumVioletRed - Lilás avermelhado */
+    border-radius: 10px 10px 5px 5px;
+    box-shadow: inset 0 -5px 0 rgba(0,0,0,0.1);
+    z-index: 2;
+}
+
+/* Detalhe Roxo Claro (Teto/Faixa) */
+.bus-roof {
+    position: absolute;
+    top: 0;
+    left: 5px;
+    width: 130px;
+    height: 25px;
+    background-color: #D8BFD8; /* Thistle - Roxo claro */
+    border-radius: 8px 8px 0 0;
+    z-index: 1;
+}
+
+.bus-windows {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    right: 10px;
+    display: flex;
+    justify-content: space-between;
+    z-index: 3;
+}
+
+.window {
+    width: 30px;
+    height: 20px;
+    background-color: #E0F7FA; /* Azul vidro claro */
+    border-radius: 3px;
+}
+
+.bus-wheels {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    display: flex;
+    justify-content: space-around;
+    z-index: 4;
+}
+
+.wheel {
+    width: 22px;
+    height: 22px;
+    background-color: #333;
+    border-radius: 50%;
+    border: 3px solid #ccc;
+    animation: spin 1s linear infinite;
+}
+
+.loading-text {
+    margin-top: 20px;
+    color: var(--text-secondary);
+    font-size: 1.1rem;
+    font-weight: 500;
+    animation: pulse 1.5s infinite;
+}
+
+/* Animação de movimento (Autocarro a passar) */
+@keyframes driveAcross {
+    from { transform: translateX(-200px); }
+    to { transform: translateX(200px); }
+}
+
+/* Animação de balanço (suspensão) */
+@keyframes bounce {
+    from { transform: translateY(0); }
+    to { transform: translateY(-3px); }
+}
+
+/* Rodas a girar */
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+@keyframes pulse {
+    0% { opacity: 0.6; }
+    50% { opacity: 1; }
+    100% { opacity: 0.6; }
+}
+
+/* --- [NOVO] Estilos para Gestão de Arquivos (Media Grid) --- */
+.media-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 20px;
+    width: 100%;
+    margin-top: 20px;
+}
+
+.media-item {
+    background-color: var(--background-dark);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.media-item:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    border-color: var(--primary-color);
+}
+
+.media-preview {
+    height: 120px;
+    width: 100%;
+    object-fit: contain;
+    background-color: #fff; /* Fundo branco para ver logos transparentes */
+    border-bottom: 1px solid var(--border-color);
+}
+
+.media-info {
+    padding: 10px;
+    text-align: center;
+}
+
+.media-name {
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: block;
+}
+
+.btn-delete-media {
+    background-color: #c53030;
+    color: white;
+    border: none;
+    padding: 5px 10px;
+    border-radius: 4px;
+    font-size: 11px;
+    cursor: pointer;
+    width: 100%;
+}
+
+.btn-delete-media:hover {
+    background-color: #9b2c2c;
+}

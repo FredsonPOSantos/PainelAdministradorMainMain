@@ -6,6 +6,8 @@
     <title>Gestão LGPD - Rota Hotspot Admin</title>
     <link rel="stylesheet" href="../css/admin_style.css">
     <link rel="stylesheet" href="../css/notifications.css">
+    <!-- [NOVO] Adiciona a biblioteca para exportação para Excel -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body class="dashboard-body">
     <aside class="sidebar">
@@ -13,6 +15,10 @@
             <div class="nav-title">Principal</div>
             <a href="../admin_dashboard.html" class="nav-item">
                 <span>🏠</span> Voltar ao Dashboard
+            </a>
+            <!-- [NOVO] Botão para abrir o painel de logs -->
+            <a href="#" id="openLogsBtn" class="nav-item">
+                <span>📜</span> Logs Detalhados
             </a>
         </nav>
     </aside>
@@ -90,6 +96,35 @@
         </section>
     </main>
 
+    <!-- [NOVO] Painel Lateral Deslizante para Logs -->
+    <div id="logsSidebar" class="logs-sidebar">
+        <div class="logs-sidebar-header">
+            <h3>Logs de Atividade LGPD</h3>
+            <button id="closeLogsBtn" class="modal-close-btn" style="position: static;">&times;</button>
+        </div>
+        <div class="logs-sidebar-content">
+            <p class="input-hint" style="margin-bottom: 15px;">Histórico de ações de conclusão e eliminação.</p>
+            
+            <div class="header-actions" style="margin-bottom: 20px; justify-content: flex-start; flex-wrap: wrap;">
+                <button id="exportLgpdCsvBtn" class="btn-secondary" style="font-size: 12px; padding: 6px 12px;">CSV</button>
+                <button id="exportLgpdExcelBtn" class="btn-primary" style="font-size: 12px; padding: 6px 12px;">Excel</button>
+            </div>
+
+            <div class="table-container">
+                <table id="lgpdLogsTable" class="data-table" style="font-size: 13px;">
+                    <thead>
+                        <tr>
+                            <th>Data</th>
+                            <th>Ação</th>
+                            <th>Detalhes</th>
+                        </tr>
+                    </thead>
+                    <tbody id="lgpdLogsTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
     <div id="notification-container"></div>
 
     <script>
@@ -126,8 +161,8 @@
                 throw new Error(errorData.message || `Erro HTTP ${response.status}`);
             }
             if (response.status === 204) return { success: true, data: null };
-            const data = await response.json();
-            return { success: true, data: data, message: data.message };
+            // [CORRIGIDO] Retorna diretamente a resposta JSON do backend, sem a encapsular novamente.
+            return await response.json();
         };
     </script>
     <script src="../js/notifications.js"></script>

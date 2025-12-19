@@ -556,9 +556,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     });
 
-    // [NOVO] Delegação de eventos para botões de atalho rápido
-    if (mainContentArea) {
-        mainContentArea.addEventListener('click', (e) => {
+    // [CORRIGIDO] Delegação de eventos para botões de atalho rápido.
+    // O listener é anexado a um elemento pai estático ('.main-content') para que não se perca
+    // quando o '.content-area' é recarregado durante a navegação.
+    const mainContent = document.querySelector('.main-content');
+    if (mainContent) {
+        mainContent.addEventListener('click', (e) => {
             const quickLink = e.target.closest('.quick-link-btn');
             if (quickLink) {
                 e.preventDefault();
@@ -702,14 +705,23 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 
     // 4. Carrega a página inicial
-    console.log("Dashboard (V14.5): Página principal já carregada. Inicializando scripts da home...");
+    console.log("Dashboard (V14.5): Carregando página inicial (admin_home)...");
     const homeLink = document.querySelector('.sidebar-nav .nav-item[data-page="admin_home"]');
-    if (homeLink) homeLink.classList.add('active');
-
-    // Como o HTML já está na página, apenas executamos a função de inicialização.
-    if (window.initHomePage) {
-        window.initHomePage();
-    }
+    
+    // [CORRIGIDO] Carrega explicitamente o conteúdo da página inicial.
+    // Anteriormente, assumia-se que o HTML já estava presente, o que causava o erro de carregamento.
+    await loadPage('admin_home', homeLink);
 
     console.log("Dashboard (V13.1.3): Inicialização concluída com sucesso.");
+
+    // [NOVO] Remove o Preloader (Autocarro) após o carregamento completo
+    const preloader = document.getElementById('page-preloader');
+    if (preloader) {
+        // Pequeno delay para garantir que a transição visual seja suave
+        setTimeout(() => {
+            preloader.classList.add('loaded');
+            // [MODIFICADO] O elemento NÃO é removido do DOM para poder ser reutilizado em outras páginas (ex: Analytics)
+            // setTimeout(() => { preloader.remove(); }, 800);
+        }, 800); // Mantém o autocarro visível por pelo menos 0.8s para o efeito visual
+    }
 }); // Fim do DOMContentLoaded
