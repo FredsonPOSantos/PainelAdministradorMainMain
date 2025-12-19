@@ -174,10 +174,30 @@ const deleteUser = async (req, res) => {
     }
 };
 
+// [NOVO] Função para buscar logs de atividade específicos da gestão LGPD
+const getLgpdActivityLogs = async (req, res) => {
+    try {
+        const query = `
+            SELECT timestamp, user_email, ip_address, action, status, description
+            FROM audit_logs
+            WHERE action = 'LGPD_REQUEST_COMPLETE' OR action = 'LGPD_USER_DELETE'
+            ORDER BY timestamp DESC
+            LIMIT 200;
+        `;
+        const { rows } = await pool.query(query);
+        res.json({ success: true, data: rows });
+    } catch (error) {
+        console.error('Erro ao buscar logs de atividade LGPD:', error);
+        res.status(500).json({ success: false, message: 'Erro interno ao buscar logs.' });
+    }
+};
+
+
 module.exports = {
     requestExclusion,
     getExclusionRequests,
     completeExclusionRequest,
     searchUsers,
-    deleteUser
+    deleteUser,
+    getLgpdActivityLogs // [NOVO] Exporta a nova função
 };

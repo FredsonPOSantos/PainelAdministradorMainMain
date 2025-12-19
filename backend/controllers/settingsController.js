@@ -4,6 +4,7 @@
 const pool = require('../connection');
 const path = require('path');
 const fs = require('fs'); // Para lidar com caminhos de ficheiro e remoção
+const archiver = require('archiver'); // [NOVO] Para criar arquivos ZIP
 const { logAction } = require('../services/auditLogService');
 
 // --- FASE 2.3: Configurações Gerais ---
@@ -552,6 +553,163 @@ const updatePolicies = async (req, res) => {
     }
 };
 
+// --- FASE 4: Gestão de Arquivos (Media Manager) ---
+
+/**
+ * [NOVO] Lista ficheiros de mídia de uma pasta específica.
+ */
+const listMediaFiles = async (req, res) => {
+    const { type } = req.query;
+    let folderPath = '';
+
+    // Mapeia os tipos para as pastas reais
+    switch (type) {
+        case 'banners':
+            folderPath = '../public/uploads/banners';
+            break;
+        case 'backgrounds':
+            folderPath = '../public/uploads/Background'; // [CORRIGIDO] Aponta para a pasta 'Background'
+            break;
+        case 'logos':
+            folderPath = '../public/uploads/logos/img'; // [CORRIGIDO] Aponta para a pasta 'logos/img'
+            break;
+        case 'ticket_attachments': // [NOVO] Suporte para anexos de tickets
+            folderPath = '../public/uploads/ticket_attachments';
+            break;
+        default:
+            return res.status(400).json({ message: 'Tipo de mídia inválido.' });
+    }
+
+    const absolutePath = path.join(__dirname, folderPath);
+
+    try {
+        if (!fs.existsSync(absolutePath)) {
+            return res.json({ success: true, data: [] });
+        }
+
+        const files = fs.readdirSync(absolutePath);
+        // Filtra apenas imagens
+        const imageFiles = files.filter(file => /\.(jpg|jpeg|png|gif|svg|webp)$/i.test(file));
+
+        const fileList = imageFiles.map(file => ({
+            name: file,
+            // Constrói a URL pública baseada na estrutura do server.js
+            url: `/uploads/${type === 'backgrounds' ? 'Background' : (type === 'logos' ? 'logos/img' : (type === 'ticket_attachments' ? 'ticket_attachments' : 'banners'))}/${file}`
+        }));
+
+        res.json({ success: true, data: fileList });
+    } catch (error) {
+        console.error('Erro ao listar arquivos de mídia:', error);
+        res.status(500).json({ message: 'Erro interno ao listar arquivos.' });
+    }
+};
+
+/**
+ * [NOVO] Elimina permanentemente um ficheiro de mídia.
+ */
+const deleteMediaFile = async (req, res) => {
+    const { type, filename } = req.body;
+    let folderPath = '';
+
+    switch (type) {
+        case 'banners': folderPath = '../public/uploads/banners'; break;
+        case 'backgrounds': folderPath = '../public/uploads/Background'; break; // [CORRIGIDO]
+        case 'logos': folderPath = '../public/uploads/logos/img'; break; // [CORRIGIDO]
+        case 'ticket_attachments': folderPath = '../public/uploads/ticket_attachments'; break; // [NOVO]
+        default: return res.status(400).json({ message: 'Tipo de mídia inválido.' });
+    }
+
+    const absolutePath = path.join(__dirname, folderPath, filename);
+
+    try {
+        if (fs.existsSync(absolutePath)) {
+            fs.unlinkSync(absolutePath);
+            
+            await logAction({
+                req,
+                action: 'MEDIA_DELETE_PERMANENT',
+                status: 'SUCCESS',
+                description: `Utilizador "${req.user.email}" eliminou permanentemente o ficheiro "${filename}" (${type}).`,
+                target_type: 'file',
+                details: { filename, type }
+            });
+
+            res.json({ success: true, message: 'Ficheiro eliminado permanentemente.' });
+        } else {
+            res.status(404).json({ message: 'Ficheiro não encontrado no disco.' });
+        }
+    } catch (error) {
+        console.error('Erro ao eliminar arquivo de mídia:', error);
+        res.status(500).json({ message: 'Erro interno ao eliminar arquivo.' });
+    }
+};
+
+/**
+ * [NOVO] Arquiva ficheiros de mídia em ZIP e limpa a pasta original.
+ * Focado em 'ticket_attachments' para auditoria.
+ */
+const archiveMediaFiles = async (req, res) => {
+    const { type } = req.body;
+
+    if (type !== 'ticket_attachments') {
+        return res.status(400).json({ message: 'Apenas anexos de tickets suportam arquivamento em lote.' });
+    }
+
+    const sourceDir = path.join(__dirname, '../public/uploads/ticket_attachments');
+    const archiveDir = path.join(__dirname, '../public/uploads/archives');
+
+    // Garante que a pasta de arquivos existe
+    if (!fs.existsSync(archiveDir)) {
+        fs.mkdirSync(archiveDir, { recursive: true });
+    }
+
+    try {
+        // Verifica se há ficheiros para arquivar
+        const files = fs.readdirSync(sourceDir).filter(file => {
+            return fs.lstatSync(path.join(sourceDir, file)).isFile() && /\.(jpg|jpeg|png|gif|pdf|doc|docx)$/i.test(file);
+        });
+
+        if (files.length === 0) {
+            return res.status(400).json({ message: 'Não há ficheiros para arquivar nesta pasta.' });
+        }
+
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+        const archiveName = `tickets_audit_${timestamp}.zip`;
+        const archivePath = path.join(archiveDir, archiveName);
+
+        // Cria o stream de escrita
+        const output = fs.createWriteStream(archivePath);
+        const archive = archiver('zip', { zlib: { level: 9 } });
+
+        output.on('close', async () => {
+            console.log(`[ARCHIVE] Arquivo criado: ${archiveName} (${archive.pointer()} bytes)`);
+            
+            // Após criar o ZIP com sucesso, apaga os ficheiros originais
+            files.forEach(file => fs.unlinkSync(path.join(sourceDir, file)));
+
+            await logAction({
+                req,
+                action: 'MEDIA_ARCHIVE_BATCH',
+                status: 'SUCCESS',
+                description: `Utilizador "${req.user.email}" arquivou e limpou ${files.length} anexos de tickets. Arquivo: ${archiveName}`,
+                target_type: 'file_archive',
+                details: { archiveName, fileCount: files.length }
+            });
+
+            res.json({ success: true, message: `Sucesso! ${files.length} ficheiros arquivados em "${archiveName}" e removidos da pasta principal.` });
+        });
+
+        archive.on('error', (err) => { throw err; });
+        archive.pipe(output);
+        archive.directory(sourceDir, false); // Adiciona os ficheiros da pasta ao ZIP
+        archive.finalize();
+
+    } catch (error) {
+        console.error('Erro ao arquivar mídia:', error);
+        res.status(500).json({ message: 'Erro interno ao processar arquivamento.' });
+    }
+};
+
 // Exporta todas as funções do controller
 module.exports = {
     getGeneralSettings,
@@ -560,5 +718,8 @@ module.exports = {
     updateAppearanceSettings, // EXPORTA A NOVA FUNÇÃO
     resetAppearanceSettings,
     updateSmtpSettings, // EXPORTA A NOVA FUNÇÃO
-    updatePolicies // [NOVO] EXPORTA A NOVA FUNÇÃO
+    updatePolicies, // [NOVO] EXPORTA A NOVA FUNÇÃO
+    listMediaFiles, // [NOVO]
+    deleteMediaFile, // [NOVO]
+    archiveMediaFiles // [NOVO]
 };

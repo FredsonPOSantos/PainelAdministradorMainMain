@@ -3,7 +3,7 @@
 
 const express = require('express');
 const router = express.Router();
-const { requestExclusion, getExclusionRequests, completeExclusionRequest, searchUsers, deleteUser } = require('../controllers/lgpdController');
+const { requestExclusion, getExclusionRequests, completeExclusionRequest, searchUsers, deleteUser, getLgpdActivityLogs } = require('../controllers/lgpdController');
 const authMiddleware = require('../middlewares/authMiddleware');
 const checkPermission = require('../middlewares/roleMiddleware');
 
@@ -21,5 +21,8 @@ router.get('/search-users', authMiddleware, checkPermission('lgpd.read'), search
 
 // Rota para um administrador eliminar um utilizador do hotspot
 router.delete('/users/:id', authMiddleware, checkPermission('lgpd.delete'), deleteUser);
+
+// [NOVO] Rota para buscar os logs de atividade da página LGPD
+router.get('/logs', authMiddleware, checkPermission('lgpd.read'), getLgpdActivityLogs);
 
 module.exports = router;

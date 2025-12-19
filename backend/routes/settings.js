@@ -56,6 +56,26 @@ router.post(
     settingsController.updatePolicies
 );
 
+// [NOVO] ROTAS PARA GESTÃO DE ARQUIVOS (MEDIA MANAGER)
+// Apenas Master deve ter acesso a exclusão permanente de arquivos
+router.get(
+    '/media',
+    [verifyToken, checkPermission('settings.media')], // Permissão sugerida (Master tem acesso total)
+    settingsController.listMediaFiles
+);
+
+router.delete(
+    '/media',
+    [verifyToken, checkPermission('settings.media')],
+    settingsController.deleteMediaFile
+);
+
+// [NOVO] Rota para arquivar e limpar ficheiros (Auditoria)
+router.post(
+    '/media/archive',
+    [verifyToken, checkPermission('settings.media')],
+    settingsController.archiveMediaFiles
+);
 
 
 
