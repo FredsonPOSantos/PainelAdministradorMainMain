@@ -25,8 +25,45 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ===== INICIALIZAÇÃO =====
+    // [NOVO] Fallback para o preloader se a página for aberta diretamente (standalone)
+    // Isso garante que o utilizador veja o carregamento mesmo sem o admin_dashboard.js
+    if (typeof window.showPagePreloader !== 'function') {
+        const preloaderId = 'standalone-preloader';
+        if (!document.getElementById(preloaderId)) {
+            const overlay = document.createElement('div');
+            overlay.id = preloaderId;
+            overlay.style.cssText = `
+                position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+                background-color: #111827; z-index: 99999; display: flex;
+                justify-content: center; align-items: center; flex-direction: column;
+                color: #fff; font-family: system-ui, -apple-system, sans-serif;
+            `;
+            overlay.innerHTML = `
+                <div style="width: 50px; height: 50px; border: 4px solid rgba(255,255,255,0.1); border-top-color: #3b82f6; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+                <p id="${preloaderId}-text" style="margin-top: 1rem; font-size: 1.1rem;">A carregar dashboard...</p>
+                <style>@keyframes spin { to { transform: rotate(360deg); } }</style>
+            `;
+            document.body.appendChild(overlay);
+        }
+        window.showPagePreloader = (msg) => {
+            const el = document.getElementById(preloaderId);
+            if (el) { el.style.opacity = '1'; el.style.pointerEvents = 'all'; }
+            const txt = document.getElementById(`${preloaderId}-text`);
+            if (txt && msg) txt.textContent = msg;
+        };
+        window.hidePagePreloader = () => {
+            const el = document.getElementById(preloaderId);
+            if (el) { el.style.opacity = '0'; el.style.pointerEvents = 'none'; setTimeout(() => el.remove(), 500); }
+        };
+    }
+
+    // Mostra o preloader imediatamente
+    window.showPagePreloader('A carregar dashboard do roteador...');
+
     // [CORRIGIDO] Carrega os dados de resumo com o range fixo de 24h para garantir que os valores de MÍN/MÁX/MÉD sejam consistentes.
-    loadMetrics(DASHBOARD_SUMMARY_RANGE);
+    loadMetrics(DASHBOARD_SUMMARY_RANGE).finally(() => {
+        window.hidePagePreloader();
+    });
     setupEventListeners();
     startLiveUpdates(); // [NOVO] Inicia as atualizações em tempo real por padrão
 
@@ -49,15 +86,45 @@ document.addEventListener('DOMContentLoaded', () => {
             metricsData = apiData;
 
             // Atualizar header
-            document.getElementById('routerNameTitle').textContent = metricsData.routerName || 'Roteador Desconhecido';
-            document.getElementById('routerIpDisplay').textContent = `IP: ${metricsData.routerIp || 'Desconhecido'}`;
+            // [MODIFICADO] Exibe o nome e a versão do roteador (se disponível) na mesma linha
+            const routerName = metricsData.routerName || 'Roteador Desconhecido';
+            const routerVersion = metricsData.routerVersion || metricsData.version || (metricsData.system && metricsData.system.version) || '';
+            
+            const titleEl = document.getElementById('routerNameTitle');
+            if (titleEl) {
+                titleEl.innerHTML = `${routerName}${routerVersion ? ` <span class="router-version-tag">${routerVersion}</span>` : ''}`;
+                
+                // [NOVO] Injeta o botão de reiniciar se não existir
+                if (!document.getElementById('rebootRouterBtn')) {
+                    const btn = document.createElement('button');
+                    btn.id = 'rebootRouterBtn';
+                    btn.className = 'btn-danger';
+                    btn.style.cssText = 'margin-left: 15px; padding: 5px 15px; font-size: 0.9rem; display: inline-flex; align-items: center; gap: 5px; vertical-align: middle; cursor: pointer; border: none; border-radius: 5px; color: white; background-color: #ef4444;';
+                    btn.innerHTML = '<i class="fas fa-power-off"></i> Reiniciar';
+                    btn.onclick = () => handleRebootRouter(metricsData.routerId, metricsData.routerName);
+                    titleEl.appendChild(btn);
+                }
+            }
+
+            const ipDisplay = document.getElementById('routerIpDisplay');
+            ipDisplay.textContent = `IP: ${metricsData.routerIp || 'Desconhecido'}`;
+
+            // [NOVO] Exibe o Uptime logo abaixo do IP
+            let uptimeDisplay = document.getElementById('routerUptimeDisplay');
+            if (!uptimeDisplay) {
+                uptimeDisplay = document.createElement('p');
+                uptimeDisplay.id = 'routerUptimeDisplay';
+                uptimeDisplay.style.cssText = 'margin: 4px 0 0 0; color: #9CA3AF; font-size: 0.9em;';
+                ipDisplay.after(uptimeDisplay);
+            }
+            uptimeDisplay.textContent = `Uptime: ${formatUptime(metricsData.currentUptime)}`;
             
             // [NOVO] Preenche os valores iniciais do cabeçalho de tempo real
             document.getElementById('liveCpu').textContent = metricsData.system?.cpu?.stats?.current.toFixed(2) + '%' || '0%';
             document.getElementById('liveMemory').textContent = metricsData.system?.memory?.stats?.current.toFixed(2) + '%' || '0%';
 
             // Atualizar cards
-            updateCards();
+            await updateCards(); // [MODIFICADO] Agora aguarda a atualização completa dos cards
 
         } catch (error) {
             console.error('Erro ao carregar métricas:', error);
@@ -68,7 +135,7 @@ document.addEventListener('DOMContentLoaded', () => {
     /**
      * Atualiza os cards com os dados carregados
      */
-    function updateCards() {
+    async function updateCards() { // [MODIFICADO] Agora é async para permitir Promise.all
         // Sistema
         if (metricsData.system) {            
             renderCpuChart(metricsData.system.cpu);
@@ -82,20 +149,107 @@ document.addEventListener('DOMContentLoaded', () => {
             renderTrafficDistributionChart(metricsData.interfaces);
         }
 
-        // Carregar dados de clientes
-        loadClientsData();
+        // [MODIFICADO] Carrega todos os dados adicionais em paralelo e aguarda a conclusão
+        await Promise.all([
+            loadClientsData(),
+            loadWifiAnalytics(),
+            loadDhcpAnalytics(),
+            loadHotspotAnalytics(),
+            loadAvailabilityData()
+        ]);
+    }
 
-        // NOVO: Carregar análise de clientes Wi-Fi
-        loadWifiAnalytics();
+    /**
+     * [NOVO] Lida com o clique no botão de reiniciar
+     */
+    const handleRebootRouter = async (id, name) => {
+        const credentials = await showCredentialPrompt(`Reiniciar Roteador "${name}"`);
 
-        // NOVO: Carregar análise de clientes DHCP
-        loadDhcpAnalytics();
+        if (!credentials) {
+            // O utilizador cancelou
+            return;
+        }
 
-        // NOVO: Carregar análise de clientes Hotspot
-        loadHotspotAnalytics();
+        const btn = document.getElementById('rebootRouterBtn');
+        const originalText = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> A reiniciar...';
 
-        // NOVO: Carregar dados de disponibilidade
-        loadAvailabilityData();
+        try {
+            // Envia as credenciais no corpo da requisição
+            const response = await apiRequest(`/api/routers/${id}/reboot`, 'POST', {
+                username: credentials.username,
+                password: credentials.password,
+                ip_address: metricsData.routerIp // [NOVO] Envia o IP para evitar consulta ao DB
+            });
+            alert(response.message || 'Comando enviado com sucesso.');
+        } catch (error) {
+            alert(`Erro ao reiniciar: ${error.message}`);
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+        }
+    };
+
+    /**
+     * [NOVO] Mostra um modal para pedir credenciais da API.
+     * @param {string} title - O título do modal.
+     * @returns {Promise<{username: string, password: string}|null>}
+     */
+    function showCredentialPrompt(title) {
+        return new Promise((resolve) => {
+            const existingModal = document.getElementById('credentialPromptModal');
+            if (existingModal) existingModal.remove();
+
+            const modalOverlay = document.createElement('div');
+            modalOverlay.id = 'credentialPromptModal';
+            modalOverlay.className = 'confirmation-modal-overlay';
+            modalOverlay.innerHTML = `
+                <div class="confirmation-modal-content" style="width: 400px; max-width: 90%;">
+                    <h3>${title}</h3>
+                    <p style="font-size: 0.9em; color: #9CA3AF;">Insira as credenciais da API do MikroTik para esta ação. Elas não serão guardadas.</p>
+                    <div style="margin-top: 1rem; display: flex; flex-direction: column; gap: 1rem;">
+                        <input type="text" id="promptUsername" placeholder="Usuário API (ex: admin)" style="width: 100%; padding: 10px; background: #374151; border: 1px solid #4B5563; color: white; border-radius: 4px;">
+                        <input type="password" id="promptPassword" placeholder="Senha API" style="width: 100%; padding: 10px; background: #374151; border: 1px solid #4B5563; color: white; border-radius: 4px;">
+                    </div>
+                    <div class="confirmation-modal-buttons" style="margin-top: 1.5rem;">
+                        <button class="confirmation-modal-btn" data-action="cancel">Cancelar</button>
+                        <button class="confirmation-modal-btn" data-action="confirm">Confirmar</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modalOverlay);
+            setTimeout(() => modalOverlay.classList.add('visible'), 10);
+
+            const usernameInput = document.getElementById('promptUsername');
+            usernameInput.focus();
+
+            const confirmBtn = modalOverlay.querySelector('button[data-action="confirm"]');
+            const cancelBtn = modalOverlay.querySelector('button[data-action="cancel"]');
+
+            const resolveAndClose = (value) => {
+                modalOverlay.classList.remove('visible');
+                modalOverlay.addEventListener('transitionend', () => {
+                    modalOverlay.remove();
+                    resolve(value);
+                });
+            };
+
+            confirmBtn.onclick = () => {
+                const username = usernameInput.value;
+                const password = document.getElementById('promptPassword').value;
+                if (!username || !password) {
+                    alert('Usuário e senha são obrigatórios.');
+                    return;
+                }
+                resolveAndClose({ username, password });
+            };
+
+            cancelBtn.onclick = () => resolveAndClose(null);
+            modalOverlay.onclick = (e) => {
+                if (e.target === modalOverlay) resolveAndClose(null);
+            };
+        });
     }
 
     /**
@@ -492,10 +646,17 @@ document.addEventListener('DOMContentLoaded', () => {
      * Formata uptime em segundos para formato legível
      */
     function formatUptime(seconds) {
-        if (seconds < 60) return Math.floor(seconds) + 's';
-        if (seconds < 3600) return Math.floor(seconds / 60) + 'm';
-        if (seconds < 86400) return Math.floor(seconds / 3600) + 'h';
-        return Math.floor(seconds / 86400) + 'd';
+        if (!seconds) return 'Desconhecido';
+        const days = Math.floor(seconds / 86400);
+        const hours = Math.floor((seconds % 86400) / 3600);
+        const minutes = Math.floor((seconds % 3600) / 60);
+
+        let parts = [];
+        if (days > 0) parts.push(`${days}d`);
+        if (hours > 0) parts.push(`${hours}h`);
+        if (minutes > 0) parts.push(`${minutes}m`);
+
+        return parts.join(' ') || Math.floor(seconds) + 's';
     }
 
     /**
@@ -520,6 +681,45 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     /**
+     * [NOVO] Atualiza as métricas de uma interface específica quando o período é alterado
+     */
+    window.updateInterfaceMetrics = async (interfaceName, range) => {
+        const ids = [
+            `rx-min-${interfaceName}`, `rx-max-${interfaceName}`, `rx-avg-${interfaceName}`,
+            `tx-min-${interfaceName}`, `tx-max-${interfaceName}`, `tx-avg-${interfaceName}`
+        ];
+        
+        // Mostrar loading
+        ids.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.textContent = '...';
+        });
+
+        try {
+            const response = await apiRequest(`/api/monitoring/router/${routerId}/detailed-metrics?range=${range}`);
+            if (response.success && response.data && response.data.interfaces && response.data.interfaces[interfaceName]) {
+                const data = response.data.interfaces[interfaceName];
+                const rxStats = data.rx?.stats || { min: 0, max: 0, avg: 0 };
+                const txStats = data.tx?.stats || { min: 0, max: 0, avg: 0 };
+
+                document.getElementById(`rx-min-${interfaceName}`).textContent = formatBitsPerSecond(rxStats.min);
+                document.getElementById(`rx-max-${interfaceName}`).textContent = formatBitsPerSecond(rxStats.max);
+                document.getElementById(`rx-avg-${interfaceName}`).textContent = formatBitsPerSecond(rxStats.avg);
+
+                document.getElementById(`tx-min-${interfaceName}`).textContent = formatBitsPerSecond(txStats.min);
+                document.getElementById(`tx-max-${interfaceName}`).textContent = formatBitsPerSecond(txStats.max);
+                document.getElementById(`tx-avg-${interfaceName}`).textContent = formatBitsPerSecond(txStats.avg);
+            }
+        } catch (error) {
+            console.error('Erro ao atualizar métricas da interface:', error);
+            ids.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.textContent = 'Erro';
+            });
+        }
+    };
+
+    /**
      * Cria um card para uma interface
      */
     function createInterfaceCard(interfaceName, data) {
@@ -533,42 +733,53 @@ document.addEventListener('DOMContentLoaded', () => {
         const rxStats = data.rx?.stats || { min: 0, max: 0, avg: 0 };
         const txStats = data.tx?.stats || { min: 0, max: 0, avg: 0 };
 
+        // Define o seletor de período com estilo inline para se ajustar ao cabeçalho
+        const isSelected = (val) => val === DASHBOARD_SUMMARY_RANGE ? 'selected' : '';
+
         card.innerHTML = `
-            <div class="card-header">
-                <div class="card-icon interface-icon">
-                    <i class="${icon}"></i>
+            <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                    <div class="card-icon interface-icon">
+                        <i class="${icon}"></i>
+                    </div>
+                    <h3 style="margin: 0;">${displayName}</h3>
                 </div>
-                <h3>${displayName}</h3>
+                <select class="interface-range-select" style="padding: 2px 5px; border-radius: 4px; background: #374151; color: #fff; border: 1px solid #4B5563; font-size: 0.8rem;" onchange="updateInterfaceMetrics('${interfaceName}', this.value)">
+                    <option value="1h" ${isSelected('1h')}>1h</option>
+                    <option value="24h" ${isSelected('24h')}>24h</option>
+                    <option value="15d" ${isSelected('15d')}>15d</option>
+                    <option value="30d" ${isSelected('30d')}>30d</option>
+                </select>
             </div>
             <div class="card-stats">
                 <div class="stat-group">
                     <div class="stat-group-title">RX (Recebido)</div>
                     <div class="stat-row">
                         <span class="stat-label">Mín:</span>
-                        <span class="stat-value">${formatBitsPerSecond(rxStats.min)}</span>
+                        <span class="stat-value" id="rx-min-${interfaceName}">${formatBitsPerSecond(rxStats.min)}</span>
                     </div>
                     <div class="stat-row">
                         <span class="stat-label">Máx:</span>
-                        <span class="stat-value">${formatBitsPerSecond(rxStats.max)}</span>
+                        <span class="stat-value" id="rx-max-${interfaceName}">${formatBitsPerSecond(rxStats.max)}</span>
                     </div>
                     <div class="stat-row">
                         <span class="stat-label">Média:</span>
-                        <span class="stat-value">${formatBitsPerSecond(rxStats.avg)}</span>
+                        <span class="stat-value" id="rx-avg-${interfaceName}">${formatBitsPerSecond(rxStats.avg)}</span>
                     </div>
                 </div>
                 <div class="stat-group">
                     <div class="stat-group-title">TX (Enviado)</div>
                     <div class="stat-row">
                         <span class="stat-label">Mín:</span>
-                        <span class="stat-value">${formatBitsPerSecond(txStats.min)}</span>
+                        <span class="stat-value" id="tx-min-${interfaceName}">${formatBitsPerSecond(txStats.min)}</span>
                     </div>
                     <div class="stat-row">
                         <span class="stat-label">Máx:</span>
-                        <span class="stat-value">${formatBitsPerSecond(txStats.max)}</span>
+                        <span class="stat-value" id="tx-max-${interfaceName}">${formatBitsPerSecond(txStats.max)}</span>
                     </div>
                     <div class="stat-row">
                         <span class="stat-label">Média:</span>
-                        <span class="stat-value">${formatBitsPerSecond(txStats.avg)}</span>
+                        <span class="stat-value" id="tx-avg-${interfaceName}">${formatBitsPerSecond(txStats.avg)}</span>
                     </div>
                 </div>
             </div>
@@ -690,7 +901,17 @@ document.addEventListener('DOMContentLoaded', () => {
         document.querySelector('#chartVisualizationFilters .filter-btn[data-visualization="area"]')?.classList.add('active');
 
         modal.classList.remove('hidden');
-        await updateExpandedChart(currentRange);
+        
+        // [NOVO] Tenta obter o range selecionado no card específico, se existir (para interfaces)
+        let rangeToUse = currentRange;
+        const card = document.querySelector(`.metric-card[data-metric="${metric}"]`);
+        if (card) {
+            const select = card.querySelector('select.interface-range-select');
+            if (select) {
+                rangeToUse = select.value;
+            }
+        }
+        await updateExpandedChart(rangeToUse);
     };
 
     /**

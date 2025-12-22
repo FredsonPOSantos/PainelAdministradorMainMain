@@ -565,13 +565,13 @@ const listMediaFiles = async (req, res) => {
     // Mapeia os tipos para as pastas reais
     switch (type) {
         case 'banners':
-            folderPath = '../public/uploads/banners';
+            folderPath = '../../public/uploads/banners';
             break;
         case 'backgrounds':
-            folderPath = '../public/uploads/Background'; // [CORRIGIDO] Aponta para a pasta 'Background'
+            folderPath = '../../public/uploads/Background'; // [CORRIGIDO] Aponta para a pasta 'Background'
             break;
         case 'logos':
-            folderPath = '../public/uploads/logos/img'; // [CORRIGIDO] Aponta para a pasta 'logos/img'
+            folderPath = '../../public/uploads/logos'; // [CORRIGIDO] Aponta para a pasta 'logos'
             break;
         case 'ticket_attachments': // [NOVO] Suporte para anexos de tickets
             folderPath = '../public/uploads/ticket_attachments';
@@ -594,7 +594,7 @@ const listMediaFiles = async (req, res) => {
         const fileList = imageFiles.map(file => ({
             name: file,
             // Constrói a URL pública baseada na estrutura do server.js
-            url: `/uploads/${type === 'backgrounds' ? 'Background' : (type === 'logos' ? 'logos/img' : (type === 'ticket_attachments' ? 'ticket_attachments' : 'banners'))}/${file}`
+            url: `/uploads/${type === 'backgrounds' ? 'Background' : (type === 'logos' ? 'logos' : (type === 'ticket_attachments' ? 'ticket_attachments' : 'banners'))}/${file}`
         }));
 
         res.json({ success: true, data: fileList });
@@ -612,9 +612,11 @@ const deleteMediaFile = async (req, res) => {
     let folderPath = '';
 
     switch (type) {
-        case 'banners': folderPath = '../public/uploads/banners'; break;
-        case 'backgrounds': folderPath = '../public/uploads/Background'; break; // [CORRIGIDO]
-        case 'logos': folderPath = '../public/uploads/logos/img'; break; // [CORRIGIDO]
+        case 'banners': folderPath = '../../public/uploads/banners'; break;
+        case 'backgrounds': folderPath = '../../public/uploads/Background'; break; // [CORRIGIDO]
+        case 'hotspot_backgrounds': folderPath = '../../public/uploads/Background_hotspot'; break; // [NOVO]
+        case 'logos': folderPath = '../../public/uploads/logos'; break; // [CORRIGIDO]
+        case 'hotspot_logos': folderPath = '../../public/uploads/logo_hotspot'; break; // [NOVO]
         case 'ticket_attachments': folderPath = '../public/uploads/ticket_attachments'; break; // [NOVO]
         default: return res.status(400).json({ message: 'Tipo de mídia inválido.' });
     }

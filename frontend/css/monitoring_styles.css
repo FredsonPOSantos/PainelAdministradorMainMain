@@ -63,6 +63,19 @@ body {
     color: #9CA3AF;
 }
 
+/* [NOVO] Estilo para a versão do roteador no título */
+.router-version-tag {
+    font-size: 0.5em;
+    color: #9CA3AF;
+    font-weight: normal;
+    vertical-align: middle;
+    margin-left: 8px;
+    background: rgba(55, 65, 81, 0.5);
+    padding: 2px 6px;
+    border-radius: 4px;
+    border: 1px solid rgba(75, 85, 99, 0.5);
+}
+
 .live-stats-header {
     display: flex;
     gap: 40px;
@@ -805,4 +818,75 @@ input:checked + .slider:before { transform: translateX(26px); }
 
 .client-table tbody tr:hover {
     background-color: #2D3748;
+}
+
+/* [NOVO] Estilos para o Modal de Confirmação (usado em router_dashboard.js) */
+.confirmation-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s, visibility 0.3s;
+}
+
+.confirmation-modal-overlay.visible {
+    opacity: 1;
+    visibility: visible;
+}
+
+.confirmation-modal-content {
+    background: #1F2937;
+    padding: 30px;
+    border-radius: 10px;
+    width: 90%;
+    max-width: 400px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    border: 1px solid #4B5563;
+    text-align: center;
+    color: #E5E7EB;
+}
+
+.confirmation-modal-content h3 {
+    margin-top: 0;
+    color: #F3F4F6;
+}
+
+.confirmation-modal-buttons {
+    margin-top: 20px;
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+}
+
+.confirmation-modal-btn {
+    padding: 8px 16px;
+    border-radius: 5px;
+    border: none;
+    cursor: pointer;
+    font-weight: 600;
+    transition: background-color 0.2s;
+}
+
+.confirmation-modal-btn[data-action="confirm"] {
+    background-color: #10B981;
+    color: white;
+}
+.confirmation-modal-btn[data-action="confirm"]:hover {
+    background-color: #059669;
+}
+
+.confirmation-modal-btn[data-action="cancel"] {
+    background-color: #EF4444;
+    color: white;
+}
+.confirmation-modal-btn[data-action="cancel"]:hover {
+    background-color: #DC2626;
 }

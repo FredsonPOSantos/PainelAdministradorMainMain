@@ -19,6 +19,9 @@ router.delete('/:id/permanent', verifyToken, checkPermission('routers.individual
 // --- ROTA DE VERIFICAÇÃO DE STATUS ---
 router.post('/:id/ping', verifyToken, checkPermission('routers.read'), routerController.checkRouterStatus);
 
+// [NOVO] Rota para reiniciar o roteador
+router.post('/:id/reboot', verifyToken, checkPermission('routers.update'), routerController.rebootRouter);
+
 // [NOVO] Rota para obter o status de todos os roteadores para a página de monitoramento
 router.get('/status', verifyToken, checkPermission('routers.read'), routerController.getRoutersStatus);
 

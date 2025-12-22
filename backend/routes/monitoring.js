@@ -493,9 +493,48 @@ router.get('/router/:id/clients', /* seuMiddlewareDeAuth, */ async (req, res) =>
         const memoryData = await fetchMemoryData(); // CORREÇÃO: Usa a nova função para calcular a porcentagem
         const uptimeData = await fetchMetricData('system_resource', 'uptime_seconds');
 
+        // [NOVO] Buscar versão do roteador
+        let routerVersion = null;
+        try {
+            const versionQuery = `
+                from(bucket: "${influxBucket}")
+                  |> range(start: -30d)
+                  |> filter(fn: (r) => r._measurement == "system_resource")
+                  |> filter(fn: (r) => r._field == "version")
+                  |> filter(fn: (r) => r.router_host == "${routerIp}")
+                  |> last()
+            `;
+            const versionRows = await queryApi.collectRows(versionQuery);
+            if (versionRows.length > 0) {
+                routerVersion = versionRows[0]._value;
+            }
+        } catch (err) {
+            console.error(`Erro ao buscar versão para ${routerIp}:`, err);
+        }
+
+        // [NOVO] Buscar uptime atual exato em segundos
+        let currentUptime = 0;
+        try {
+            const uptimeQuery = `
+                from(bucket: "${influxBucket}")
+                  |> range(start: -1h) // Busca na última hora para garantir que pega o último dado
+                  |> filter(fn: (r) => r._measurement == "system_resource")
+                  |> filter(fn: (r) => r._field == "uptime_seconds")
+                  |> filter(fn: (r) => r.router_host == "${routerIp}")
+                  |> last()
+            `;
+            const uptimeRows = await queryApi.collectRows(uptimeQuery);
+            if (uptimeRows.length > 0) {
+                currentUptime = uptimeRows[0]._value;
+            }
+        } catch (err) {
+            console.error(`Erro ao buscar uptime atual para ${routerIp}:`, err);
+        }
+
         console.log(`[${new Date().toISOString()}] [REQ-${reqId}] Dados detalhados retornados para ${id}:`, {
             routerName,
             routerIp,
+            routerVersion,
             systemMetrics: { cpu: cpuData.length, memory: memoryData.length, uptime: uptimeData.length },
             interfaces: Object.keys(interfaceMetrics)
         });
@@ -506,6 +545,8 @@ router.get('/router/:id/clients', /* seuMiddlewareDeAuth, */ async (req, res) =>
                 routerId: id,
                 routerName: routerName,
                 routerIp: routerIp,
+                routerVersion: routerVersion, // [NOVO] Envia a versão para o frontend
+                currentUptime: currentUptime, // [NOVO] Envia o uptime atual em segundos
                 system: {
                     cpu: { data: cpuData, stats: calculateStats(cpuData) },
                     memory: { data: memoryData, stats: calculateStats(memoryData) },

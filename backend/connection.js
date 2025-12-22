@@ -26,6 +26,41 @@ pool.on('error', (err) => {
   process.exit(-1);
 });
 
+/**
+ * [NOVO] Verifica e atualiza o esquema da base de dados, adicionando colunas em falta.
+ * Esta função é idempotente, ou seja, pode ser executada várias vezes sem causar erros.
+ */
+async function checkAndUpgradeSchema(client) {
+    console.log('🔍 [DB-UPGRADE] A verificar o esquema da base de dados para atualizações...');
+
+    const checkColumn = async (tableName, columnName) => {
+        const res = await client.query(`
+            SELECT 1 FROM information_schema.columns 
+            WHERE table_schema = 'public' AND table_name = $1 AND column_name = $2
+        `, [tableName, columnName]);
+        return res.rowCount > 0;
+    };
+
+    // Colunas a serem adicionadas na tabela 'routers' para a API do MikroTik
+    const columnsToAdd = [
+        { name: 'username', type: 'VARCHAR(255)' },
+        { name: 'password', type: 'VARCHAR(255)' },
+        { name: 'api_port', type: 'INTEGER' }
+    ];
+
+    for (const col of columnsToAdd) {
+        const exists = await checkColumn('routers', col.name);
+        if (!exists) {
+            console.log(`   -> A coluna '${col.name}' não foi encontrada na tabela 'routers'. A adicionar...`);
+            await client.query(`ALTER TABLE routers ADD COLUMN ${col.name} ${col.type}`);
+            console.log(`   ✅ Coluna '${col.name}' adicionada com sucesso.`);
+        } else {
+            // console.log(`   -> Coluna '${col.name}' já existe.`);
+        }
+    }
+    console.log('✅ [DB-UPGRADE] Verificação do esquema concluída.');
+}
+
 // Teste e validação detalhada da conexão
 (async () => {
   const startTime = Date.now();
@@ -50,6 +85,15 @@ pool.on('error', (err) => {
     console.log(`   ⚡ Tempo de conexão:   ${duration} ms\n`);
 
     console.log('✅ [SRV-ADM] Conectado com sucesso no PostgreSQL!\n');
+
+    // [NOVO] Executa a verificação e atualização do esquema
+    try {
+        await checkAndUpgradeSchema(client);
+    } catch (schemaError) {
+        console.warn('⚠️ [DB-UPGRADE] Aviso: Não foi possível atualizar as colunas automaticamente (permissão negada).');
+        console.warn(`   -> Erro: ${schemaError.message}`);
+        console.warn('   -> O servidor iniciará, mas a função de Reiniciar Roteador pode falhar até que o SQL seja executado manualmente.');
+    }
 
     client.release();
   } catch (err) {

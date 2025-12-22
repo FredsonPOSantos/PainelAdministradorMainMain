@@ -5,6 +5,38 @@ if (window.initNetworkStatusPage) {
 } else {
     window.initNetworkStatusPage = () => {
         console.log("A inicializar a página de Status da Rede...");
+
+    // [NOVO] Fallback para o preloader se a página for aberta diretamente (standalone)
+    if (typeof window.showPagePreloader !== 'function') {
+        const preloaderId = 'standalone-preloader';
+        if (!document.getElementById(preloaderId)) {
+            const overlay = document.createElement('div');
+            overlay.id = preloaderId;
+            overlay.style.cssText = `
+                position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+                background-color: #111827; z-index: 99999; display: flex;
+                justify-content: center; align-items: center; flex-direction: column;
+                color: #fff; font-family: system-ui, -apple-system, sans-serif;
+            `;
+            overlay.innerHTML = `
+                <div style="width: 50px; height: 50px; border: 4px solid rgba(255,255,255,0.1); border-top-color: #3b82f6; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+                <p id="${preloaderId}-text" style="margin-top: 1rem; font-size: 1.1rem;">A carregar status da rede...</p>
+                <style>@keyframes spin { to { transform: rotate(360deg); } }</style>
+            `;
+            document.body.appendChild(overlay);
+        }
+        window.showPagePreloader = (msg) => {
+            const el = document.getElementById(preloaderId);
+            if (el) { el.style.opacity = '1'; el.style.pointerEvents = 'all'; }
+            const txt = document.getElementById(`${preloaderId}-text`);
+            if (txt && msg) txt.textContent = msg;
+        };
+        window.hidePagePreloader = () => {
+            const el = document.getElementById(preloaderId);
+            if (el) { el.style.opacity = '0'; el.style.pointerEvents = 'none'; setTimeout(() => el.remove(), 500); }
+        };
+    }
+
     const tableBody = document.getElementById('router-status-table-body');
 
     // Função para formatar segundos em um formato legível (dias, horas, minutos)

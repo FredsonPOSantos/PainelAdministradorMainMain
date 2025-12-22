@@ -4,6 +4,17 @@ const ping = require('ping');
 const { logAction } = require('../services/auditLogService');
 // [NOVO] Adicionar dependências e configuração para InfluxDB
 const { InfluxDB } = require('@influxdata/influxdb-client');
+
+// [CORRIGIDO] Importação robusta para a biblioteca node-routeros para resolver o erro 'is not a constructor'.
+// Diferentes versões da biblioteca podem exportar a classe de maneiras distintas.
+let RouterOSClient;
+try {
+    const routeros = require('node-routeros');
+    RouterOSClient = routeros.RouterOSClient || routeros.RouterOSAPI || routeros.default || routeros;
+} catch (e) {
+    console.error("FATAL: A biblioteca 'node-routeros' não foi encontrada. Execute 'npm install node-routeros' e reinicie o servidor.");
+    RouterOSClient = null; 
+}
 require('dotenv').config();
 
 // [NOVO] Configuração do InfluxDB a partir de variáveis de ambiente
@@ -26,6 +37,7 @@ const getAllRouters = async (req, res) => {
   // [MODIFICADO] Esta rota agora é usada apenas para a lista simples na gestão.
   // A nova rota /status é usada para a página de monitoramento.
   try {
+    // [MODIFICADO] Inclui campos de autenticação API
     const allRouters = await pool.query('SELECT id, name, status, observacao, group_id, ip_address FROM routers ORDER BY name ASC');
     res.json(allRouters.rows);
   } catch (error) {
@@ -60,6 +72,7 @@ const getRoutersStatus = async (req, res) => {
             let interface_traffic = {};
             let interfaces = [];
             let default_interface = null;
+            let routerVersion = null; // [NOVO] Variável para armazenar a versão
 
             // Ping para obter latência real
             // [MODIFICADO] Adicionado .trim() para remover espaços em branco do IP vindo do banco de dados.
@@ -77,6 +90,19 @@ const getRoutersStatus = async (req, res) => {
             // Se o InfluxDB estiver configurado, buscar métricas
             if (queryApi && cleanIp) { // [MODIFICADO] Apenas executa se houver um IP limpo.
                 try {
+                    // [NOVO] Query para buscar a versão do roteador a partir do system_resource
+                    const versionQuery = `
+                        from(bucket: "${influxBucket}")
+                          |> range(start: -30d) // Um range amplo para garantir que encontramos o último valor
+                          |> filter(fn: (r) => r._measurement == "system_resource" and r.router_host == "${cleanIp}")
+                          |> filter(fn: (r) => r._field == "version")
+                          |> last()
+                    `;
+                    const versionResult = await queryApi.collectRows(versionQuery);
+                    if (versionResult.length > 0 && versionResult[0]._value) {
+                        routerVersion = versionResult[0]._value;
+                    }
+
                     // [MODIFICADO] Adiciona queries para múltiplas fontes de contagem de clientes
                     let hotspot_clients = 0;
                     let dhcp_clients = 0;
@@ -192,6 +218,7 @@ const getRoutersStatus = async (req, res) => {
                 interfaces: interfaces.length > 0 ? interfaces : [], // Lista real de interfaces
                 default_interface: default_interface, // [NOVO] Sugestão de interface padrão
                 bandwidth_limit: 10000000, // Limite simulado (10 Mbps)
+                routerVersion: routerVersion // [NOVO] Adiciona a versão ao objeto de resposta
             };
         }));
 
@@ -386,12 +413,117 @@ const checkRouterStatus = async (req, res) => {
         }
         const pingResult = await ping.promise.probe(ip);
         const newStatus = pingResult.alive ? 'online' : 'offline';
+        // [NOVO] Captura a latência se estiver vivo
+        const latency = pingResult.alive && typeof pingResult.time === 'number' ? Math.round(pingResult.time) : null;
+
         const updateQuery = 'UPDATE routers SET status = $1, last_seen = NOW() WHERE id = $2 RETURNING status';
         const updateResult = await pool.query(updateQuery, [newStatus, id]);
-        res.json({ status: updateResult.rows[0].status });
+        res.json({ status: updateResult.rows[0].status, latency });
     } catch (error) {
         console.error(`Erro ao verificar status do roteador ${id}:`, error);
         res.status(500).json({ message: 'Erro interno ao verificar o status.' });
+    }
+};
+
+/**
+ * [NOVO] Reinicia o roteador.
+ * Requer permissão 'routers.update'.
+ */
+const rebootRouter = async (req, res) => {
+    const { id } = req.params;
+    const { username, password } = req.body;
+
+    // [NOVO] Log para visualizar o corpo da requisição recebida
+    console.log('[DEBUG] Corpo da requisição de reinício recebido:', req.body);
+
+    // Valida se as credenciais foram enviadas
+    if (!username || !password) {
+        return res.status(400).json({ message: 'Credenciais de API (usuário e senha) são obrigatórias para esta operação.' });
+    }
+    
+    try {
+        const routerResult = await pool.query('SELECT name, ip_address, api_port FROM routers WHERE id = $1', [id]);
+        if (routerResult.rowCount === 0) {
+            return res.status(404).json({ message: 'Roteador não encontrado.' });
+        }
+        const { name, ip_address, api_port } = routerResult.rows[0];
+
+        if (!ip_address) return res.status(400).json({ message: 'IP não configurado para este roteador.' });
+
+        const user = username;
+        const pass = password;
+        const port = api_port || 8797; // Usa a porta guardada ou o fallback 8797
+
+        console.log(`[ROUTER-CMD] A conectar a ${name} (${ip_address}:${port})...`);
+
+        // [CORRIGIDO] Verifica se a biblioteca foi carregada corretamente antes de usar
+        if (!RouterOSClient) {
+            throw new Error("A biblioteca de conexão com o MikroTik (node-routeros) não pôde ser carregada.");
+        }
+
+        // [MODIFICADO] Implementação com node-routeros
+        const client = new RouterOSClient({
+            host: ip_address,
+            user: user,
+            password: pass,
+            port: port,
+            keepalive: false,
+            timeout: 20 // Timeout em segundos
+        });
+
+        try {
+            await client.connect();
+            console.log(`[ROUTER-CMD] Conectado. A enviar comando /system/reboot...`);
+            await client.write('/system/reboot');
+        } catch (cmdError) {
+            // Ignora erros de conexão fechada que são esperados no reboot
+            if (cmdError.message && (cmdError.message.includes('closed') || cmdError.message.includes('ended') || cmdError.message.includes('ECONNRESET'))) {
+                 console.log(`[ROUTER-CMD] Comando enviado (conexão fechada pelo roteador).`);
+            } else {
+                 throw cmdError;
+            }
+        } finally {
+            client.close();
+        }
+
+        await logAction({
+            req,
+            action: 'ROUTER_REBOOT',
+            status: 'SUCCESS',
+            description: `Utilizador "${req.user.email}" enviou comando de reinício para o roteador "${name}" (${ip_address}).`,
+            target_type: 'router',
+            target_id: id
+        });
+
+        res.json({ success: true, message: `Comando de reinício enviado para o roteador ${name}.` });
+
+    } catch (error) {
+        console.error(`Erro ao reiniciar roteador ${id}:`, error);
+        
+        // [CORRIGIDO] Fallback mais robusto para a mensagem de erro
+        let userMessage = `Erro ao tentar reiniciar: ${error.message || JSON.stringify(error)}`;
+
+        // Tratamento de erros comuns de rede e autenticação
+        // [MODIFICADO] Adaptação para mensagens de erro do node-routeros
+        if (error.message && (error.message.includes('login failure') || error.message.includes('cannot log in'))) {
+            userMessage = `Falha de autenticação. Verifique se o usuário e senha da API do roteador estão corretos no painel.`;
+        } else if (error.code === 'ECONNREFUSED') {
+            userMessage = `Conexão recusada pelo roteador (${error.address || 'IP'}:${error.port || 8728}). Verifique se o serviço API está ativado no MikroTik (/ip service enable api) e se a porta está correta.`;
+        } else if (error.code === 'ETIMEDOUT' || (error.message && error.message.includes('Timeout'))) {
+            userMessage = `Tempo limite esgotado. O servidor não conseguiu alcançar o roteador. Verifique o IP e a conectividade.`;
+        }
+
+        await logAction({
+            req,
+            action: 'ROUTER_REBOOT_FAILURE',
+            status: 'FAILURE',
+            description: `Falha ao reiniciar roteador ${id}: ${error.message}`,
+            target_type: 'router',
+            target_id: id,
+            details: { error: error.message, code: error.code }
+        });
+
+        res.status(500).json({ message: userMessage });
     }
 };
 
@@ -648,6 +780,7 @@ module.exports = {
   deleteRouter,
   deleteRouterPermanently, // Exporta a nova função
   checkRouterStatus,
+  rebootRouter, // [NOVO] Exporta a função de reinício
   discoverNewRouters,
   batchAddRouters,
   getAllRouterGroups,
