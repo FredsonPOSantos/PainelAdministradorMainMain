@@ -570,8 +570,14 @@ const listMediaFiles = async (req, res) => {
         case 'backgrounds':
             folderPath = '../../public/uploads/Background'; // [CORRIGIDO] Aponta para a pasta 'Background'
             break;
+        case 'hotspot_backgrounds': // [NOVO]
+            folderPath = '../../public/uploads/Background_hotspot';
+            break;
         case 'logos':
             folderPath = '../../public/uploads/logos'; // [CORRIGIDO] Aponta para a pasta 'logos'
+            break;
+        case 'hotspot_logos': // [NOVO]
+            folderPath = '../../public/uploads/logo_hotspot';
             break;
         case 'ticket_attachments': // [NOVO] Suporte para anexos de tickets
             folderPath = '../public/uploads/ticket_attachments';
@@ -591,11 +597,20 @@ const listMediaFiles = async (req, res) => {
         // Filtra apenas imagens
         const imageFiles = files.filter(file => /\.(jpg|jpeg|png|gif|svg|webp)$/i.test(file));
 
-        const fileList = imageFiles.map(file => ({
-            name: file,
-            // Constrói a URL pública baseada na estrutura do server.js
-            url: `/uploads/${type === 'backgrounds' ? 'Background' : (type === 'logos' ? 'logos' : (type === 'ticket_attachments' ? 'ticket_attachments' : 'banners'))}/${file}`
-        }));
+        const fileList = imageFiles.map(file => {
+            let urlFolder = 'banners';
+            if (type === 'backgrounds') urlFolder = 'Background';
+            else if (type === 'hotspot_backgrounds') urlFolder = 'Background_hotspot';
+            else if (type === 'logos') urlFolder = 'logos';
+            else if (type === 'hotspot_logos') urlFolder = 'logo_hotspot';
+            else if (type === 'ticket_attachments') urlFolder = 'ticket_attachments';
+
+            return {
+                name: file,
+                // Constrói a URL pública baseada na estrutura do server.js
+                url: `/uploads/${urlFolder}/${file}`
+            };
+        });
 
         res.json({ success: true, data: fileList });
     } catch (error) {
