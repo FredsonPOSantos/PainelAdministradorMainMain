@@ -1,7 +1,7 @@
 // Ficheiro: backend/controllers/raffleController.js
 // Descrição: Contém a lógica de negócio para o sistema de sorteios.
 
-const pool = require('../connection');
+const { pool } = require('../connection');
 const { logAction } = require('../services/auditLogService');
 const seedrandom = require('seedrandom');
 

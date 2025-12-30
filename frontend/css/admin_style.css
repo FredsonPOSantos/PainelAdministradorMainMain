@@ -732,3 +732,40 @@ trix-editor {
 .btn-delete-media:hover {
     background-color: #9b2c2c;
 }
+
+/* [NOVO] Estilos para a nova interface de abas na página de logs */
+.tabs-container {
+    display: flex;
+    border-bottom: 2px solid #374151;
+    margin-bottom: 1.5rem;
+}
+.tab-link {
+    padding: 10px 20px;
+    cursor: pointer;
+    background: none;
+    border: none;
+    color: #9CA3AF;
+    font-size: 1rem;
+    border-bottom: 3px solid transparent;
+    margin-bottom: -2px;
+    transition: all 0.2s ease-in-out;
+}
+.tab-link:hover {
+    color: #E5E7EB;
+}
+.tab-link.active {
+    color: #3B82F6;
+    border-bottom-color: #3B82F6;
+    font-weight: 600;
+}
+.tab-content {
+    display: none;
+}
+.tab-content.active {
+    display: block;
+}
+.http-method-GET { background-color: #2563eb; color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.8em; }
+.http-method-POST { background-color: #16a34a; color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.8em; }
+.http-method-PUT { background-color: #d97706; color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.8em; }
+.http-method-DELETE { background-color: #dc2626; color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.8em; }
+.error-message-cell { max-width: 400px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

@@ -1,5 +1,5 @@
 // Ficheiro: controllers/bannerController.js
-const pool = require('../connection');
+const { pool } = require('../connection');
 const { logAction } = require('../services/auditLogService');
 
 // ... (as suas funções createBanner, getAllBanners, updateBanner, deleteBanner devem permanecer aqui) ...

@@ -1,16 +1,7 @@
 const express = require('express');
 const router = express.Router();
-const { InfluxDB } = require('@influxdata/influxdb-client');
-const pool = require('../connection'); // Usa a pool de conexão do PostgreSQL, como o resto do sistema.
-
-// --- Configuração do Cliente InfluxDB ---
-// As variáveis vêm do .env que já configurámos
-const influxDB = new InfluxDB({ 
-    url: process.env.INFLUXDB_URL, 
-    token: process.env.INFLUXDB_TOKEN 
-});
-const queryApi = influxDB.getQueryApi(process.env.INFLUXDB_ORG);
-const influxBucket = 'monitor';
+const { pool } = require('../connection'); // [MODIFICADO] Usa a pool de conexão do PostgreSQL
+const { queryApi, influxBucket } = require('../services/influxService'); // [NOVO] Importa o serviço centralizado do InfluxDB
 
 /**
  * @route   GET /api/monitoring/router-status

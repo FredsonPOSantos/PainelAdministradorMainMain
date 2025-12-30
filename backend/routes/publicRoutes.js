@@ -3,7 +3,7 @@
 
 const express = require('express');
 const router = express.Router();
-const pool = require('../connection');
+const { pool } = require('../connection');
 const { getActiveCampaignData, getCampaignPreviewData } = require('../services/campaignService'); // [NOVO] Importa a nova função
 
 // Rota para obter a campanha ativa para um determinado roteador

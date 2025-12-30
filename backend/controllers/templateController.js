@@ -1,7 +1,7 @@
 // Ficheiro: controllers/templateController.js
 // Descrição: Contém a lógica de negócio para a gestão de templates.
 
-const pool = require('../connection'); // Caminho atualizado
+const { pool } = require('../connection'); // Caminho atualizado
 const { logAction } = require('../services/auditLogService');
 
 /**

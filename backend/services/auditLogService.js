@@ -1,7 +1,7 @@
 // Ficheiro: backend/services/auditLogService.js
 // Descrição: Serviço centralizado para gravação de logs de auditoria.
 
-const pool = require('../connection');
+const { pool } = require('../connection');
 
 /**
  * Grava uma ação de auditoria no banco de dados.

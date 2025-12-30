@@ -1,7 +1,7 @@
 // Ficheiro: backend/controllers/lgpdController.js
 // Descrição: Lida com a lógica para a gestão de pedidos de exclusão de dados (LGPD).
 
-const pool = require('../connection');
+const { pool } = require('../connection');
 const { logAction } = require('../services/auditLogService');
 const { sendExclusionRequestNotificationEmail } = require('../services/emailService');
 

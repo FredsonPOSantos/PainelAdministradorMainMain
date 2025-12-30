@@ -5,7 +5,7 @@ const path = require('path');
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
-const pool = require('./connection');
+const { pool, testInitialConnection, pgConnectionStatus } = require('./connection'); // [MODIFICADO]
 const methodOverride = require('method-override'); // [NOVO] Importa o method-override
 
 // [NOVO] Registra o momento em que o servidor inicia para calcular o uptime.
@@ -13,6 +13,8 @@ const serverStartTime = new Date();
 const ping = require('ping'); // [NOVO] Importa a biblioteca de ping para a verificação
 
 // Importação das rotas
+const influxService = require('./services/influxService'); // [NOVO] Importa o serviço Influx
+const { logError } = require('./services/errorLogService'); // [NOVO] Importa o serviço de log de erros
 const authRoutes = require('./routes/auth');
 const adminRoutes = require('./routes/admin');
 const routerRoutes = require('./routes/routers');
@@ -124,69 +126,75 @@ app.get('/api/db-test', async (req, res) => {
 
 // --- Middleware de Tratamento de Erros Genérico (Opcional, mas bom ter) ---
 // Captura erros não tratados em outras partes da aplicação
-app.use((err, req, res, next) => {
+app.use(async (err, req, res, next) => {
   console.error("🔥 Erro não tratado:", err.stack || err);
+  // [NOVO] Grava o erro no banco de dados
+  await logError(err, req);
   res.status(500).json({ message: "Ocorreu um erro inesperado no servidor." });
 });
 
 // --- [NOVO] Verificação Periódica de Status dos Roteadores ---
 const startPeriodicRouterCheck = () => {
-  console.log('✅ [SRV-ADM] Agendando verificação periódica de status de roteadores (a cada 60 segundos)...');
-  
-  const checkRouters = async () => {
-    console.log('🔄 [ROUTER-CHECK] Iniciando ciclo de verificação de status...');
-    const client = await pool.connect();
-    try {
-      // [CORRIGIDO] Primeiro, marca como 'offline' todos os roteadores que não têm IP.
-      // Isso garante que, se um IP for removido, o status seja atualizado corretamente.
-      await client.query(
-        "UPDATE routers SET status = 'offline' WHERE ip_address IS NULL AND status != 'offline'"
-      );
-
-      // Busca apenas roteadores que têm um endereço IP definido
-      const routersResult = await client.query('SELECT id, ip_address FROM routers WHERE ip_address IS NOT NULL');
-      const routersToCheck = routersResult.rows;
-
-      if (routersToCheck.length === 0) {
-        console.log('⏹️ [ROUTER-CHECK] Nenhum roteador com IP configurado para verificar. Ciclo concluído.');
+    // [MODIFICADO] Só agenda se o PG estiver conectado
+    if (!pgConnectionStatus.connected) {
+        console.warn('🟡 [ROUTER-CHECK] Verificação periódica de roteadores em espera. Aguardando conexão com o PostgreSQL...');
         return;
-      }
-
-      // Itera sobre cada roteador e verifica o status
-      for (const router of routersToCheck) {
-        const pingResult = await ping.promise.probe(router.ip_address);
-        const newStatus = pingResult.alive ? 'online' : 'offline';
-        
-        // Atualiza o status e a data da última verificação no banco de dados
-        await client.query(
-          'UPDATE routers SET status = $1, last_seen = NOW() WHERE id = $2',
-          [newStatus, router.id]
-        );
-      }
-      console.log(`⏹️ [ROUTER-CHECK] Ciclo de verificação concluído. ${routersToCheck.length} roteador(es) verificado(s).`);
-    } catch (error) {
-      console.error('❌ [ROUTER-CHECK] Erro durante a verificação periódica de roteadores:', error);
-    } finally {
-      client.release();
     }
-  };
-  setInterval(checkRouters, 60000); // Executa a cada 60 segundos
+
+    console.log('✅ [SRV-ADM] Agendando verificação periódica de status de roteadores (a cada 60 segundos)...');
+    
+    const checkRouters = async () => {
+        // [MODIFICADO] Verifica a conexão antes de cada ciclo
+        if (!pgConnectionStatus.connected) {
+            console.warn('🟡 [ROUTER-CHECK] Ciclo de verificação pulado. PostgreSQL está offline.');
+            return;
+        }
+        console.log('🔄 [ROUTER-CHECK] Iniciando ciclo de verificação de status...');
+        const client = await pool.connect();
+        try {
+            await client.query(
+                "UPDATE routers SET status = 'offline' WHERE ip_address IS NULL AND status != 'offline'"
+            );
+
+            const routersResult = await client.query('SELECT id, ip_address FROM routers WHERE ip_address IS NOT NULL');
+            const routersToCheck = routersResult.rows;
+
+            if (routersToCheck.length === 0) {
+                console.log('⏹️ [ROUTER-CHECK] Nenhum roteador com IP configurado para verificar. Ciclo concluído.');
+                return;
+            }
+
+            for (const router of routersToCheck) {
+                const pingResult = await ping.promise.probe(router.ip_address);
+                const newStatus = pingResult.alive ? 'online' : 'offline';
+                
+                await client.query(
+                    'UPDATE routers SET status = $1, last_seen = NOW() WHERE id = $2',
+                    [newStatus, router.id]
+                );
+            }
+            console.log(`⏹️ [ROUTER-CHECK] Ciclo de verificação concluído. ${routersToCheck.length} roteador(es) verificado(s).`);
+        } catch (error) {
+            console.error('❌ [ROUTER-CHECK] Erro durante a verificação periódica de roteadores:', error);
+        } finally {
+            client.release();
+        }
+    }
+    setInterval(checkRouters, 60000); // Executa a cada 60 segundos
 };
 
 // --- Inicia o Servidor ---
 // Começa a escutar por conexões na porta definida
 app.listen(PORT, async () => {
   console.log(`✅ [SRV-ADM] Servidor iniciado na porta ${PORT}`);
-  // Tenta conectar ao DB e inicializar o esquema ao iniciar
-  try {
-    const client = await pool.connect();
-    console.log("✅ [SRV-ADM] Ligação com o PostgreSQL estabelecida com sucesso!");
-    // [NOVO] Inicia a verificação periódica após a conexão com o banco ser confirmada
-    startPeriodicRouterCheck();
-    client.release(); // Libera o cliente de volta para o pool
-  } catch (error) {
-    console.error("❌ [SRV-ADM] ERRO CRÍTICO ao conectar ou inicializar o PostgreSQL:", error);
-  }
+  // [MODIFICADO] Tenta a conexão inicial com o PostgreSQL.
+  // O servidor continuará a funcionar mesmo que falhe, e tentará reconectar.
+  const pgReady = await testInitialConnection();
+  
+  // O serviço do InfluxDB já tenta conectar-se na sua própria inicialização.
+  
+  // Inicia a verificação periódica de roteadores (só funcionará se o PG estiver online)
+  startPeriodicRouterCheck();
 });
 
 // [NOVO] Exporta a variável para que outras partes da aplicação possam usá-la.

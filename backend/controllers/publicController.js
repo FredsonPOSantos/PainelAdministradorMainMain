@@ -2,7 +2,7 @@
 // Descrição: Lida com a lógica para endpoints públicos.
 
 const { query } = require('express');
-const pool = require('../connection');
+const { pool } = require('../connection');
 const { getCampaignPreviewData } = require('../services/campaignService');
 
 /**

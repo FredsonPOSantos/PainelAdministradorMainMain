@@ -567,6 +567,106 @@ window.initSettingsPage = () => {
 
 
         let auditLogs = []; // Variável para armazenar os logs carregados
+        let systemLogs = []; // [NOVO] Variável para armazenar os logs de sistema
+        let currentLogTab = 'activity'; // [NOVO] Estado atual da aba de logs
+
+        // [NOVO] Função para injetar as abas de tipo de log na interface
+        const injectLogTabs = () => {
+            const keywordInput = document.getElementById('logKeyword');
+            if (!keywordInput || document.getElementById('log-type-tabs')) return;
+
+            // Encontra o container de filtros para inserir as abas antes dele
+            const filtersContainer = keywordInput.parentElement; // .filters ou div pai
+            
+            const tabsDiv = document.createElement('div');
+            tabsDiv.id = 'log-type-tabs';
+            tabsDiv.style.cssText = 'margin-bottom: 15px; display: flex; gap: 10px;';
+            
+            tabsDiv.innerHTML = `
+                <button type="button" class="btn-primary" id="btn-log-activity">Logs de Atividade</button>
+                <button type="button" class="btn-secondary" id="btn-log-system">Logs do Sistema</button>
+            `;
+            
+            filtersContainer.parentElement.insertBefore(tabsDiv, filtersContainer);
+
+            document.getElementById('btn-log-activity').addEventListener('click', () => switchLogTab('activity'));
+            document.getElementById('btn-log-system').addEventListener('click', () => switchLogTab('system'));
+        };
+
+        // [NOVO] Função para alternar entre tipos de logs
+        const switchLogTab = (tab) => {
+            currentLogTab = tab;
+            
+            // Atualiza estilo dos botões
+            const btnActivity = document.getElementById('btn-log-activity');
+            const btnSystem = document.getElementById('btn-log-system');
+            
+            if (tab === 'activity') {
+                btnActivity.className = 'btn-primary';
+                btnSystem.className = 'btn-secondary';
+                updateLogTableHeaders('activity');
+                loadAuditLogs();
+            } else {
+                btnActivity.className = 'btn-secondary';
+                btnSystem.className = 'btn-primary';
+                updateLogTableHeaders('system');
+                loadSystemLogs();
+            }
+        };
+
+        // [NOVO] Atualiza os cabeçalhos da tabela dinamicamente
+        const updateLogTableHeaders = (type) => {
+            const tableBody = document.getElementById('auditLogsTableBody');
+            if (!tableBody) return;
+            const table = tableBody.closest('table');
+            const thead = table.querySelector('thead tr');
+            
+            if (type === 'activity') {
+                thead.innerHTML = `
+                    <th>Data/Hora</th>
+                    <th>Utilizador</th>
+                    <th>IP</th>
+                    <th>Ação</th>
+                    <th>Status</th>
+                    <th>Descrição</th>
+                `;
+            } else {
+                thead.innerHTML = `
+                    <th>Data/Hora</th>
+                    <th>Mensagem de Erro</th>
+                    <th>Endpoint</th>
+                    <th>Utilizador</th>
+                    <th>Ações</th>
+                `;
+            }
+        };
+
+        // [NOVO] Modal de detalhes do erro
+        window.showErrorDetails = (logId) => {
+            const log = systemLogs.find(l => l.id === logId);
+            if (!log) return;
+
+            const modal = document.createElement('div');
+            modal.className = 'modal-overlay'; // Usa a classe existente do seu CSS
+            modal.innerHTML = `
+                <div class="modal-content large">
+                    <h3>Detalhes do Erro #${log.id}</h3>
+                    <p><strong>Timestamp:</strong> ${new Date(log.timestamp).toLocaleString()}</p>
+                    <p><strong>Mensagem:</strong> ${log.error_message}</p>
+                    <p><strong>Endpoint:</strong> ${log.request_method || 'N/A'} ${log.request_url || 'N/A'}</p>
+                    
+                    <h4 style="margin-top:15px; font-size:14px;">Stack Trace:</h4>
+                    <pre style="background: #1a202c; padding: 10px; border-radius: 5px; max-height: 300px; overflow-y: auto; font-size: 12px; color: #e2e8f0;"><code>${log.stack_trace || 'Não disponível'}</code></pre>
+                    
+                    <div class="modal-actions">
+                        <button class="btn-primary" onclick="this.closest('.modal-overlay').remove()">Fechar</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+            // Pequeno delay para animação CSS se houver
+            setTimeout(() => modal.classList.remove('hidden'), 10);
+        };
 
         const loadAuditLogs = async (filters = {}) => {
             window.showPagePreloader('A carregar logs de atividade...');
@@ -576,7 +676,7 @@ window.initSettingsPage = () => {
             tableBody.innerHTML = `<tr><td colspan="6" style="text-align:center;">A carregar logs...</td></tr>`;
 
             try {
-                let endpoint = '/api/logs';
+                let endpoint = '/api/logs/activity';
                 const queryParams = new URLSearchParams();
                 if (filters.keyword) {
                     queryParams.append('keyword', filters.keyword);
@@ -644,7 +744,76 @@ window.initSettingsPage = () => {
             }
         };
 
+        // [NOVO] Carrega os logs de sistema
+        const loadSystemLogs = async (filters = {}) => {
+            window.showPagePreloader('A carregar logs de sistema...');
+            const tableBody = document.getElementById('auditLogsTableBody');
+            if (!tableBody) return;
+
+            tableBody.innerHTML = `<tr><td colspan="5" style="text-align:center;">A carregar logs de sistema...</td></tr>`;
+
+            try {
+                let endpoint = '/api/logs/system';
+                const queryParams = new URLSearchParams();
+                // Usa os mesmos inputs de filtro para ambos os tipos
+                const keyword = document.getElementById('logKeyword')?.value;
+                const startDate = document.getElementById('logStartDate')?.value;
+                const endDate = document.getElementById('logEndDate')?.value;
+
+                if (keyword) queryParams.append('keyword', keyword);
+                if (startDate) queryParams.append('startDate', startDate);
+                if (endDate) queryParams.append('endDate', endDate);
+
+                const queryString = queryParams.toString();
+                if (queryString) endpoint += `?${queryString}`;
+
+                const response = await apiRequest(endpoint);
+                systemLogs = response.data || response; // [CORRIGIDO]
+
+                tableBody.innerHTML = '';
+
+                if (!Array.isArray(systemLogs) || systemLogs.length === 0) {
+                    tableBody.innerHTML = `<tr><td colspan="5" style="text-align:center;">Nenhum erro de sistema registado.</td></tr>`;
+                    return;
+                }
+
+                systemLogs.forEach(log => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${new Date(log.timestamp).toLocaleString()}</td>
+                        <td title="${log.error_message}" style="max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${log.error_message}</td>
+                        <td><span class="badge role-estetica">${log.request_method || '-'}</span> ${log.request_url || '-'}</td>
+                        <td>${log.user_email || 'N/A'}</td>
+                        <td><button class="btn-secondary" style="padding: 4px 8px; font-size: 12px;" onclick="showErrorDetails(${log.id})">Detalhes</button></td>
+                    `;
+                    tableBody.appendChild(row);
+                });
+            } catch (error) {
+                console.error("Erro ao carregar logs de sistema:", error);
+                tableBody.innerHTML = `<tr><td colspan="5" style="text-align:center; color: var(--error-text);">Falha ao carregar logs.</td></tr>`;
+            } finally {
+                window.hidePagePreloader();
+            }
+        };
+
         const exportToCSV = () => {
+            // [MODIFICADO] Exporta baseado na aba atual
+            if (currentLogTab === 'system') {
+                const header = ["Data/Hora", "Mensagem", "Endpoint", "Utilizador", "Stack Trace"];
+                const csv = [
+                    header.join(','),
+                    ...systemLogs.map(log => [
+                        `"${new Date(log.timestamp).toLocaleString('pt-BR')}"`,
+                        `"${(log.error_message || '').replace(/"/g, '""')}"`,
+                        `"${log.request_method} ${log.request_url}"`,
+                        `"${log.user_email || 'N/A'}"`,
+                        `"${(log.stack_trace || '').replace(/"/g, '""').replace(/\n/g, ' ')}"`
+                    ].join(','))
+                ].join('\n');
+                downloadFile(csv, 'logs_sistema.csv', 'text/csv;charset=utf-8;');
+                return;
+            }
+
             const header = ["Data/Hora", "Utilizador", "IP", "Ação", "Status", "Descrição"];
             const csv = [
                 header.join(','),
@@ -658,18 +827,26 @@ window.initSettingsPage = () => {
                 ].join(','))
             ].join('\n');
 
+            downloadFile(csv, 'logs_auditoria.csv', 'text/csv;charset=utf-8;');
+        };
+
+        // Função auxiliar para download
+        const downloadFile = (content, fileName, mimeType) => {
             const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
             const link = document.createElement('a');
             const url = URL.createObjectURL(blob);
             link.setAttribute('href', url);
-            link.setAttribute('download', 'logs_de_auditoria.csv');
+            link.setAttribute('download', fileName);
             link.style.visibility = 'hidden';
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
-        };
+        }
 
         const exportToExcel = () => {
+            const data = currentLogTab === 'activity' ? auditLogs : systemLogs;
+            const sheetName = currentLogTab === 'activity' ? "Logs de Auditoria" : "Logs de Sistema";
+            
             const worksheet = XLSX.utils.json_to_sheet(auditLogs.map(log => ({
                 "Data/Hora": new Date(log.timestamp).toLocaleString('pt-BR'),
                 "Utilizador": log.user_email || 'N/A',
@@ -679,8 +856,8 @@ window.initSettingsPage = () => {
                 "Descrição": log.description || ''
             })));
             const workbook = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(workbook, worksheet, "Logs de Auditoria");
-            XLSX.writeFile(workbook, "logs_de_auditoria.xlsx");
+            XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
+            XLSX.writeFile(workbook, `${sheetName.toLowerCase().replace(/ /g, '_')}.xlsx`);
         };
 
         const filterLogsBtn = document.getElementById('filterLogsBtn');
@@ -691,7 +868,11 @@ window.initSettingsPage = () => {
                 const keyword = document.getElementById('logKeyword').value;
                 const startDate = document.getElementById('logStartDate').value;
                 const endDate = document.getElementById('logEndDate').value;
-                loadAuditLogs({ keyword, startDate, endDate });
+                if (currentLogTab === 'activity') {
+                    loadAuditLogs({ keyword, startDate, endDate });
+                } else {
+                    loadSystemLogs({ keyword, startDate, endDate });
+                }
             });
         }
 
@@ -700,7 +881,11 @@ window.initSettingsPage = () => {
                 document.getElementById('logKeyword').value = '';
                 document.getElementById('logStartDate').value = '';
                 document.getElementById('logEndDate').value = '';
-                loadAuditLogs();
+                if (currentLogTab === 'activity') {
+                    loadAuditLogs();
+                } else {
+                    loadSystemLogs();
+                }
             });
         }
 
@@ -764,7 +949,9 @@ window.initSettingsPage = () => {
                 loadPermissionsMatrix();
             }
             if (document.getElementById('tab-logs')?.style.display !== 'none') {
-                loadAuditLogs();
+                // [MODIFICADO] Injeta as abas e carrega o padrão
+                injectLogTabs();
+                loadAuditLogs(); // Carrega atividade por padrão
             }
             if (document.getElementById('tab-arquivos')?.style.display !== 'none') {
                 loadMediaFiles(); // Carrega a aba de arquivos se visível

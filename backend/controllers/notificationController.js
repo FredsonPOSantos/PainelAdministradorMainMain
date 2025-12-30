@@ -1,7 +1,7 @@
 // Ficheiro: backend/controllers/notificationController.js
 // Descrição: Contém a lógica para gerir as notificações.
 
-const pool = require('../connection');
+const { pool } = require('../connection');
 
 // Obter a contagem de notificações não lidas para o utilizador logado
 const getUnreadCount = async (req, res) => {

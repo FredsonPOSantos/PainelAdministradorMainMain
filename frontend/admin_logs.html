@@ -1,0 +1,52 @@
+<!--
+Ficheiro: frontend/admin_logs.html
+Descrição: Nova estrutura da página de logs com abas para Atividade e Sistema.
+-->
+<div class="page-header">
+    <h3><i class="fas fa-clipboard-list" style="margin-right: 10px;"></i>Logs do Sistema</h3>
+</div>
+
+<!-- Container das Abas -->
+<div class="tabs-container">
+    <button class="tab-link active" data-tab="activity">Logs de Atividade</button>
+    <button class="tab-link" data-tab="system">Logs de Sistema</button>
+</div>
+
+<!-- Conteúdo da Aba de Atividade (estrutura que você já tinha) -->
+<div id="activity-content" class="tab-content active">
+    <div class="filters" style="display: flex; gap: 10px; margin-bottom: 20px; align-items: center;">
+        <input type="text" id="activity-keyword" placeholder="Pesquisar por utilizador, ação..." style="flex-grow: 1;">
+        <input type="date" id="activity-startDate">
+        <input type="date" id="activity-endDate">
+        <button id="activity-filterBtn" class="btn-primary">Filtrar</button>
+        <button id="activity-exportBtn" class="btn-secondary">Exportar</button>
+    </div>
+    <div class="table-container">
+        <table id="activityLogsTable">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Timestamp</th>
+                    <th>Utilizador</th>
+                    <th>IP</th>
+                    <th>Ação</th>
+                    <th>Status</th>
+                    <th>Descrição</th>
+                    <th>Alvo</th>
+                    <th>ID do Alvo</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Os dados serão inseridos aqui pelo admin_logs.js -->
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Conteúdo da Aba de Logs de Sistema (será preenchido pelo JS) -->
+<div id="system-content" class="tab-content">
+    <!-- O conteúdo para os logs de sistema será gerado por JavaScript -->
+</div>
+
+<!-- Carrega o script da página de logs -->
+<script src="js/admin_logs.js?v=14.8"></script>

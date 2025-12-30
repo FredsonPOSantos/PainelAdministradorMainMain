@@ -1,7 +1,7 @@
 // Ficheiro: controllers/campaignController.js
 // Descrição: Contém a lógica de negócio para a gestão de campanhas.
 
-const pool = require('../connection'); // Caminho atualizado
+const { pool } = require('../connection'); // Caminho atualizado
 const { logAction } = require('../services/auditLogService');
 
 /**

@@ -1,5 +1,5 @@
 // Ficheiro: controllers/hotspotController.js
-const pool = require('../connection');
+const { pool } = require('../connection');
 const { Parser } = require('json2csv');
 
 // Função principal para pesquisar utilizadores do hotspot

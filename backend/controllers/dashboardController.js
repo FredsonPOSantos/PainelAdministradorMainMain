@@ -1,6 +1,6 @@
 // Ficheiro: backend/controllers/dashboardController.js
 
-const pool = require('../connection');
+const { pool } = require('../connection');
 
 const getDashboardStats = async (req, res) => {
     try {

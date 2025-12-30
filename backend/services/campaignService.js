@@ -1,5 +1,5 @@
 // Ficheiro: backend/services/campaignService.js
-const pool = require('../connection');
+const { pool } = require('../connection');
 
 const getActiveCampaignData = async (routerName) => {
 

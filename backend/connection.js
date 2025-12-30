@@ -1,6 +1,7 @@
 // Ficheiro: connection.js
 // Descrição: Centraliza e valida a conexão com a base de dados PostgreSQL (SRV-ADM)
 
+let pgReconnectInterval = null;
 require('dotenv').config();
 const { Pool } = require('pg');
 
@@ -15,15 +16,26 @@ const pool = new Pool({
   idleTimeoutMillis: 30000,
 });
 
+// [NOVO] Objeto para monitorizar o estado da conexão
+const pgConnectionStatus = {
+    connected: false,
+    error: null,
+};
+
 // Evento: ligação estabelecida
 pool.on('connect', () => {
-  console.log('✅ [SRV-ADM] Ligação com o PostgreSQL estabelecida com sucesso!');
+  // Este evento é por cliente, não para a pool inteira. A verificação inicial é mais fiável.
 });
 
 // Evento: erro inesperado
 pool.on('error', (err) => {
   console.error('❌ [SRV-ADM] Erro inesperado no cliente da base de dados:', err);
-  process.exit(-1);
+  pgConnectionStatus.connected = false;
+  pgConnectionStatus.error = err.message;
+  // Inicia a tentativa de reconexão se não estiver a decorrer
+  if (!pgReconnectInterval) {
+      startPgReconnect();
+  }
 });
 
 /**
@@ -61,8 +73,32 @@ async function checkAndUpgradeSchema(client) {
     console.log('✅ [DB-UPGRADE] Verificação do esquema concluída.');
 }
 
-// Teste e validação detalhada da conexão
-(async () => {
+const startPgReconnect = () => {
+    if (pgReconnectInterval) return; // Já está a tentar
+
+    console.log('🔄 [PG-RECONNECT] A agendar tentativas de reconexão com o PostgreSQL a cada 30 segundos...');
+    pgReconnectInterval = setInterval(async () => {
+        console.log('🔄 [PG-RECONNECT] A tentar reconectar ao PostgreSQL...');
+        try {
+            const client = await pool.connect();
+            console.log('✅ [PG-RECONNECT] Conexão com o PostgreSQL restabelecida!');
+            pgConnectionStatus.connected = true;
+            pgConnectionStatus.error = null;
+            clearInterval(pgReconnectInterval); // Para as tentativas
+            pgReconnectInterval = null;
+            await checkAndUpgradeSchema(client); // Verifica o esquema após reconectar
+            client.release();
+            // Aqui poderíamos emitir um evento para reiniciar serviços dependentes, como o 'startPeriodicRouterCheck'
+        } catch (err) {
+            console.error('❌ [PG-RECONNECT] Tentativa de reconexão falhou:', err.message);
+            pgConnectionStatus.connected = false;
+            pgConnectionStatus.error = err.message;
+        }
+    }, 30000); // Tenta a cada 30 segundos
+};
+
+// Função de teste e validação inicial
+const testInitialConnection = async () => {
   const startTime = Date.now();
   try {
     const client = await pool.connect();
@@ -86,20 +122,28 @@ async function checkAndUpgradeSchema(client) {
 
     console.log('✅ [SRV-ADM] Conectado com sucesso no PostgreSQL!\n');
 
+    // [NOVO] Atualiza o status global
+    pgConnectionStatus.connected = true;
+    pgConnectionStatus.error = null;
+
     // [NOVO] Executa a verificação e atualização do esquema
     try {
         await checkAndUpgradeSchema(client);
     } catch (schemaError) {
         console.warn('⚠️ [DB-UPGRADE] Aviso: Não foi possível atualizar as colunas automaticamente (permissão negada).');
         console.warn(`   -> Erro: ${schemaError.message}`);
-        console.warn('   -> O servidor iniciará, mas a função de Reiniciar Roteador pode falhar até que o SQL seja executado manualmente.');
+        console.warn('   -> O servidor continuará, mas algumas funcionalidades podem falhar até que o SQL seja executado manualmente.');
     }
 
     client.release();
+    return true; // Retorna sucesso
   } catch (err) {
     console.error('🚨 [SRV-ADM] Falha ao conectar ao PostgreSQL:', err.message);
-    process.exit(1);
+    pgConnectionStatus.connected = false;
+    pgConnectionStatus.error = err.message;
+    startPgReconnect(); // Inicia as tentativas de reconexão
+    return false; // Retorna falha
   }
-})();
+};
 
-module.exports = pool;
+module.exports = { pool, testInitialConnection, pgConnectionStatus };

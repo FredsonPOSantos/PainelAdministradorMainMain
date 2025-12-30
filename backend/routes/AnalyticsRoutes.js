@@ -2,7 +2,7 @@
 
 const express = require('express');
 const router = express.Router();
-const pool = require('../connection'); // [CORRIGIDO] Aponta para o arquivo de conexão correto
+const { pool } = require('../connection'); // [CORRIGIDO] Aponta para o arquivo de conexão correto
 const verifyToken = require('../middlewares/authMiddleware'); // [CORRIGIDO] Importa o middleware da forma correta
 const checkPermission = require('../middlewares/roleMiddleware'); // [NOVO] Importa o middleware de permissão
 

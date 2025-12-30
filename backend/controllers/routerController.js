@@ -1,9 +1,9 @@
 // Ficheiro: controllers/routerController.js
-const pool = require('../connection');
+const { pool } = require('../connection'); // [MODIFICADO] Importa apenas a pool
 const ping = require('ping');
 const { logAction } = require('../services/auditLogService');
-// [NOVO] Adicionar dependências e configuração para InfluxDB
-const { InfluxDB } = require('@influxdata/influxdb-client');
+// [NOVO] Importa o serviço centralizado do InfluxDB
+const { queryApi, influxBucket } = require('../services/influxService');
 
 // [CORRIGIDO] Importação robusta para a biblioteca node-routeros para resolver o erro 'is not a constructor'.
 // Diferentes versões da biblioteca podem exportar a classe de maneiras distintas.
@@ -17,20 +17,6 @@ try {
 }
 require('dotenv').config();
 
-// [NOVO] Configuração do InfluxDB a partir de variáveis de ambiente
-const influxUrl = process.env.INFLUXDB_URL;
-const influxToken = process.env.INFLUXDB_TOKEN;
-const influxOrg = process.env.INFLUXDB_ORG;
-const influxBucket = process.env.INFLUXDB_BUCKET;
-
-let queryApi = null;
-if (influxUrl && influxToken && influxOrg && influxBucket) {
-    const influxDB = new InfluxDB({ url: influxUrl, token: influxToken });
-    queryApi = influxDB.getQueryApi(influxOrg);
-    console.log('Conexão com InfluxDB estabelecida para métricas em tempo real.');
-} else {
-    console.warn('Variáveis de ambiente da InfluxDB não configuradas. As métricas em tempo real não estarão disponíveis.');
-}
 // --- Funções de Roteadores Individuais ---
 
 const getAllRouters = async (req, res) => {

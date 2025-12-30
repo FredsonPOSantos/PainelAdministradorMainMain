@@ -97,29 +97,36 @@ window.applyVisualSettings = (settings) => {
 
 
 // --- [NOVO V13.1 / V14.4] ---
-// Função robusta para esperar que um elemento exista no DOM antes de executar um script
-const waitForElement = (selector, container, initFunction, pageName) => {
-
-    const maxRetries = 20; // 20 tentativas * 50ms = 1000ms (1 segundo)
-    const delay = 50;
+// Função robusta para esperar que um elemento E a função de inicialização existam
+const waitForElement = (selector, container, initFunctionName, pageName) => {
+    // [CORRIGIDO] Aumenta o tempo de espera para 5 segundos para acomodar redes mais lentas.
+    const maxRetries = 100; 
+    const delay = 50; // Verifica a cada 50ms
     let retryCount = 0;
 
     const check = () => {
         // Procura o elemento dentro do container (ex: .content-area)
         const element = container.querySelector(selector);
+        // Procura a função no window (global)
+        const initFunction = window[initFunctionName];
         
-        if (element) {
-            // Elemento encontrado, executa a função de inicialização
-            console.log(`waitForElement (V13.1.3): Elemento '${selector}' encontrado para '${pageName}'. Executando init...`);
+        if (element && typeof initFunction === 'function') {
+            // Elemento e Função encontrados, executa a inicialização
+            console.log(`%c[waitForElement] SUCESSO: Elemento '${selector}' e função '${initFunctionName}' prontos para a página '${pageName}'. A executar...`, 'color: #28a745');
             initFunction();
         } else if (retryCount < maxRetries) {
             // Elemento não encontrado, tenta novamente após o delay
             retryCount++;
-            console.log(`waitForElement (V13.1.3): Esperando por '${selector}' (Tentativa ${retryCount}/${maxRetries})...`);
+            // [NOVO] Log de depuração mais detalhado
+            if (retryCount % 20 === 0) { // Loga a cada 1 segundo para não poluir o console
+                console.log(`[waitForElement] A aguardar... Página: ${pageName}, Elemento: ${selector} (${element ? 'OK' : 'Falta'}), Função: ${initFunctionName} (${typeof initFunction === 'function' ? 'OK' : 'Falta'})`);
+            }
             setTimeout(check, delay);
         } else {
             // Esgotou as tentativas
-            console.error(`Timeout (V13.1.3): Elemento ${selector} não encontrado após ${maxRetries * delay}ms para ${pageName}. initFunction não foi executada.`);
+            console.error(`%c[waitForElement] TIMEOUT: Falha ao iniciar a página '${pageName}'.`, 'color: #dc3545; font-weight: bold;');
+            if (!element) console.error(`  -> Causa: O elemento HTML esperado ('${selector}') não foi encontrado no DOM.`);
+            if (typeof window[initFunctionName] !== 'function') console.error(`  -> Causa: A função de inicialização ('${initFunctionName}') não foi encontrada. Verifique se o script JS da página foi carregado corretamente e não contém erros.`);
         }
     };
     
@@ -260,19 +267,20 @@ document.addEventListener('DOMContentLoaded', async () => {
     notificationIcon?.addEventListener('click', toggleNotificationDropdown);
 
 
-    // Mapeamento de inicializadores de página
+    // [CORRIGIDO] Mapeamento de inicializadores de página usando STRINGS.
+    // Isso permite que a função seja encontrada no 'window' mesmo que o script seja carregado depois.
     const pageInitializers = {
-        'admin_home': window.initHomePage,
-        'admin_hotspot': window.initHotspotPage,
-        'admin_users': window.initUsersPage,
-        'admin_templates': window.initTemplatesPage,
-        'admin_banners': window.initBannersPage,
-        'admin_campaigns': window.initCampaignsPage,
-        'admin_routers': window.initRoutersPage,
-        'admin_settings': window.initSettingsPage,
-        'support': window.initSupportPage,
-        'admin_raffles': window.initRafflesPage,
-        'analytics_dashboard': window.initAnalyticsDashboard, // [NOVO]
+        'admin_home': 'initHomePage',
+        'admin_hotspot': 'initHotspotPage',
+        'admin_users': 'initUsersPage',
+        'admin_templates': 'initTemplatesPage',
+        'admin_banners': 'initBannersPage',
+        'admin_campaigns': 'initCampaignsPage',
+        'admin_routers': 'initRoutersPage',
+        'admin_settings': 'initSettingsPage',
+        'support': 'initSupportPage',
+        'admin_raffles': 'initRafflesPage',
+        'analytics_dashboard': 'initAnalyticsDashboard',
     };
 
     // --- [ATUALIZADO V13.1.3] IDs de verificação para o waitForElement ---
@@ -344,6 +352,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                     window.cleanupSettingsPage();
                     window.cleanupSettingsPage = undefined; // Limpa a referência para a próxima navegação.
                 }
+                // [NOVO] Limpeza específica para a página de logs para permitir reinicialização
+                if (document.body.dataset.logsPageInitialized) {
+                    delete document.body.dataset.logsPageInitialized;
+                    console.log("Cleanup: Flag de inicialização da página de logs removida.");
+                }
                 // [CORREÇÃO] Remove event listeners "fantasmas" de páginas anteriores.
                 // A maneira mais eficaz de remover todos os listeners de um elemento é
                 // substituí-lo por um clone dele mesmo. Isso evita que scripts de uma página
@@ -376,15 +389,16 @@ document.addEventListener('DOMContentLoaded', async () => {
                 return;
             }
 
-            const initFunction = pageInitializers[pageName];
+            // [CORRIGIDO] Resolve a função dinamicamente a partir do window usando o nome (string)
+            const initFunctionName = pageInitializers[pageName];
             const elementToWaitFor = pageElementIds[pageName];
 
-            if (typeof initFunction === 'function' && elementToWaitFor && mainContentArea) {
+            if (initFunctionName && elementToWaitFor && mainContentArea) {
                 // A função waitForElement garante que o HTML foi renderizado antes de executar o JS.
-                // A chamada anterior estava incorreta.
-                waitForElement(elementToWaitFor, mainContentArea, initFunction, pageName);
-            } else if (typeof initFunction !== 'function') {
-                console.warn(`Init function (V13.1.3) ${pageName} não encontrada.`);
+                // Agora passamos o NOME da função (string) para que o waitForElement aguarde ela existir.
+                waitForElement(elementToWaitFor, mainContentArea, initFunctionName, pageName);
+            } else if (!initFunctionName) {
+                console.warn(`Nome da função de init para ${pageName} não definido.`);
             }
             else if (!elementToWaitFor) {
                  console.error(`ID de verificação (V13.1.3) para ${pageName} não definido em pageElementIds.`);

@@ -2,7 +2,7 @@
 // [VERSÃO 13.5.3 - GESTÃO BATCH]
 // Lógica para buscar matriz completa e salvar em lote (Batch).
 
-const pool = require('../connection');
+const { pool } = require('../connection');
 const { logAction } = require('../services/auditLogService');
 
 /**

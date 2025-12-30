@@ -2,7 +2,7 @@
 // [VERSÃO 4 - ESTÁVEL]
 // Esta é a versão original do seu controller, ANTES da implementação do menu inteligente.
 // Ela NÃO envia 'profile.permissions' para o frontend.
-const pool = require('../connection');
+const { pool } = require('../connection');
 const bcrypt = require('bcrypt');
 const { getPermissionsForRole } = require('./permissionsController');
 const { logAction } = require('../services/auditLogService');

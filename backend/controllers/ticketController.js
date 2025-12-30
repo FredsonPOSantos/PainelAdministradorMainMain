@@ -1,7 +1,7 @@
 // Ficheiro: backend/controllers/ticketController.js
 // Descrição: Contém a lógica de negócio para o sistema de tickets.
 
-const pool = require('../connection');
+const { pool } = require('../connection');
 const { logAction } = require('../services/auditLogService');
 const { sendEmail } = require('../emailService');
 

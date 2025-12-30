@@ -3,7 +3,7 @@
 // Descrição: Middleware para verificar o token, buscar perfil e permissões do utilizador.
 
 const jwt = require('jsonwebtoken');
-const pool = require('../connection');
+const { pool } = require('../connection');
 
 const verifyToken = async (req, res, next) => {
     const authHeader = req.headers['authorization'];
@@ -95,4 +95,3 @@ const verifyToken = async (req, res, next) => {
 };
 
 module.exports = verifyToken;
-

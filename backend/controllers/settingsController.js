@@ -1,7 +1,7 @@
 // Ficheiro: backend/controllers/settingsController.js
 // Descrição: Lida com a lógica de GESTÃO de configurações do sistema.
 
-const pool = require('../connection');
+const { pool } = require('../connection');
 const path = require('path');
 const fs = require('fs'); // Para lidar com caminhos de ficheiro e remoção
 const archiver = require('archiver'); // [NOVO] Para criar arquivos ZIP
