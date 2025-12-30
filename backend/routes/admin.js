@@ -30,4 +30,3 @@ router.delete('/users/:id', verifyToken, checkPermission('users.delete'), adminC
 router.post('/users/:id/reset-password', verifyToken, checkPermission('users.update'), adminController.resetUserPassword);
 
 module.exports = router;
-

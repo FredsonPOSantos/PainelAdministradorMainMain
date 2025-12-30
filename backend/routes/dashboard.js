@@ -7,6 +7,7 @@ const authMiddleware = require('../middlewares/authMiddleware');
 const checkPermission = require('../middlewares/roleMiddleware');
 const { pool } = require('../connection'); // [NOVO] Importa a conexão com o DB
 const radius = require('radius'); // [NOVO] Para verificar o status do FreeRADIUS
+const { logAction } = require('../services/auditLogService');
 const dgram = require('dgram'); // [NOVO] Dependência do pacote radius
 const serverModule = require('../server'); // [NOVO] Importa o tempo de início
 
@@ -85,6 +86,14 @@ router.get(
       ] = results;
 
       console.log('[ANALYTICS] Consultas concluídas. A processar resultados...');
+
+      // [NOVO] Regista o evento de verificação do RADIUS
+      await logAction({
+          req,
+          action: radiusResult.status === 'online' ? 'RADIUS_CHECK_SUCCESS' : 'RADIUS_CHECK_FAILURE',
+          status: radiusResult.status === 'online' ? 'SUCCESS' : 'FAILURE',
+          description: `Verificação de status do servidor RADIUS retornou: ${radiusResult.status}.`
+      });
 
       // [NOVO] Log detalhado para cada resultado
       results.forEach((result, index) => {

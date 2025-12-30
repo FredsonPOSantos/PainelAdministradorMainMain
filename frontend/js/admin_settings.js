@@ -1197,10 +1197,6 @@ window.initSettingsPage = () => {
             goToLgpdPageBtn.addEventListener('click', () => {
                 const reauthModal = document.getElementById('reauthLgpdModal');
                 const reauthEmail = document.getElementById('reauthEmail');
-                // [NOVO] Adiciona o listener para o formulário de SMTP
-                if (smtpSettingsForm) {
-                    smtpSettingsForm.addEventListener('submit', handleSmtpSettings);
-                }
 
 
                 if (reauthModal && reauthEmail && window.currentUserProfile) {
@@ -1213,6 +1209,12 @@ window.initSettingsPage = () => {
         // [ADICIONADO] Listener para o formulário de aparência unificado
         if (unifiedAppearanceForm) {
             unifiedAppearanceForm.addEventListener('submit', handleUnifiedAppearance);
+        }
+
+        // [NOVO] Listener para o formulário de SMTP e Botão de Teste de Erro
+        if (smtpSettingsForm) {
+            smtpSettingsForm.removeEventListener('submit', handleSmtpSettings); // Previne duplicados
+            smtpSettingsForm.addEventListener('submit', handleSmtpSettings);
         }
 
         // [NOVO] Listeners para Gestão de Arquivos

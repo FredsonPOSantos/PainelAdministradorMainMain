@@ -14,6 +14,7 @@ const ping = require('ping'); // [NOVO] Importa a biblioteca de ping para a veri
 
 // Importação das rotas
 const influxService = require('./services/influxService'); // [NOVO] Importa o serviço Influx
+const { logAction } = require('./services/auditLogService');
 const { logError } = require('./services/errorLogService'); // [NOVO] Importa o serviço de log de erros
 const authRoutes = require('./routes/auth');
 const adminRoutes = require('./routes/admin');
@@ -195,6 +196,13 @@ app.listen(PORT, async () => {
   
   // Inicia a verificação periódica de roteadores (só funcionará se o PG estiver online)
   startPeriodicRouterCheck();
+
+  // [NOVO] Regista o evento de início do servidor no log de auditoria
+  await logAction({
+      action: 'SERVER_START',
+      status: 'SUCCESS',
+      description: `Servidor iniciado com sucesso na porta ${PORT}.`
+  });
 });
 
 // [NOVO] Exporta a variável para que outras partes da aplicação possam usá-la.

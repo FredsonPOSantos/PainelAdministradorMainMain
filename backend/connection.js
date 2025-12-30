@@ -70,6 +70,88 @@ async function checkAndUpgradeSchema(client) {
             // console.log(`   -> Coluna '${col.name}' já existe.`);
         }
     }
+
+    // [NOVO] Garante que todas as permissões do sistema existem na tabela 'permissions'
+    // Isto assegura que o Master tenha acesso a tudo (exceto LGPD) e que as permissões apareçam na matriz.
+    const systemPermissions = [
+        // Dashboard & Analytics
+        { key: 'dashboard.read', feature: 'Dashboard', action: 'Visualizar' },
+        { key: 'analytics.read', feature: 'Analytics', action: 'Visualizar' },
+        
+        // Utilizadores (Admin)
+        { key: 'users.read', feature: 'Utilizadores', action: 'Visualizar' },
+        { key: 'users.create', feature: 'Utilizadores', action: 'Criar' },
+        { key: 'users.update', feature: 'Utilizadores', action: 'Editar' },
+        { key: 'users.delete', feature: 'Utilizadores', action: 'Eliminar' },
+
+        // Roteadores
+        { key: 'routers.read', feature: 'Roteadores', action: 'Visualizar' },
+        { key: 'routers.create', feature: 'Roteadores', action: 'Criar' },
+        { key: 'routers.update', feature: 'Roteadores', action: 'Editar' },
+        { key: 'routers.delete', feature: 'Roteadores', action: 'Eliminar' },
+        { key: 'routers.individual.delete_permanent', feature: 'Roteadores', action: 'Exclusão Permanente' },
+
+        // Templates
+        { key: 'templates.read', feature: 'Templates', action: 'Visualizar' },
+        { key: 'templates.create', feature: 'Templates', action: 'Criar' },
+        { key: 'templates.update', feature: 'Templates', action: 'Editar' },
+        { key: 'templates.delete', feature: 'Templates', action: 'Eliminar' },
+
+        // Campanhas
+        { key: 'campaigns.read', feature: 'Campanhas', action: 'Visualizar' },
+        { key: 'campaigns.create', feature: 'Campanhas', action: 'Criar' },
+        { key: 'campaigns.update', feature: 'Campanhas', action: 'Editar' },
+        { key: 'campaigns.delete', feature: 'Campanhas', action: 'Eliminar' },
+
+        // Banners
+        { key: 'banners.read', feature: 'Banners', action: 'Visualizar' },
+        { key: 'banners.create', feature: 'Banners', action: 'Criar' },
+        { key: 'banners.update', feature: 'Banners', action: 'Editar' },
+        { key: 'banners.delete', feature: 'Banners', action: 'Eliminar' },
+
+        // Hotspot (Portal)
+        { key: 'hotspot.read', feature: 'Hotspot', action: 'Visualizar' },
+
+        // Tickets
+        { key: 'tickets.read', feature: 'Tickets', action: 'Visualizar' },
+        { key: 'tickets.create', feature: 'Tickets', action: 'Criar' },
+        { key: 'tickets.update', feature: 'Tickets', action: 'Editar' },
+        { key: 'tickets.delete', feature: 'Tickets', action: 'Eliminar' },
+
+        // Sorteios
+        { key: 'raffles.read', feature: 'Sorteios', action: 'Visualizar' },
+        { key: 'raffles.create', feature: 'Sorteios', action: 'Criar' },
+        { key: 'raffles.update', feature: 'Sorteios', action: 'Editar' },
+        { key: 'raffles.delete', feature: 'Sorteios', action: 'Eliminar' },
+
+        // Configurações
+        { key: 'settings.appearance', feature: 'Configurações', action: 'Aparência' },
+        { key: 'settings.login_page', feature: 'Configurações', action: 'Página de Login' },
+        { key: 'settings.smtp', feature: 'Configurações', action: 'SMTP (E-mail)' },
+        { key: 'settings.policies', feature: 'Configurações', action: 'Políticas' },
+        { key: 'settings.media', feature: 'Configurações', action: 'Gestão de Arquivos' },
+
+        // Logs
+        { key: 'logs.read', feature: 'Logs', action: 'Visualizar' },
+
+        // LGPD (Exclusivo DPO - Master não terá acesso a estas)
+        { key: 'lgpd.read', feature: 'LGPD', action: 'Visualizar' },
+        { key: 'lgpd.update', feature: 'LGPD', action: 'Editar' },
+        { key: 'lgpd.delete', feature: 'LGPD', action: 'Eliminar' }
+    ];
+
+    for (const perm of systemPermissions) {
+        // Verifica se a permissão existe
+        const permCheck = await client.query('SELECT 1 FROM permissions WHERE permission_key = $1', [perm.key]);
+        if (permCheck.rowCount === 0) {
+            console.log(`   -> Permissão '${perm.key}' em falta. A adicionar...`);
+            await client.query(
+                'INSERT INTO permissions (permission_key, feature_name, action_name, description) VALUES ($1, $2, $3, $4)',
+                [perm.key, perm.feature, perm.action, `Permissão para ${perm.action} em ${perm.feature}`]
+            );
+        }
+    }
+
     console.log('✅ [DB-UPGRADE] Verificação do esquema concluída.');
 }
 

@@ -260,7 +260,7 @@ if (window.initAnalyticsDashboard) {
                     console.warn(`Endpoint /api/dashboard/analytics/logins não encontrado (404).`);
                     return; // Interrompe a execução para não tentar renderizar dados inexistentes
                 }
-                const data = response.data.data;
+                const data = response.data;
 
                 // Renderiza a tabela de detalhes
                 renderTable('loginsDetailBody', data.latest_logins, [
@@ -351,7 +351,7 @@ if (window.initAnalyticsDashboard) {
                     console.warn(`Endpoint /api/dashboard/analytics/hotspot-users não encontrado ou com erro.`);
                     return;
                 }
-                const data = response.data.data;
+                const data = response.data;
 
                 renderTable('hotspotUsersActivityBody', data.latest_users, [
                     { key: 'fullname' },
@@ -426,7 +426,7 @@ if (window.initAnalyticsDashboard) {
                     tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: var(--warning-text);">${response.message || 'Funcionalidade em desenvolvimento.'}</td></tr>`;
                     return;
                 }
-                const data = response.data.data;
+                const data = response.data;
 
                 renderTable('hotspotRegistrationsBody', data.latest_users, [
                     { key: 'fullname' },
@@ -505,7 +505,7 @@ if (window.initAnalyticsDashboard) {
                     throw new Error(response.message || 'Falha ao carregar status dos roteadores.');
                 }
 
-                renderTable('routerStatusBody', response.data.data, [
+                renderTable('routerStatusBody', response.data, [
                     { key: 'name' },
                     { key: 'status' },
                     { key: 'ip_address' },
@@ -529,7 +529,7 @@ if (window.initAnalyticsDashboard) {
                 const response = await apiRequest(`/api/dashboard/analytics/users-by-router?router=${routerName}`);
                 if (!response.success) throw new Error(response.message);
 
-                renderTable('routerActivityBody', response.data.data, [
+                renderTable('routerActivityBody', response.data, [
                     { key: 'fullname' },
                     { key: 'email' },
                     { key: 'last_login', type: 'datetime' }
@@ -582,7 +582,7 @@ if (window.initAnalyticsDashboard) {
                 const response = await apiRequest(`/api/dashboard/analytics/tickets?period=${periodInDays}`);
                 if (!response.success) throw new Error(response.message);
 
-                const data = response.data.data;
+                const data = response.data;
 
                 renderTable('ticketsDetailBody', data.latest_tickets, [
                     { key: 'id' },
@@ -669,7 +669,7 @@ if (window.initAnalyticsDashboard) {
                 const response = await apiRequest(`/api/dashboard/analytics/lgpd-requests?period=${periodInDays}`);
                 if (!response.success) throw new Error(response.message);
 
-                const data = response.data.data;
+                const data = response.data;
 
                 renderTable('lgpdDetailBody', data.latest_requests, [
                     { key: 'user_email' },
@@ -745,7 +745,7 @@ if (window.initAnalyticsDashboard) {
                 const response = await apiRequest(`/api/dashboard/analytics/admin-activity?period=${periodInDays}`);
                 if (!response.success) throw new Error(response.message);
 
-                const data = response.data.data;
+                const data = response.data;
 
                 renderTable('adminActivityDetailBody', data.latest_actions, [
                     { key: 'user_email' },
@@ -824,7 +824,7 @@ if (window.initAnalyticsDashboard) {
                 const response = await apiRequest(`/api/dashboard/analytics/raffles?period=${periodInDays}`);
                 if (!response.success) throw new Error(response.message);
 
-                const data = response.data.data;
+                const data = response.data;
 
                 // Renderiza as duas tabelas
                 renderTable('latestWinnersBody', data.latest_winners, [
@@ -897,7 +897,7 @@ if (window.initAnalyticsDashboard) {
                 const response = await apiRequest(`/api/dashboard/analytics/campaigns`);
                 if (!response.success) throw new Error(response.message);
 
-                const data = response.data.data;
+                const data = response.data;
 
                 renderTable('topTemplatesBody', data.top_templates_table, [
                     { key: 'template_name' },
@@ -969,7 +969,7 @@ if (window.initAnalyticsDashboard) {
                 const response = await apiRequest(`/api/dashboard/analytics/server-health`);
                 if (!response.success) throw new Error(response.message);
 
-                const data = response.data.data;
+                const data = response.data;
 
                 renderTable('serviceEventsBody', data.service_events, [
                     { key: 'timestamp', type: 'datetime' },

@@ -249,9 +249,26 @@ input[type="color"]::-webkit-color-swatch { border: none; border-radius: 6px; }
 
 /* [NOVO] Estilos para o Modal de Permissões */
 .header-actions { display: flex; gap: 15px; }
-.modal-content.large { max-width: 900px; } /* Aumenta a largura do modal grande */
+.modal-content.large { max-width: 1400px; } /* Aumenta a largura do modal grande para acomodar 4 colunas */
 .permissions-header { padding-bottom: 15px; margin-bottom: 15px; border-bottom: 1px solid var(--border-color); }
-.permissions-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 20px; max-height: 60vh; overflow-y: auto; padding: 5px; }
+.permissions-grid { 
+    display: grid; 
+    grid-template-columns: repeat(1, 1fr); /* 1 coluna por padrão em telas pequenas */
+    gap: 20px; 
+    max-height: 60vh; 
+    overflow-y: auto; 
+    padding: 5px; 
+}
+@media (min-width: 1024px) {
+    .permissions-grid {
+        grid-template-columns: repeat(2, 1fr); /* 2 colunas em tablets e telas médias */
+    }
+}
+@media (min-width: 1400px) {
+    .permissions-grid {
+        grid-template-columns: repeat(4, 1fr); /* 4 colunas em telas grandes */
+    }
+}
 .permission-group { background-color: var(--background-dark); border: 1px solid var(--border-color); border-radius: 8px; padding: 15px; }
 .permission-group h4 { font-size: 16px; color: var(--primary-color); margin-bottom: 15px; border-bottom: 1px solid var(--border-color); padding-bottom: 10px; }
 .permission-item { display: flex; align-items: center; margin-bottom: 12px; }
