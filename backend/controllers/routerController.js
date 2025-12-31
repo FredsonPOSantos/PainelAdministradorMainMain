@@ -388,12 +388,14 @@ const deleteRouterPermanently = async (req, res) => {
 
 const checkRouterStatus = async (req, res) => {
     const { id } = req.params;
+    const { period } = req.body; // [NOVO] Recebe o período (ex: '24h', '7d')
     try {
         const routerResult = await pool.query('SELECT ip_address FROM routers WHERE id = $1', [id]);
         if (routerResult.rowCount === 0) {
             return res.status(404).json({ message: 'Roteador não encontrado.' });
         }
-        const ip = routerResult.rows[0].ip_address;
+        // [CORREÇÃO] Remove espaços em branco do IP para garantir correspondência exata
+        const ip = routerResult.rows[0].ip_address ? routerResult.rows[0].ip_address.trim() : null;
         if (!ip) {
             return res.status(400).json({ message: 'Este roteador não tem um endereço IP configurado.' });
         }
@@ -401,10 +403,56 @@ const checkRouterStatus = async (req, res) => {
         const newStatus = pingResult.alive ? 'online' : 'offline';
         // [NOVO] Captura a latência se estiver vivo
         const latency = pingResult.alive && typeof pingResult.time === 'number' ? Math.round(pingResult.time) : null;
+        
+        // [NOVO] Tenta buscar o uptime do InfluxDB se estiver online
+        let uptime = null;
+        let availability = null; // [NOVO] Variável para disponibilidade
+
+        // [CORREÇÃO] Verifica se queryApi e influxBucket estão disponíveis
+        if (newStatus === 'online' && queryApi && influxBucket) {
+            try {
+                const uptimeQuery = `
+                    from(bucket: "${influxBucket}")
+                      |> range(start: -1h)
+                      |> filter(fn: (r) => r._measurement == "system_resource")
+                      |> filter(fn: (r) => r.router_host == "${ip}")
+                      // [CORRIGIDO] Usa especificamente uptime_seconds que sabemos existir e ser numérico
+                      |> filter(fn: (r) => r._field == "uptime_seconds")
+                      |> last()
+                `;
+                const result = await queryApi.collectRows(uptimeQuery);
+                if (result.length > 0) uptime = result[0]._value;
+            } catch (e) { console.error(`Erro ao buscar uptime para ${ip}:`, e.message); }
+        }
+
+        // [NOVO] Cálculo de Disponibilidade (Availability) se um período for fornecido
+        if (queryApi && period && influxBucket) {
+            try {
+                // Conta quantas janelas de 5m tiveram dados (online)
+                // [CORRIGIDO] Query simplificada e robusta usando uptime_seconds
+                const availabilityQuery = `
+                    from(bucket: "${influxBucket}")
+                      |> range(start: -${period})
+                      |> filter(fn: (r) => r._measurement == "system_resource")
+                      |> filter(fn: (r) => r.router_host == "${ip}")
+                      |> filter(fn: (r) => r._field == "uptime_seconds")
+                      |> aggregateWindow(every: 5m, fn: count)
+                      |> filter(fn: (r) => r._value > 0)
+                      |> count()
+                `;
+                const result = await queryApi.collectRows(availabilityQuery);
+                const onlineWindows = result.length > 0 ? result[0]._value : 0;
+                
+                // [MODIFICADO] Retorna o tempo total online em segundos em vez de porcentagem.
+                // Cada janela representa 5 minutos (300 segundos).
+                // Isso permite que o frontend mostre "Online 6d 23h" em vez de "99%".
+                availability = onlineWindows * 300;
+            } catch (e) { console.error(`Erro ao calcular disponibilidade para ${ip}:`, e.message); }
+        }
 
         const updateQuery = 'UPDATE routers SET status = $1, last_seen = NOW() WHERE id = $2 RETURNING status';
         const updateResult = await pool.query(updateQuery, [newStatus, id]);
-        res.json({ status: updateResult.rows[0].status, latency });
+        res.json({ status: updateResult.rows[0].status, latency, uptime, availability });
     } catch (error) {
         console.error(`Erro ao verificar status do roteador ${id}:`, error);
         res.status(500).json({ message: 'Erro interno ao verificar o status.' });

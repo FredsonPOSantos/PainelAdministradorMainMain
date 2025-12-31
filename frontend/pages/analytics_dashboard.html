@@ -185,25 +185,19 @@
             </div>
             <!-- Fim da tabela movida -->
 
-            <!-- [NOVO] Tabela de Status Detalhado -->
-            <div class="table-container" style="margin-top: 2rem;">
-                 <div class="section-header" style="margin-bottom: 1rem;">
-                    <h4>Status de Todos os Roteadores</h4>
-                </div>
-                <table id="routerStatusTable">
-                    <thead>
-                        <tr>
-                            <th>Nome do Roteador</th>
-                            <th>Status</th>
-                            <th>Endereço IP</th>
-                            <th>Última Verificação</th>
-                        </tr>
-                    </thead>
-                    <tbody id="routerStatusBody">
-                        <!-- Conteúdo será preenchido via JS -->
-                    </tbody>
-                </table>
+            <!-- [NOVO] Gráfico de Pizza de Distribuição por Grupo -->
+            <div class="chart-container" style="margin-top: 2rem; max-width: 500px; margin-left: auto; margin-right: auto;">
+                <h5 style="text-align: center; margin-bottom: 1rem;">Distribuição de Usuários por Grupo</h5>
+                <canvas id="routerGroupPieChart"></canvas>
             </div>
+
+            <!-- [NOVO] Gráfico de Barras de Distribuição por Roteador -->
+            <!-- [CORREÇÃO] Adiciona position: relative e uma altura fixa para evitar que o gráfico cresça infinitamente dentro do container flex. -->
+            <div class="chart-container" style="margin-top: 2rem; position: relative; height: 400px;">
+                <h5 style="text-align: center; margin-bottom: 1rem;">Top Roteadores por Usuários</h5>
+                <canvas id="routerDistributionBarChart"></canvas>
+            </div>
+
         </div>
 
         <!-- [NOVO] Detalhes de Utilizadores Hotspot -->

@@ -190,13 +190,13 @@ const getSystemHealth = async (req, res) => {
 const getRouterUsers = async (req, res) => {
     const { routerName } = req.query;
 
-    try {
+    try { // [CORRIGIDO] A coluna de email na tabela 'userdetails' é 'username'.
         let query = `
-            SELECT u.username, u.email, MAX(a.timestamp) as last_login
+            SELECT u.nome_completo as fullname, u.username as email, MAX(a.timestamp) as last_login
             FROM userdetails u
-            LEFT JOIN audit_logs a ON u.email = a.user_email AND a.action = 'LOGIN_SUCCESS'
+            LEFT JOIN audit_logs a ON u.username = a.user_email AND a.action = 'LOGIN_SUCCESS'
         `;
-        
+
         const params = [];
 
         if (routerName && routerName !== 'all') {
@@ -204,7 +204,7 @@ const getRouterUsers = async (req, res) => {
             params.push(routerName);
         }
 
-        query += ` GROUP BY u.id, u.username, u.email ORDER BY last_login DESC NULLS LAST LIMIT 100;`;
+        query += ` GROUP BY u.id, u.nome_completo, u.username ORDER BY last_login DESC NULLS LAST LIMIT 100;`;
 
         const { rows } = await pool.query(query, params);
         res.json({ success: true, data: rows });

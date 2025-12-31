@@ -24,7 +24,7 @@ const masterOnly = (req, res, next) => {
  * PARÂMETROS:
  *  - period (query): Número de dias a serem considerados (ex: 7, 15, 30). Padrão é 30.
  */
-router.get('/logins', [verifyToken, checkPermission('analytics.read')], async (req, res) => {
+router.get('/logins', [verifyToken, checkPermission('analytics.details.logins')], async (req, res) => {
     const period = parseInt(req.query.period, 10) || 30;
 
     try {
@@ -83,7 +83,7 @@ router.get('/logins', [verifyToken, checkPermission('analytics.read')], async (r
  * PARÂMETROS:
  *  - period (query): Número de dias a serem considerados (ex: 7, 15, 30). Padrão é 30.
  */
-router.get('/hotspot-users', [verifyToken, checkPermission('analytics.read')], async (req, res) => {
+router.get('/hotspot-users', [verifyToken, checkPermission('analytics.details.hotspot_users')], async (req, res) => {
     const period = parseInt(req.query.period, 10) || 30;
 
     try {
@@ -142,7 +142,7 @@ router.get('/hotspot-users', [verifyToken, checkPermission('analytics.read')], a
  *  - period (query): Número de dias a serem considerados (ex: 7, 15, 30). Padrão é 30.
  *  - marketing (query): 'true' para filtrar apenas quem aceitou marketing.
  */
-router.get('/hotspot-registrations', [verifyToken, checkPermission('analytics.read')], async (req, res) => {
+router.get('/hotspot-registrations', [verifyToken, checkPermission('analytics.details.hotspot_users')], async (req, res) => {
     const period = parseInt(req.query.period, 10) || 30;
     const marketingOnly = req.query.marketing === 'true';
 
@@ -203,7 +203,7 @@ router.get('/hotspot-registrations', [verifyToken, checkPermission('analytics.re
  * DESCRIÇÃO: Retorna uma lista de todos os roteadores com seu status detalhado.
  * PROTEÇÃO: Requer autenticação e perfil 'master'.
  */
-router.get('/routers-status', [verifyToken, checkPermission('analytics.read')], async (req, res) => {
+router.get('/routers-status', [verifyToken, checkPermission('analytics.details.routers')], async (req, res) => {
     try {
         const query = `
             SELECT 
@@ -230,7 +230,7 @@ router.get('/routers-status', [verifyToken, checkPermission('analytics.read')], 
  * DESCRIÇÃO: Retorna uma lista de usuários associados a um roteador específico.
  * PROTEÇÃO: Requer autenticação e perfil 'master'.
  */
-router.get('/users-by-router', [verifyToken, checkPermission('analytics.read')], async (req, res) => {
+router.get('/users-by-router', [verifyToken, checkPermission('analytics.details.routers')], async (req, res) => {
     const { router } = req.query;
 
     if (!router) {
@@ -268,7 +268,7 @@ router.get('/users-by-router', [verifyToken, checkPermission('analytics.read')],
  * DESCRIÇÃO: Retorna dados detalhados sobre os tickets de suporte.
  * PROTEÇÃO: Requer autenticação e perfil 'master'.
  */
-router.get('/tickets', [verifyToken, checkPermission('analytics.read')], async (req, res) => {
+router.get('/tickets', [verifyToken, checkPermission('analytics.details.tickets')], async (req, res) => {
     const period = parseInt(req.query.period, 10) || 30;
 
     try {
@@ -339,7 +339,7 @@ router.get('/tickets', [verifyToken, checkPermission('analytics.read')], async (
  * DESCRIÇÃO: Retorna dados detalhados sobre os pedidos de exclusão de dados (LGPD).
  * PROTEÇÃO: Requer autenticação e perfil 'master'.
  */
-router.get('/lgpd-requests', [verifyToken, checkPermission('analytics.read')], async (req, res) => {
+router.get('/lgpd-requests', [verifyToken, checkPermission('analytics.details.lgpd')], async (req, res) => {
     const period = parseInt(req.query.period, 10) || 30;
 
     try {
@@ -391,61 +391,7 @@ router.get('/lgpd-requests', [verifyToken, checkPermission('analytics.read')], a
  * DESCRIÇÃO: Retorna dados detalhados sobre a atividade dos administradores.
  * PROTEÇÃO: Requer autenticação e perfil 'master'.
  */
-router.get('/admin-activity', [verifyToken, checkPermission('analytics.read')], async (req, res) => {
-    const period = parseInt(req.query.period, 10) || 30;
-
-    try {
-        // ---- Consulta para a Tabela de Últimas Ações ----
-        const latestActionsQuery = `
-            SELECT user_email, action, status, timestamp
-            FROM audit_logs
-            WHERE timestamp >= NOW() - INTERVAL '${period} days'
-              AND user_email IS NOT NULL
-            ORDER BY timestamp DESC
-            LIMIT 100;
-        `;
-
-        // ---- Consulta para os Dados do Gráfico (Ações por Dia) ----
-        const actionsByDayQuery = `
-            SELECT 
-                TO_CHAR(DATE_TRUNC('day', timestamp), 'DD/MM') AS day,
-                COUNT(*) AS count
-            FROM audit_logs
-            WHERE timestamp >= NOW() - INTERVAL '${period} days'
-              AND user_email IS NOT NULL
-            GROUP BY DATE_TRUNC('day', timestamp)
-            ORDER BY DATE_TRUNC('day', timestamp) ASC;
-        `;
-
-        const [latestActionsResult, actionsByDayResult] = await Promise.all([
-            pool.query(latestActionsQuery),
-            pool.query(actionsByDayQuery)
-        ]);
-
-        const chartData = {
-            labels: actionsByDayResult.rows.map(r => r.day),
-            data: actionsByDayResult.rows.map(r => parseInt(r.count, 10)),
-        };
-
-        const responseData = {
-            latest_actions: latestActionsResult.rows,
-            actions_by_day: chartData
-        };
-
-        res.json({ success: true, data: responseData });
-
-    } catch (error) {
-        console.error('Erro ao buscar dados de atividade dos administradores:', error);
-        res.status(500).json({ success: false, message: 'Erro interno do servidor ao processar a sua solicitação.' });
-    }
-});
-
-/**
- * ROTA: GET /api/dashboard/analytics/admin-activity
- * DESCRIÇÃO: Retorna dados detalhados sobre a atividade dos administradores.
- * PROTEÇÃO: Requer autenticação e perfil 'master'.
- */
-router.get('/admin-activity', [verifyToken, checkPermission('analytics.read')], async (req, res) => {
+router.get('/admin-activity', [verifyToken, checkPermission('analytics.details.admin_activity')], async (req, res) => {
     const period = parseInt(req.query.period, 10) || 30;
 
     try {
@@ -499,7 +445,7 @@ router.get('/admin-activity', [verifyToken, checkPermission('analytics.read')], 
  * DESCRIÇÃO: Retorna dados detalhados sobre a performance dos sorteios.
  * PROTEÇÃO: Requer autenticação e perfil 'master'.
  */
-router.get('/raffles', [verifyToken, checkPermission('analytics.read')], async (req, res) => {
+router.get('/raffles', [verifyToken, checkPermission('analytics.details.raffles')], async (req, res) => {
     const period = parseInt(req.query.period, 10) || 30;
 
     try {
@@ -574,7 +520,7 @@ router.get('/raffles', [verifyToken, checkPermission('analytics.read')], async (
  * DESCRIÇÃO: Retorna dados detalhados sobre o engajamento das campanhas.
  * PROTEÇÃO: Requer autenticação e perfil 'master'.
  */
-router.get('/campaigns', [verifyToken, checkPermission('analytics.read')], async (req, res) => {
+router.get('/campaigns', [verifyToken, checkPermission('analytics.details.campaigns')], async (req, res) => {
     try {
         // ---- Consulta para o Gráfico (Campanhas mais vistas) ----
         const topCampaignsQuery = `
@@ -630,7 +576,7 @@ router.get('/campaigns', [verifyToken, checkPermission('analytics.read')], async
  * DESCRIÇÃO: Retorna dados detalhados sobre a saúde do servidor.
  * PROTEÇÃO: Requer autenticação e perfil 'master'.
  */
-router.get('/server-health', [verifyToken, checkPermission('analytics.read')], async (req, res) => {
+router.get('/server-health', [verifyToken, checkPermission('analytics.details.server_health')], async (req, res) => {
     try {
         // Busca os últimos 10 eventos de 'START' e 'STOP' (simulados) do log de auditoria.
         // No futuro, isso pode ser uma tabela dedicada a eventos do sistema.

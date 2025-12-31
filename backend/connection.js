@@ -74,85 +74,86 @@ async function checkAndUpgradeSchema(client) {
     // [NOVO] Garante que todas as permissões do sistema existem na tabela 'permissions'
     // Isto assegura que o Master tenha acesso a tudo (exceto LGPD) e que as permissões apareçam na matriz.
     const systemPermissions = [
-        // Dashboard & Analytics
-        { key: 'dashboard.read', feature: 'Dashboard Principal', action: 'Visualizar' },
-        { key: 'system_health.read', feature: 'Saúde do Sistema', action: 'Visualizar' },
-        { key: 'analytics.read', feature: 'Dashboard Analítico', action: 'Visualizar' },
+        // Principal
+        { key: 'dashboard.read', feature: 'Principal: Dashboard', action: 'Visualizar' },
+        { key: 'system_health.read', feature: 'Principal: Saúde do Sistema', action: 'Visualizar' },
+        { key: 'analytics.read', feature: 'Principal: Dashboard Analítico', action: 'Visualizar' },
+        { key: 'hotspot.read', feature: 'Principal: Relatório Hotspot', action: 'Visualizar' },
+
+        // Detalhes do Dashboard Analítico
+        { key: 'analytics.details.logins', feature: 'Principal: Dashboard Analítico (Detalhes)', action: 'Ver Detalhes de Acessos' },
+        { key: 'analytics.details.hotspot_users', feature: 'Principal: Dashboard Analítico (Detalhes)', action: 'Ver Detalhes de Utilizadores Hotspot' },
+        { key: 'analytics.details.routers', feature: 'Principal: Dashboard Analítico (Detalhes)', action: 'Ver Detalhes de Roteadores' },
+        { key: 'analytics.details.tickets', feature: 'Principal: Dashboard Analítico (Detalhes)', action: 'Ver Detalhes de Tickets' },
+        { key: 'analytics.details.lgpd', feature: 'Principal: Dashboard Analítico (Detalhes)', action: 'Ver Detalhes de Pedidos LGPD' },
+        { key: 'analytics.details.admin_activity', feature: 'Principal: Dashboard Analítico (Detalhes)', action: 'Ver Detalhes de Atividade Admin' },
+        { key: 'analytics.details.raffles', feature: 'Principal: Dashboard Analítico (Detalhes)', action: 'Ver Detalhes de Sorteios' },
+        { key: 'analytics.details.campaigns', feature: 'Principal: Dashboard Analítico (Detalhes)', action: 'Ver Detalhes de Campanhas' },
+        { key: 'analytics.details.server_health', feature: 'Principal: Dashboard Analítico (Detalhes)', action: 'Ver Detalhes de Saúde do Servidor' },
         
-        // Utilizadores (Admin)
-        { key: 'users.read', feature: 'Utilizadores', action: 'Visualizar' },
-        { key: 'users.create', feature: 'Utilizadores', action: 'Criar' },
-        { key: 'users.update', feature: 'Utilizadores', action: 'Editar' },
-        { key: 'users.delete', feature: 'Utilizadores', action: 'Eliminar' },
+        // Gestão
+        { key: 'users.read', feature: 'Gestão: Utilizadores', action: 'Visualizar' },
+        { key: 'users.create', feature: 'Gestão: Utilizadores', action: 'Criar' },
+        { key: 'users.update', feature: 'Gestão: Utilizadores', action: 'Editar' },
+        { key: 'users.delete', feature: 'Gestão: Utilizadores', action: 'Eliminar' },
 
-        // Roteadores
-        { key: 'routers.read', feature: 'Roteadores', action: 'Visualizar' },
-        { key: 'routers.create', feature: 'Roteadores', action: 'Criar' },
-        { key: 'routers.update', feature: 'Roteadores', action: 'Editar' },
-        { key: 'routers.delete', feature: 'Roteadores', action: 'Eliminar' },
-        { key: 'routers.reboot', feature: 'Roteadores', action: 'Reiniciar/Desligar' },
-        { key: 'routers.individual.delete_permanent', feature: 'Roteadores', action: 'Exclusão Permanente' },
-        { key: 'routers.monitoring.read', feature: 'Roteadores', action: 'Ver Monitoramento (NOC)' },
-        { key: 'routers.dashboard.read', feature: 'Roteadores', action: 'Ver Dashboard Individual' },
-        { key: 'routers.dashboard.clients', feature: 'Roteadores', action: 'Ver Clientes no Dashboard' },
-        { key: 'routers.dashboard.interfaces', feature: 'Roteadores', action: 'Ver Interfaces no Dashboard' },
+        { key: 'routers.read', feature: 'Gestão: Roteadores', action: 'Visualizar' },
+        { key: 'routers.create', feature: 'Gestão: Roteadores', action: 'Criar' },
+        { key: 'routers.update', feature: 'Gestão: Roteadores', action: 'Editar' },
+        { key: 'routers.delete', feature: 'Gestão: Roteadores', action: 'Eliminar' },
+        { key: 'routers.reboot', feature: 'Gestão: Roteadores', action: 'Reiniciar/Desligar' },
+        { key: 'routers.individual.delete_permanent', feature: 'Gestão: Roteadores', action: 'Exclusão Permanente' },
+        { key: 'routers.monitoring.read', feature: 'Gestão: Roteadores', action: 'Ver Monitoramento (NOC)' },
+        { key: 'routers.dashboard.read', feature: 'Gestão: Roteadores', action: 'Ver Dashboard Individual' },
+        { key: 'routers.dashboard.clients', feature: 'Gestão: Roteadores', action: 'Ver Clientes no Dashboard' },
+        { key: 'routers.dashboard.interfaces', feature: 'Gestão: Roteadores', action: 'Ver Interfaces no Dashboard' },
 
-        // Templates
-        { key: 'templates.read', feature: 'Templates', action: 'Visualizar' },
-        { key: 'templates.create', feature: 'Templates', action: 'Criar' },
-        { key: 'templates.update', feature: 'Templates', action: 'Editar' },
-        { key: 'templates.delete', feature: 'Templates', action: 'Eliminar' },
+        { key: 'tickets.read', feature: 'Gestão: Suporte (Tickets)', action: 'Visualizar' },
+        { key: 'tickets.create', feature: 'Gestão: Suporte (Tickets)', action: 'Criar' },
+        { key: 'tickets.update', feature: 'Gestão: Suporte (Tickets)', action: 'Editar' },
+        { key: 'tickets.manage', feature: 'Gestão: Suporte (Tickets)', action: 'Gerir (Atribuir/Status)' },
+        { key: 'tickets.delete', feature: 'Gestão: Suporte (Tickets)', action: 'Eliminar' },
 
-        // Campanhas
-        { key: 'campaigns.read', feature: 'Campanhas', action: 'Visualizar' },
-        { key: 'campaigns.create', feature: 'Campanhas', action: 'Criar' },
-        { key: 'campaigns.update', feature: 'Campanhas', action: 'Editar' },
-        { key: 'campaigns.delete', feature: 'Campanhas', action: 'Eliminar' },
+        // Marketing
+        { key: 'templates.read', feature: 'Marketing: Templates', action: 'Visualizar' },
+        { key: 'templates.create', feature: 'Marketing: Templates', action: 'Criar' },
+        { key: 'templates.update', feature: 'Marketing: Templates', action: 'Editar' },
+        { key: 'templates.delete', feature: 'Marketing: Templates', action: 'Eliminar' },
 
-        // Banners
-        { key: 'banners.read', feature: 'Banners', action: 'Visualizar' },
-        { key: 'banners.create', feature: 'Banners', action: 'Criar' },
-        { key: 'banners.update', feature: 'Banners', action: 'Editar' },
-        { key: 'banners.delete', feature: 'Banners', action: 'Eliminar' },
+        { key: 'campaigns.read', feature: 'Marketing: Campanhas', action: 'Visualizar' },
+        { key: 'campaigns.create', feature: 'Marketing: Campanhas', action: 'Criar' },
+        { key: 'campaigns.update', feature: 'Marketing: Campanhas', action: 'Editar' },
+        { key: 'campaigns.delete', feature: 'Marketing: Campanhas', action: 'Eliminar' },
 
-        // Hotspot (Portal)
-        { key: 'hotspot.read', feature: 'Hotspot', action: 'Visualizar' },
+        { key: 'banners.read', feature: 'Marketing: Banners', action: 'Visualizar' },
+        { key: 'banners.create', feature: 'Marketing: Banners', action: 'Criar' },
+        { key: 'banners.update', feature: 'Marketing: Banners', action: 'Editar' },
+        { key: 'banners.delete', feature: 'Marketing: Banners', action: 'Eliminar' },
 
-        // Tickets
-        { key: 'tickets.read', feature: 'Tickets', action: 'Visualizar' },
-        { key: 'tickets.create', feature: 'Tickets', action: 'Criar' },
-        { key: 'tickets.update', feature: 'Tickets', action: 'Editar' },
-        { key: 'tickets.manage', feature: 'Tickets', action: 'Gerir (Atribuir/Status)' },
-        { key: 'tickets.delete', feature: 'Tickets', action: 'Eliminar' },
+        { key: 'raffles.read', feature: 'Marketing: Ferramentas (Sorteios)', action: 'Visualizar' },
+        { key: 'raffles.create', feature: 'Marketing: Ferramentas (Sorteios)', action: 'Criar' },
+        { key: 'raffles.update', feature: 'Marketing: Ferramentas (Sorteios)', action: 'Editar' },
+        { key: 'raffles.draw', feature: 'Marketing: Ferramentas (Sorteios)', action: 'Realizar Sorteio' },
+        { key: 'raffles.delete', feature: 'Marketing: Ferramentas (Sorteios)', action: 'Eliminar' },
 
-        // Sorteios
-        { key: 'raffles.read', feature: 'Sorteios', action: 'Visualizar' },
-        { key: 'raffles.create', feature: 'Sorteios', action: 'Criar' },
-        { key: 'raffles.update', feature: 'Sorteios', action: 'Editar' },
-        { key: 'raffles.draw', feature: 'Sorteios', action: 'Realizar Sorteio' },
-        { key: 'raffles.delete', feature: 'Sorteios', action: 'Eliminar' },
+        // Administração
+        { key: 'settings.appearance', feature: 'Administração: Configurações', action: 'Aparência' },
+        { key: 'settings.login_page', feature: 'Administração: Configurações', action: 'Página de Login' },
+        { key: 'settings.smtp', feature: 'Administração: Configurações', action: 'SMTP (E-mail)' },
+        { key: 'settings.policies', feature: 'Administração: Configurações', action: 'Políticas' },
+        { key: 'settings.media', feature: 'Administração: Configurações', action: 'Gestão de Arquivos' },
+        { key: 'settings.hotspot.read', feature: 'Administração: Configurações', action: 'Ver Configs Hotspot' },
+        { key: 'settings.hotspot.update', feature: 'Administração: Configurações', action: 'Editar Configs Hotspot' },
 
-        // Configurações
-        { key: 'settings.appearance', feature: 'Configurações', action: 'Aparência' },
-        { key: 'settings.login_page', feature: 'Configurações', action: 'Página de Login' },
-        { key: 'settings.smtp', feature: 'Configurações', action: 'SMTP (E-mail)' },
-        { key: 'settings.policies', feature: 'Configurações', action: 'Políticas' },
-        { key: 'settings.media', feature: 'Configurações', action: 'Gestão de Arquivos' },
-        { key: 'settings.hotspot.read', feature: 'Configurações', action: 'Ver Configs Hotspot' },
-        { key: 'settings.hotspot.update', feature: 'Configurações', action: 'Editar Configs Hotspot' },
+        { key: 'permissions.read', feature: 'Administração: Funções e Permissões', action: 'Visualizar' },
+        { key: 'permissions.update', feature: 'Administração: Funções e Permissões', action: 'Editar' },
 
-        // Funções e Permissões
-        { key: 'permissions.read', feature: 'Funções e Permissões', action: 'Visualizar' },
-        { key: 'permissions.update', feature: 'Funções e Permissões', action: 'Editar' },
+        { key: 'logs.activity.read', feature: 'Administração: Logs', action: 'Ver Logs de Atividade' },
+        { key: 'logs.system.read', feature: 'Administração: Logs', action: 'Ver Logs de Sistema' },
 
-        // Logs
-        { key: 'logs.activity.read', feature: 'Logs', action: 'Ver Logs de Atividade' },
-        { key: 'logs.system.read', feature: 'Logs', action: 'Ver Logs de Sistema' },
-
-        // LGPD (Exclusivo DPO - Master não terá acesso a estas)
-        { key: 'lgpd.read', feature: 'LGPD', action: 'Visualizar' },
-        { key: 'lgpd.update', feature: 'LGPD', action: 'Editar' },
-        { key: 'lgpd.delete', feature: 'LGPD', action: 'Eliminar' }
+        { key: 'lgpd.read', feature: 'Administração: LGPD', action: 'Visualizar' },
+        { key: 'lgpd.update', feature: 'Administração: LGPD', action: 'Editar' },
+        { key: 'lgpd.delete', feature: 'Administração: LGPD', action: 'Eliminar' }
     ];
 
     for (const perm of systemPermissions) {

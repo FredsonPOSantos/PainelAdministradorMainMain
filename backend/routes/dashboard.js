@@ -36,7 +36,23 @@ router.get(
         activeRaffles: `SELECT COUNT(*) FROM raffles WHERE winner_id IS NULL;`,
         raffleParticipants: `SELECT COUNT(DISTINCT user_id) FROM raffle_participants WHERE created_at >= NOW() - INTERVAL '30 days';`,
         // [NOVO] Consultas para o card de Engajamento com Campanhas
-        campaigns: `SELECT COUNT(*) AS active_count, SUM(view_count) AS total_views FROM campaigns WHERE is_active = true AND CURRENT_DATE BETWEEN start_date AND end_date;`
+        campaigns: `SELECT COUNT(*) AS active_count, SUM(view_count) AS total_views FROM campaigns WHERE is_active = true AND CURRENT_DATE BETWEEN start_date AND end_date;`,
+        // [NOVO] Consulta para o gráfico de pizza de distribuição de utilizadores por grupo
+        userDistributionByGroup: `
+            SELECT COALESCE(g.name, 'Sem Grupo') as group_name, COUNT(u.id) as user_count
+            FROM userdetails u
+            LEFT JOIN routers r ON u.router_name = r.name
+            LEFT JOIN router_groups g ON r.group_id = g.id
+            GROUP BY g.name
+            ORDER BY user_count DESC;
+        `,
+        // [NOVO] Consulta para o gráfico de barras de distribuição de utilizadores por roteador
+        userDistributionByRouter: `
+            SELECT COALESCE(u.router_name, 'Desconhecido') as router_name, COUNT(u.id) as user_count
+            FROM userdetails u
+            GROUP BY u.router_name
+            ORDER BY user_count DESC;
+        `
       };
 
       // [NOVO] Função para verificar o status do RADIUS
@@ -82,6 +98,8 @@ router.get(
         activeRafflesResult, // [NOVO]
         raffleParticipantsResult, // [NOVO]
         campaignsResult, // [NOVO]
+        userDistributionByGroupResult, // [NOVO]
+        userDistributionByRouterResult, // [NOVO]
         radiusResult // [NOVO]
       ] = results;
 
@@ -158,6 +176,16 @@ router.get(
         serverHealth: {
             uptime: Date.now() - serverModule.serverStartTime.getTime(),
             radiusStatus: radiusResult.status
+        },
+        // [NOVO] Processa os dados para o gráfico de pizza
+        userDistributionByGroup: {
+            labels: userDistributionByGroupResult.rows.map(r => r.group_name),
+            data: userDistributionByGroupResult.rows.map(r => parseInt(r.user_count, 10))
+        },
+        // [NOVO] Processa os dados para o gráfico de barras por roteador
+        userDistributionByRouter: {
+            labels: userDistributionByRouterResult.rows.map(r => r.router_name),
+            data: userDistributionByRouterResult.rows.map(r => parseInt(r.user_count, 10))
         }
       };
 
@@ -181,7 +209,7 @@ router.get(
 // [NOVO] Rota para buscar utilizadores por roteador (para o Dashboard Analítico)
 router.get(
   '/router-users',
-  [authMiddleware, checkPermission('analytics.read')],
+  [authMiddleware, checkPermission('analytics.details.routers')],
   dashboardController.getRouterUsers
 );
 

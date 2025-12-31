@@ -24,6 +24,25 @@ if (window.initAnalyticsDashboard) {
         let rafflesChartInstance = null; // [NOVO]
         let campaignsChartInstance = null; // [NOVO]
         let serverHealthChartInstance = null; // [NOVO]
+        let routerGroupPieChartInstance = null; // [NOVO]
+        let routerDistributionBarChartInstance = null; // [NOVO]
+
+        // [NOVO] Cache para os dados da página
+        let analyticsPageData = {};
+
+        // [NOVO] Mapeia a métrica do card para a sua permissão de detalhe correspondente
+        const metricToPermissionMap = {
+            'logins': 'analytics.details.logins',
+            'hotspotUsers': 'analytics.details.hotspot_users',
+            'routers': 'analytics.details.routers',
+            'tickets': 'analytics.details.tickets',
+            'lgpd': 'analytics.details.lgpd',
+            'adminActivity': 'analytics.details.admin_activity',
+            'raffles': 'analytics.details.raffles',
+            'campaigns': 'analytics.details.campaigns',
+            'serverHealth': 'analytics.details.server_health'
+        };
+
 
         const fillCard = (id, value) => {
             const element = document.getElementById(id);
@@ -86,6 +105,20 @@ if (window.initAnalyticsDashboard) {
 
         // Função para mostrar a secção de detalhe correta
         const showDetailSection = (metric) => {
+            // [NOVO] Verificação de permissão antes de mostrar os detalhes
+            const requiredPermission = metricToPermissionMap[metric];
+            if (requiredPermission && !window.currentUserProfile?.permissions[requiredPermission]) {
+                document.querySelectorAll('.analytics-detail-section').forEach(section => {
+                    section.classList.add('hidden');
+                });
+                const activeSection = document.getElementById(`details-${metric}`);
+                if (activeSection) {
+                    activeSection.classList.remove('hidden');
+                    activeSection.innerHTML = `<div class="section-header"><h4>Acesso Negado</h4></div><p style="text-align:center; padding: 20px;">Você não tem permissão para ver estes detalhes.</p>`;
+                }
+                return;
+            }
+
             document.querySelectorAll('.analytics-detail-section').forEach(section => {
                 section.classList.add('hidden');
             });
@@ -174,6 +207,7 @@ if (window.initAnalyticsDashboard) {
                 
                 // [CORRIGIDO] A API retorna { success: true, data: { ... } }. O objeto de dados está em response.data.
                 const data = response.data;
+                analyticsPageData = data; // [NOVO] Armazena todos os dados
                 console.log('[loadAnalyticsData] Dados extraídos com sucesso:', data);
 
                 // Preenche os cards principais
@@ -221,6 +255,18 @@ if (window.initAnalyticsDashboard) {
                     { key: 'last_login', type: 'datetime' }
                 ], 'Nenhuma atividade encontrada.');
 
+                // [NOVO] Desativa os cards se o utilizador não tiver permissão para ver os detalhes
+                document.querySelectorAll('.stat-card.clickable').forEach(card => {
+                    const metric = card.dataset.metric;
+                    const requiredPermission = metricToPermissionMap[metric];
+                    if (requiredPermission && !window.currentUserProfile?.permissions[requiredPermission]) {
+                        card.classList.add('disabled');
+                        card.title = 'Você não tem permissão para ver os detalhes.';
+                    } else {
+                        card.classList.remove('disabled');
+                        card.title = '';
+                    }
+                });
             } catch (error) {
                 console.error('[loadAnalyticsData] ERRO FINAL:', error);
                 showNotification(`Erro ao carregar dados: ${error.message}`, 'error');
@@ -493,29 +539,85 @@ if (window.initAnalyticsDashboard) {
             });
         }
 
-        // [RENOMEADO] Função para carregar a tabela de status dos roteadores
-        const loadRouterStatusDetails = async () => {
-            const tbody = document.getElementById('routerStatusBody');
-            if (!tbody) return;
-            tbody.innerHTML = '<tr><td colspan="4" style="text-align: center;">A carregar status...</td></tr>';
+        // [NOVO] Função para renderizar o gráfico de pizza de distribuição de utilizadores
+        const renderRouterGroupPieChart = (chartData) => {
+            const canvas = document.getElementById('routerGroupPieChart');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
 
-            try {
-                const response = await apiRequest('/api/dashboard/analytics/routers-status');
-                if (!response.success) {
-                    throw new Error(response.message || 'Falha ao carregar status dos roteadores.');
-                }
-
-                renderTable('routerStatusBody', response.data, [
-                    { key: 'name' },
-                    { key: 'status' },
-                    { key: 'ip_address' },
-                    { key: 'last_seen', type: 'datetime' }
-                ], 'Nenhum roteador encontrado.');
-
-            } catch (error) {
-                showNotification(`Erro ao carregar status dos roteadores: ${error.message}`, 'error');
-                tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--warning-text);">Falha ao carregar dados.</td></tr>';
+            if (routerGroupPieChartInstance) {
+                routerGroupPieChartInstance.destroy();
             }
+
+            const labels = chartData?.labels || [];
+            const data = chartData?.data || [];
+
+            routerGroupPieChartInstance = new Chart(ctx, {
+                type: 'pie',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Usuários',
+                        data: data,
+                        backgroundColor: [
+                            '#4299e1', '#38a169', '#dd6b20', '#c53030',
+                            '#805ad5', '#319795', '#718096', '#d69e2e'
+                        ],
+                        borderColor: 'var(--background-medium)',
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: { 
+                                color: '#ffffff', // [CORRIGIDO] Cor branca para melhor visibilidade no fundo escuro
+                                padding: 20
+                            }
+                        }
+                    }
+                }
+            });
+        };
+
+        // [NOVO] Função para renderizar o gráfico de barras de distribuição por roteador
+        const renderRouterDistributionBarChart = (chartData) => {
+            const canvas = document.getElementById('routerDistributionBarChart');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+
+            if (routerDistributionBarChartInstance) {
+                routerDistributionBarChartInstance.destroy();
+            }
+
+            const labels = chartData?.labels || [];
+            const data = chartData?.data || [];
+
+            routerDistributionBarChartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Usuários',
+                        data: data,
+                        backgroundColor: 'rgba(54, 162, 235, 0.6)',
+                        borderColor: 'rgba(54, 162, 235, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
         };
 
         // [NOVO] Função para carregar a tabela de atividade por roteador (com filtro)
@@ -525,8 +627,8 @@ if (window.initAnalyticsDashboard) {
             tbody.innerHTML = '<tr><td colspan="3" style="text-align: center;">A carregar usuários...</td></tr>';
 
             try {
-                // A rota /api/dashboard/analytics/users-by-router será criada no backend
-                const response = await apiRequest(`/api/dashboard/analytics/users-by-router?router=${routerName}`);
+                // [CORRIGIDO] Usa a rota correta que já existe
+                const response = await apiRequest(`/api/dashboard/router-users?routerName=${routerName}`);
                 if (!response.success) throw new Error(response.message);
 
                 renderTable('routerActivityBody', response.data, [
@@ -543,8 +645,16 @@ if (window.initAnalyticsDashboard) {
 
         // [NOVO] Função principal para inicializar toda a seção de Roteadores
         const initRoutersSection = async () => {
-            // Carrega as duas tabelas em paralelo
-            loadRouterStatusDetails();
+            // [REMOVIDO] A tabela de status foi removida pois era duplicada.
+
+            // [NOVO] Renderiza o gráfico de pizza com os dados já carregados
+            if (analyticsPageData.userDistributionByGroup) {
+                renderRouterGroupPieChart(analyticsPageData.userDistributionByGroup);
+            }
+            // [NOVO] Renderiza o gráfico de barras com os dados já carregados
+            if (analyticsPageData.userDistributionByRouter) {
+                renderRouterDistributionBarChart(analyticsPageData.userDistributionByRouter);
+            }
             loadRouterActivityDetails('all'); // Carrega inicialmente para todos
 
             // Popula o dropdown de filtro
@@ -552,13 +662,16 @@ if (window.initAnalyticsDashboard) {
             if (select) {
                 try {
                     const response = await apiRequest('/api/routers'); // Reutiliza a rota existente
-                    if (response.success) {
-                        // [CORRIGIDO] A rota /api/routers retorna a lista diretamente em `response.data`
-                        response.data.forEach(router => {
-                            const option = new Option(router.name, router.name);
-                            select.add(option);
-                        });
-                    }
+                    
+                    // [CORRIGIDO] A API /api/routers retorna um array diretamente.
+                    // O código anterior esperava { success: true, data: [...] } e falhava.
+                    const routers = Array.isArray(response) ? response : (response.data || []);
+
+                    routers.forEach(router => {
+                        const option = new Option(router.name, router.name);
+                        select.add(option);
+                    });
+                    
                     select.onchange = (e) => loadRouterActivityDetails(e.target.value);
                 } catch (error) {
                     console.error("Falha ao popular filtro de roteadores:", error);
@@ -986,6 +1099,11 @@ if (window.initAnalyticsDashboard) {
         // Adiciona os listeners de clique aos cards
         document.querySelectorAll('.stat-card.clickable').forEach(card => {
             card.addEventListener('click', () => {
+                // [NOVO] Impede o clique se o card estiver desativado por falta de permissão
+                if (card.classList.contains('disabled')) {
+                    showNotification('Acesso aos detalhes negado.', 'warning');
+                    return;
+                }
                 const metric = card.dataset.metric;
                 showDetailSection(metric);
             });

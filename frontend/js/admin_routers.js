@@ -44,6 +44,18 @@ if (window.initRoutersPage) {
                 displayRouters(filtered, 1); // [NOVO] Reseta para a primeira página ao pesquisar
             });
             checkStatusBtn.parentElement.appendChild(searchInput);
+
+            // [NOVO] Cria e injeta o seletor de período para disponibilidade
+            const periodSelect = document.createElement('select');
+            periodSelect.id = 'availabilityPeriodSelect';
+            periodSelect.style.cssText = 'padding: 6px 12px; margin-left: 10px; border: 1px solid #4B5563; border-radius: 4px; background-color: #374151; color: #fff;';
+            periodSelect.innerHTML = `
+                <option value="24h" selected>24 Horas</option>
+                <option value="7d">7 Dias</option>
+                <option value="30d">30 Dias</option>
+            `;
+            // Insere antes do botão de verificar status
+            checkStatusBtn.parentElement.insertBefore(periodSelect, checkStatusBtn);
         }
         
         // [NOVO] Cria e injeta o container da paginação abaixo da tabela
@@ -75,6 +87,20 @@ if (window.initRoutersPage) {
              // Insere após a coluna de Status (índice 2, então insere antes do índice 3)
              if (tableHeadRow.children.length > 3) tableHeadRow.insertBefore(latencyTh, tableHeadRow.children[3]);
              else tableHeadRow.appendChild(latencyTh);
+        }
+        
+        // [NOVO] Injeta a coluna de Tempo Atividade (Uptime)
+        if (tableHeadRow && !tableHeadRow.innerHTML.includes('Tempo Atividade')) {
+             const uptimeTh = document.createElement('th');
+             uptimeTh.textContent = 'Tempo Atividade';
+             if (tableHeadRow.children.length > 4) tableHeadRow.insertBefore(uptimeTh, tableHeadRow.children[4]);
+        }
+
+        // [NOVO] Injeta a coluna de Disponibilidade
+        if (tableHeadRow && !tableHeadRow.innerHTML.includes('Disponibilidade')) {
+             const availTh = document.createElement('th');
+             availTh.textContent = 'Disponibilidade';
+             if (tableHeadRow.children.length > 5) tableHeadRow.insertBefore(availTh, tableHeadRow.children[5]);
         }
 
         // --- Funções Principais de Carregamento ---
@@ -152,12 +178,15 @@ if (window.initRoutersPage) {
 
             paginatedItems.forEach(router => {
                 const row = document.createElement('tr');
+                row.dataset.routerId = router.id; // [NOVO] Adiciona ID para facilitar a busca na exportação
                 const groupName = router.group_id ? groupMap.get(router.group_id) || `ID: ${router.group_id}` : 'Nenhum';
                 row.innerHTML = `
                     <td>${router.id}</td>
                     <td>${router.name}</td>
                     <td><span class="status-dot status-${router.status || 'offline'}"></span> ${router.status || 'offline'}</td>
                     <td class="latency-cell">-</td>
+                    <td class="uptime-cell">-</td>
+                    <td class="availability-cell">-</td> <!-- [NOVO] Célula de Disponibilidade -->
                     <td>${groupName}</td>
                     <td>${router.observacao || 'N/A'}</td> 
                     <td class="action-buttons">
@@ -291,6 +320,7 @@ if (window.initRoutersPage) {
             isCheckingStatus = true;
             checkStatusBtn.textContent = 'Cancelar'; // Muda o botão para Cancelar
             checkStatusBtn.classList.add('btn-danger'); // Adiciona estilo visual de alerta (opcional)
+            const selectedPeriod = document.getElementById('availabilityPeriodSelect')?.value || '24h'; // [NOVO] Pega o período
 
             // Percorre cada linha da tabela para atualizar o status individualmente
             const rows = routersTableBody.querySelectorAll('tr');
@@ -329,14 +359,18 @@ if (window.initRoutersPage) {
                 
                 const statusCell = row.cells[2];
                 const latencyCell = row.cells[3]; // [NOVO] Célula de latência
+                const uptimeCell = row.cells[4];  // [NOVO] Célula de uptime
+                const availCell = row.cells[5];   // [NOVO] Célula de disponibilidade
 
                 statusCell.innerHTML = 'Verificando...';
                 latencyCell.textContent = '...';
+                uptimeCell.textContent = '...';
+                availCell.textContent = '...';
 
                 try {
                     // Atualiza o objeto 'router' na cache 'allRouters'
                     const routerInCache = allRouters.find(r => r.id === routerId);
-                    const pingResponse = await apiRequest(`/api/routers/${routerId}/ping`, 'POST');
+                    const pingResponse = await apiRequest(`/api/routers/${routerId}/ping`, 'POST', { period: selectedPeriod }); // [NOVO] Envia o período
 
                     // [CORRIGIDO] A API de ping retorna { status: 'online' } diretamente.
                     // A verificação de 'success' e 'data' não se aplica aqui.
@@ -353,6 +387,31 @@ if (window.initRoutersPage) {
                             latencyCell.textContent = '-';
                             latencyCell.style.color = '';
                         }
+                        
+                        // [NOVO] Atualiza o uptime
+                        if (pingResponse.uptime !== null && pingResponse.uptime !== undefined) {
+                            // Usa a função global formatUptime definida em utils.js
+                            if (typeof formatUptime === 'function') {
+                                uptimeCell.textContent = formatUptime(pingResponse.uptime);
+                            } else {
+                                uptimeCell.textContent = pingResponse.uptime + 's'; // Fallback
+                            }
+                        } else {
+                            uptimeCell.textContent = '-';
+                        }
+
+                        // [NOVO] Atualiza a disponibilidade
+                        if (pingResponse.availability !== null && pingResponse.availability !== undefined) {
+                            // [MODIFICADO] Exibe o tempo total online formatado (ex: "6d 23h")
+                            if (typeof formatUptime === 'function') {
+                                availCell.textContent = formatUptime(pingResponse.availability);
+                            } else {
+                                availCell.textContent = pingResponse.availability + 's';
+                            }
+                            availCell.style.color = ''; // Remove cores de alerta, usa cor padrão
+                        } else {
+                            availCell.textContent = '-';
+                        }
 
                         if (routerInCache) routerInCache.status = pingResponse.status; // Atualiza cache
                     } else {
@@ -362,6 +421,8 @@ if (window.initRoutersPage) {
                 } catch (error) {
                     statusCell.innerHTML = `<span class="status-dot status-offline"></span> erro`;
                     latencyCell.textContent = '-';
+                    uptimeCell.textContent = '-';
+                    availCell.textContent = '-';
                     const routerInCache = allRouters.find(r => r.id === routerId);
                     if (routerInCache) routerInCache.status = 'offline'; // Atualiza cache
                 }
@@ -389,39 +450,47 @@ if (window.initRoutersPage) {
 
         // [NOVO] Função para exportar os dados da tabela para um ficheiro Excel
         const exportRoutersToExcel = () => {
-            // Verifica se a biblioteca SheetJS (XLSX) está disponível
             if (typeof XLSX === 'undefined') {
                 showNotification("Erro: A biblioteca de exportação para Excel não foi carregada.", 'error');
                 console.error("SheetJS (XLSX) library not found. Make sure it's included in the main HTML file.");
                 return;
             }
 
-            const rows = routersTableBody.querySelectorAll('tr');
-            if (rows.length === 0 || (rows.length === 1 && rows[0].textContent.includes('Nenhum roteador'))) {
+            // [CORRIGIDO] Usa a lista completa de roteadores (allRouters) em vez de apenas os da página atual
+            if (allRouters.length === 0) {
                 showNotification('Não há dados de roteadores para exportar.', 'info');
                 return;
             }
 
-            const dataToExport = [];
-            rows.forEach(row => {
-                const cells = row.querySelectorAll('td');
-                if (cells.length < 6) return; // Ignora linhas inválidas
+            const groupMap = new Map(allGroups.map(group => [group.id, group.name]));
 
-                // Extrai os dados de cada célula, limpando o texto
-                dataToExport.push({
-                    'ID': cells[0].textContent.trim(),
-                    'Nome': cells[1].textContent.trim(),
-                    'Status': cells[2].textContent.trim(),
-                    'Latência': cells[3].textContent.trim(),
-                    'Grupo': cells[4].textContent.trim(),
-                    'Observação': cells[5].textContent.trim()
-                });
+            const dataToExport = allRouters.map(router => {
+                // Pega os valores das células da linha correspondente na tabela para ter os dados de status em tempo real
+                const row = routersTableBody.querySelector(`tr[data-router-id="${router.id}"]`);
+                
+                let latency = '-';
+                let uptime = '-';
+                let availability = '-';
+                let status = router.status || 'offline';
+
+                if (row) {
+                    status = row.cells[2]?.textContent.trim() || status;
+                    latency = row.cells[3]?.textContent.trim() || '-';
+                    uptime = row.cells[4]?.textContent.trim() || '-';
+                    availability = row.cells[5]?.textContent.trim() || '-';
+                }
+
+                return {
+                    'ID': router.id,
+                    'Nome': router.name,
+                    'Status': status,
+                    'Latência': latency,
+                    'Uptime': uptime,
+                    'Disponibilidade': availability,
+                    'Grupo': router.group_id ? groupMap.get(router.group_id) || 'N/A' : 'Nenhum',
+                    'Observação': router.observacao || 'N/A'
+                };
             });
-
-            if (dataToExport.length === 0) {
-                showNotification('Não foram encontrados dados válidos para exportar.', 'info');
-                return;
-            }
 
             const worksheet = XLSX.utils.json_to_sheet(dataToExport);
             const workbook = XLSX.utils.book_new();

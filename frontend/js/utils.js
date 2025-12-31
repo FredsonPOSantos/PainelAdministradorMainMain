@@ -32,6 +32,25 @@ function formatBytes(bytes) {
 }
 
 /**
+ * [NOVO] Formata segundos em um formato legível (dias, horas, minutos).
+ * @param {number} seconds - O tempo em segundos.
+ * @returns {string} A string formatada (ex: "5d 12h 30m").
+ */
+function formatUptime(seconds) {
+    if (!seconds || seconds < 0) return 'N/A';
+    const days = Math.floor(seconds / 86400);
+    const hours = Math.floor((seconds % 86400) / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+
+    let parts = [];
+    if (days > 0) parts.push(`${days}d`);
+    if (hours > 0) parts.push(`${hours}h`);
+    if (minutes > 0) parts.push(`${minutes}m`);
+
+    return parts.join(' ') || Math.floor(seconds) + 's';
+}
+
+/**
  * [NOVO] Realiza uma requisição padronizada para a API do backend.
  * Lida com autenticação, tratamento de erros e parsing de JSON.
  * @param {string} endpoint O endpoint da API (ex: '/api/users').
