@@ -171,4 +171,18 @@ router.get(
   }
 );
 
+// [NOVO] Rota para o Dashboard de Saúde do Sistema
+router.get(
+  '/health',
+  [authMiddleware, checkPermission('system_health.read')],
+  dashboardController.getSystemHealth
+);
+
+// [NOVO] Rota para buscar utilizadores por roteador (para o Dashboard Analítico)
+router.get(
+  '/router-users',
+  [authMiddleware, checkPermission('analytics.read')],
+  dashboardController.getRouterUsers
+);
+
 module.exports = router;

@@ -1,0 +1,97 @@
+// Ficheiro: frontend/js/admin_system_health.js
+
+if (window.initSystemHealthPage) {
+    console.warn("Tentativa de carregar admin_system_health.js múltiplas vezes.");
+} else {
+    window.initSystemHealthPage = () => {
+        console.log("A inicializar Dashboard de Saúde do Sistema...");
+
+        const loadHealthData = async () => {
+            try {
+                const response = await apiRequest('/api/dashboard/health');
+                if (!response.success) throw new Error(response.message);
+                const data = response.data;
+
+                // PostgreSQL
+                const pgCard = document.getElementById('pgHealthCard');
+                const pgText = document.getElementById('pgStatusText');
+                const pgDetails = document.getElementById('pgStatusDetails');
+                if (data.postgres.connected) {
+                    pgCard.querySelector('.stat-card-icon').className = 'stat-card-icon color-green';
+                    pgText.textContent = 'Online';
+                    pgText.style.color = '#38a169';
+                    pgDetails.textContent = 'Conexão estável';
+                } else {
+                    pgCard.querySelector('.stat-card-icon').className = 'stat-card-icon color-red';
+                    pgText.textContent = 'Offline';
+                    pgText.style.color = '#e53e3e';
+                    pgDetails.textContent = data.postgres.error || 'Erro desconhecido';
+                }
+
+                // InfluxDB
+                const influxCard = document.getElementById('influxHealthCard');
+                const influxText = document.getElementById('influxStatusText');
+                const influxDetails = document.getElementById('influxStatusDetails');
+                if (data.influx.connected) {
+                    influxCard.querySelector('.stat-card-icon').className = 'stat-card-icon color-purple';
+                    influxText.textContent = 'Online';
+                    influxText.style.color = '#38a169';
+                    influxDetails.textContent = 'Métricas em tempo real ativas';
+                } else {
+                    influxCard.querySelector('.stat-card-icon').className = 'stat-card-icon color-red';
+                    influxText.textContent = 'Offline';
+                    influxText.style.color = '#e53e3e';
+                    influxDetails.textContent = data.influx.error || 'Verifique as configurações';
+                }
+
+                // Uptime
+                const uptime = data.uptime;
+                const days = Math.floor(uptime / 86400);
+                const hours = Math.floor((uptime % 86400) / 3600);
+                const minutes = Math.floor((uptime % 3600) / 60);
+                document.getElementById('serverUptimeText').textContent = `${days}d ${hours}h ${minutes}m`;
+
+                // Buffer
+                const bufferCard = document.getElementById('bufferHealthCard');
+                const bufferText = document.getElementById('bufferCountText');
+                bufferText.textContent = data.bufferCount;
+                if (data.bufferCount > 0) {
+                    bufferCard.querySelector('.stat-card-icon').className = 'stat-card-icon color-orange';
+                    bufferText.style.color = '#dd6b20';
+                } else {
+                    bufferCard.querySelector('.stat-card-icon').className = 'stat-card-icon color-gray';
+                    bufferText.style.color = 'var(--text-primary)';
+                }
+
+                // Recent Errors
+                const tbody = document.querySelector('#recentErrorsTable tbody');
+                tbody.innerHTML = '';
+                if (data.recentErrors.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="2" style="text-align: center;">Nenhum erro recente.</td></tr>';
+                } else {
+                    data.recentErrors.forEach(err => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td>${new Date(err.timestamp).toLocaleString()}</td>
+                            <td style="color: #fc8181;">${err.error_message}</td>
+                        `;
+                        tbody.appendChild(row);
+                    });
+                }
+
+            } catch (error) {
+                console.error("Erro ao carregar saúde do sistema:", error);
+                showNotification("Erro ao carregar dados de saúde.", "error");
+            }
+        };
+
+        loadHealthData();
+        // Auto-refresh a cada 30 segundos
+        const interval = setInterval(loadHealthData, 30000);
+        
+        // Função de limpeza para parar o intervalo ao sair da página
+        window.cleanupSystemHealthPage = () => {
+            clearInterval(interval);
+        };
+    };
+}

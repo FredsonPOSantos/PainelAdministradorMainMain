@@ -1,6 +1,9 @@
 // Ficheiro: backend/controllers/dashboardController.js
 
-const { pool } = require('../connection');
+const { pool, pgConnectionStatus } = require('../connection');
+const { getInfluxConnectionStatus } = require('../services/influxService');
+const fs = require('fs');
+const path = require('path');
 
 const getDashboardStats = async (req, res) => {
     try {
@@ -127,5 +130,88 @@ const getAnalyticsStats = async (req, res) => {
     }
 };
 
+/**
+ * [NOVO] Obtém dados de saúde do sistema (Conexões, Uptime, Erros).
+ */
+const getSystemHealth = async (req, res) => {
+    try {
+        // 1. Status das Conexões
+        const pgStatus = { ...pgConnectionStatus };
+        const influxStatus = getInfluxConnectionStatus();
 
-module.exports = { getDashboardStats, getAnalyticsStats };
+        // 2. Uptime do Servidor (em segundos)
+        const uptimeSeconds = process.uptime();
+
+        // 3. Buffer de Erros Offline
+        const logFilePath = path.join(__dirname, '../services/offline_error_log.json');
+        let bufferCount = 0;
+        if (fs.existsSync(logFilePath)) {
+            try {
+                const fileContent = fs.readFileSync(logFilePath, 'utf-8');
+                const logs = fileContent ? JSON.parse(fileContent) : [];
+                bufferCount = logs.length;
+            } catch (e) {
+                console.error("Erro ao ler buffer offline:", e);
+            }
+        }
+
+        // 4. Últimos Erros de Sistema (apenas se DB estiver online)
+        let recentErrors = [];
+        if (pgStatus.connected) {
+            try {
+                const errorsResult = await pool.query('SELECT id, error_message, timestamp FROM system_errors ORDER BY timestamp DESC LIMIT 5');
+                recentErrors = errorsResult.rows;
+            } catch (e) {
+                console.error("Erro ao buscar erros recentes:", e);
+                recentErrors = [];
+            }
+        }
+
+        res.json({
+            success: true,
+            data: {
+                postgres: pgStatus,
+                influx: influxStatus,
+                uptime: uptimeSeconds,
+                bufferCount: bufferCount,
+                recentErrors: recentErrors
+            }
+        });
+    } catch (error) {
+        console.error('Erro ao buscar saúde do sistema:', error);
+        res.status(500).json({ success: false, message: 'Erro interno ao buscar saúde do sistema.' });
+    }
+};
+
+/**
+ * [NOVO] Obtém a lista de utilizadores de um roteador específico (ou todos).
+ * Retorna: Nome de Utilizador, E-mail, Último Login.
+ */
+const getRouterUsers = async (req, res) => {
+    const { routerName } = req.query;
+
+    try {
+        let query = `
+            SELECT u.username, u.email, MAX(a.timestamp) as last_login
+            FROM userdetails u
+            LEFT JOIN audit_logs a ON u.email = a.user_email AND a.action = 'LOGIN_SUCCESS'
+        `;
+        
+        const params = [];
+
+        if (routerName && routerName !== 'all') {
+            query += ` WHERE u.router_name = $1`;
+            params.push(routerName);
+        }
+
+        query += ` GROUP BY u.id, u.username, u.email ORDER BY last_login DESC NULLS LAST LIMIT 100;`;
+
+        const { rows } = await pool.query(query, params);
+        res.json({ success: true, data: rows });
+    } catch (error) {
+        console.error('Erro ao buscar utilizadores do roteador:', error);
+        res.status(500).json({ success: false, message: 'Erro ao buscar utilizadores.' });
+    }
+};
+
+module.exports = { getDashboardStats, getAnalyticsStats, getSystemHealth, getRouterUsers };

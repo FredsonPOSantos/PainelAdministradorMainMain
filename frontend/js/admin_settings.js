@@ -971,7 +971,11 @@ window.initSettingsPage = () => {
                 if (tabId === 'tab-aparencia') {
                     return; // Pula a lógica antiga
                 }
-                if (tabId === 'tab-logs' && !isMaster && role !== 'DPO') { show = false; }
+                // [CORRIGIDO] Permite acesso se tiver permissão de leitura de logs de atividade OU sistema
+                if (tabId === 'tab-logs' && !isMaster && role !== 'DPO') {
+                    const hasLogPermission = permissions['logs.activity.read'] || permissions['logs.system.read'];
+                    if (!hasLogPermission) show = false;
+                }
                 // [CORRIGIDO] Adiciona a verificação de permissão para a aba de Gestão de Dados (LGPD)
                 if (tabId === 'tab-lgpd' && !permissions['lgpd.read']) {
                 show = false;

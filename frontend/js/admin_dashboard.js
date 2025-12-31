@@ -281,6 +281,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         'support': 'initSupportPage',
         'admin_raffles': 'initRafflesPage',
         'analytics_dashboard': 'initAnalyticsDashboard',
+        'admin_system_health': 'initSystemHealthPage', // [NOVO]
     };
 
     // --- [ATUALIZADO V13.1.3] IDs de verificação para o waitForElement ---
@@ -296,6 +297,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         'support': '#support-page-container',
         'admin_raffles': '#createRaffleForm',
         'analytics_dashboard': '#analytics-dashboard-wrapper', // [CORRIGIDO]
+        'admin_system_health': '#systemHealthContainer', // [NOVO]
     };
     // --- FIM V13.1.3 ---
 
@@ -356,6 +358,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (document.body.dataset.logsPageInitialized) {
                     delete document.body.dataset.logsPageInitialized;
                     console.log("Cleanup: Flag de inicialização da página de logs removida.");
+                }
+                // [NOVO] Limpeza específica para a página de saúde do sistema
+                if (window.cleanupSystemHealthPage) {
+                    window.cleanupSystemHealthPage();
+                    window.cleanupSystemHealthPage = undefined;
                 }
                 // [CORREÇÃO] Remove event listeners "fantasmas" de páginas anteriores.
                 // A maneira mais eficaz de remover todos os listeners de um elemento é
@@ -510,7 +517,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             'admin_routers': 'routers.read',
             'admin_users': 'users.read',
             'analytics_dashboard': 'analytics.read', // [CORREÇÃO] Adiciona a permissão para o dashboard analítico
-            'support': 'tickets.read' // [NOVO]
+            'support': 'tickets.read', // [NOVO]
+            'admin_system_health': 'system_health.read' // [NOVO] Saúde do Sistema
         };
 
         allNavItemsAndTitles.forEach(el => {

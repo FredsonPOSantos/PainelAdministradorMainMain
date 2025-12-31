@@ -74,6 +74,9 @@
             <a href="#" class="nav-item" data-page="analytics_dashboard">
                 <span>📊</span> Dashboard Analítico
             </a>
+            <a href="#" class="nav-item" data-page="admin_system_health">
+                <span>❤️‍🩹</span> Saúde do Sistema
+            </a>
             <a href="#" class="nav-item" data-page="admin_hotspot">
                 <span>📶</span> Relatório Hotspot
             </a>
@@ -156,11 +159,11 @@
             <form id="forceChangePasswordForm" style="margin-top: 20px;">
                 <div class="input-group">
                     <label for="currentTemporaryPassword">Senha Temporária (Atual)</label>
-                    <input type="password" id="currentTemporaryPassword" required>
+                    <input type="password" id="currentTemporaryPassword" autocomplete="current-password" required>
                 </div>
                 <div class="input-group">
                     <label for="newPassword">Nova Senha (mín. 6 caracteres)</label>
-                    <input type="password" id="newPassword" required minlength="6">
+                    <input type="password" id="newPassword" autocomplete="new-password" required minlength="6">
                 </div>
 
                 <div class="modal-actions" style="margin-top: 20px;">
@@ -179,11 +182,11 @@
             <form id="reauthLgpdForm" style="margin-top: 20px;">
                 <div class="input-group">
                     <label for="reauthEmail">E-mail</label>
-                    <input type="email" id="reauthEmail" required readonly>
+                    <input type="email" id="reauthEmail" autocomplete="username" required readonly>
                 </div>
                 <div class="input-group">
                     <label for="reauthPassword">Senha</label>
-                    <input type="password" id="reauthPassword" required>
+                    <input type="password" id="reauthPassword" autocomplete="current-password" required>
                 </div>
                 <div id="reauthError" class="form-error-message" style="display: none; margin-top: 15px;"></div>
                 <div class="modal-actions" style="margin-top: 20px;">

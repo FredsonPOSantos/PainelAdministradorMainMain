@@ -231,15 +231,33 @@ router.get('/router/:id/clients', [authMiddleware, checkPermission('routers.dash
         const routerIp = routerQuery.rows[0].ip_address;
         const routerName = routerQuery.rows[0].name;
 
+        // [FIX] Verifica se o IP do roteador existe antes de consultar o InfluxDB
+        if (!routerIp) {
+            return res.json({
+                success: true,
+                data: {
+                    routerId: id,
+                    routerName: routerName,
+                    routerIp: null,
+                    clients: {
+                        dhcp: { count: 0, details: [] },
+                        wifi: { count: 0, details: [] },
+                        hotspot: { count: 0, details: [] },
+                        total: 0
+                    }
+                }
+            });
+        }
+
         // 2. Buscar clientes DHCP
         const dhcpQuery = `
             from(bucket: "${influxBucket}")
-              |> range(start: -24h)
+              |> range(start: -1h) // [OTIMIZAÇÃO] Reduzido de 24h para 1h para evitar timeouts
               |> filter(fn: (r) => r._measurement == "ip_dhcp_server_lease")
               |> filter(fn: (r) => r.router_host == "${routerIp}")
               |> filter(fn: (r) => r._field == "address" or r._field == "mac_address" or r._field == "status" or r._field == "host_name" or r._field == "server" or r._field == "active_address")
+              |> last() // [OTIMIZAÇÃO] last() antes de map() reduz drasticamente o processamento
               |> map(fn: (r) => ({ r with _value: string(v: r._value) }))
-              |> last()
               |> pivot(rowKey:["_time"], columnKey: ["_field"], valueColumn: "_value")
         `;
 
@@ -258,12 +276,13 @@ router.get('/router/:id/clients', [authMiddleware, checkPermission('routers.dash
         // 3. Buscar clientes Hotspot
         const hotspotQuery = `
             from(bucket: "${influxBucket}")
-              |> range(start: -24h)
+              |> range(start: -1h) // [OTIMIZAÇÃO] Reduzido de 24h para 1h
               |> filter(fn: (r) => r._measurement == "hotspot_active")
               |> filter(fn: (r) => r.router_host == "${routerIp}")
+              |> rename(columns: {user: "hotspot_user_tag"}) // [FIX] Renomeia a tag 'user' para evitar conflito no pivot
               |> filter(fn: (r) => r._field == "user" or r._field == "mac_address" or r._field == "address" or r._field == "uptime")
+              |> last() // [OTIMIZAÇÃO] last() antes de map()
               |> map(fn: (r) => ({ r with _value: string(v: r._value) }))
-              |> last()
               |> pivot(rowKey:["_time"], columnKey: ["_field"], valueColumn: "_value")
         `;
 
@@ -282,12 +301,12 @@ router.get('/router/:id/clients', [authMiddleware, checkPermission('routers.dash
         // 3. Buscar clientes Wi-Fi (wireless registration table)
         const wifiQuery = `
             from(bucket: "${influxBucket}")
-              |> range(start: -24h)
+              |> range(start: -1h) // [OTIMIZAÇÃO] Reduzido de 24h para 1h
               |> filter(fn: (r) => r._measurement == "interface_wireless_registration_table")
               |> filter(fn: (r) => r.router_host == "${routerIp}")
               |> filter(fn: (r) => r._field == "mac_address" or r._field == "interface" or r._field == "uptime" or r._field == "last_ip")
+              |> last() // [OTIMIZAÇÃO] last() antes de map()
               |> map(fn: (r) => ({ r with _value: string(v: r._value) }))
-              |> last()
               |> pivot(rowKey:["_time"], columnKey: ["_field"], valueColumn: "_value")
         `;
 

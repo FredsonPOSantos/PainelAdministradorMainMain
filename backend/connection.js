@@ -76,6 +76,7 @@ async function checkAndUpgradeSchema(client) {
     const systemPermissions = [
         // Dashboard & Analytics
         { key: 'dashboard.read', feature: 'Dashboard Principal', action: 'Visualizar' },
+        { key: 'system_health.read', feature: 'Saúde do Sistema', action: 'Visualizar' },
         { key: 'analytics.read', feature: 'Dashboard Analítico', action: 'Visualizar' },
         
         // Utilizadores (Admin)

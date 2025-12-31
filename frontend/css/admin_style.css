@@ -200,6 +200,8 @@ input[type="file"]::file-selector-button { background-color: var(--primary-color
 .stat-card { background-color: var(--background-medium); border-radius: 12px; padding: 20px; display: flex; align-items: center; gap: 16px; border: 1px solid var(--border-color); transition: transform 0.2s, box-shadow 0.2s; overflow: hidden; }
 .stat-card:hover { transform: translateY(-4px); box-shadow: 0 6px 18px rgba(0, 0, 0, 0.3); }
 .stat-card-icon { width: 50px; height: 50px; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 44px; flex-shrink: 0; color: #fff; }
+.stat-card-icon.color-green { background-color: #38a169; } /* [NOVO] */
+.stat-card-icon.color-gray { background-color: #718096; } /* [NOVO] */
 .stat-card-icon.color-blue { background-color: #3182ce; } .stat-card-icon.color-orange { background-color: #dd6b20; } .stat-card-icon.color-red { background-color: #c53030; } .stat-card-icon.color-purple { background-color: #553c9a; } .stat-card-icon.color-teal { background-color: #319795; }
 .stat-card-info { display: flex; flex-direction: column; overflow: hidden; }
 .stat-card-title { font-size: 20px; font-weight: bold; color: var(--text-secondary); margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
