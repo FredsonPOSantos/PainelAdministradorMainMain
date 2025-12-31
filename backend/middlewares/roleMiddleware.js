@@ -13,10 +13,7 @@ const checkPermission = (permissionKey) => {
     const role = req.user.role;
     if (role === 'master') {
       const deniedForMaster = new Set(['lgpd.read', 'lgpd.update', 'lgpd.delete']);
-      if (!deniedForMaster.has(permissionKey)) {
-        return next();
-      }
-      // Se for uma permissão negada explicitamente, continua a verificação normal
+      if (!deniedForMaster.has(permissionKey)) return next();
     }
 
     const userPermissions = req.user.permissions;
@@ -28,4 +25,3 @@ const checkPermission = (permissionKey) => {
 };
 
 module.exports = checkPermission;
-

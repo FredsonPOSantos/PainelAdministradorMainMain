@@ -337,44 +337,69 @@ const changeOwnPassword = async (req, res) => {
 
 // Função para eliminar um utilizador (Apenas 'master')
 const deleteUser = async (req, res) => {
-  const { id } = req.params;
+    const { id } = req.params;
 
-  if (id === '1') {
-    return res.status(403).json({ message: "O utilizador master principal não pode ser eliminado." });
-  }
-
-  // Para o log, buscamos os dados do utilizador ANTES de o eliminar
-  const userToDeleteQuery = await pool.query('SELECT email FROM admin_users WHERE id = $1', [id]);
-  if (userToDeleteQuery.rowCount === 0) {
-    return res.status(404).json({ message: "Utilizador não encontrado." });
-  }
-  const userEmailToDelete = userToDeleteQuery.rows[0].email;
-
-  try {
-    // Agora, eliminamos o utilizador
-    const result = await pool.query('DELETE FROM admin_users WHERE id = $1', [id]);
-
-    if (result.rowCount === 0) {
-      // Este caso é raro, pois já verificámos acima, mas é uma boa prática
-      return res.status(404).json({ message: "Utilizador não encontrado." });
+    if (id === '1') {
+        return res.status(403).json({ message: "O utilizador master principal não pode ser eliminado." });
     }
 
-    // Log de auditoria
-    await logAction({
-      req,
-      action: 'USER_DELETE',
-      status: 'SUCCESS',
-      description: `Utilizador "${req.user.email}" eliminou o utilizador "${userEmailToDelete}" (ID: ${id}).`,
-      target_type: 'user',
-      target_id: id,
-      details: { deleted_user_email: userEmailToDelete }
-    });
+    const client = await pool.connect(); // Get a client for the transaction
 
-    res.status(200).json({ message: "Utilizador eliminado com sucesso." });
-  } catch (error) {
-    console.error('Erro ao eliminar utilizador:', error);
-    res.status(500).json({ message: "Erro interno do servidor." });
-  }
+    try {
+        await client.query('BEGIN');
+
+        // 1. Get user email for logging before deletion
+        const userToDeleteQuery = await client.query('SELECT email FROM admin_users WHERE id = $1', [id]);
+        if (userToDeleteQuery.rowCount === 0) {
+            await client.query('ROLLBACK');
+            return res.status(404).json({ message: "Utilizador não encontrado." });
+        }
+        const userEmailToDelete = userToDeleteQuery.rows[0].email;
+
+        // 2. Nullify references in other tables
+        await client.query('UPDATE tickets SET created_by_user_id = NULL WHERE created_by_user_id = $1', [id]);
+        await client.query('UPDATE tickets SET assigned_to_user_id = NULL WHERE assigned_to_user_id = $1', [id]);
+        await client.query('UPDATE ticket_messages SET user_id = NULL WHERE user_id = $1', [id]);
+        await client.query('UPDATE notifications SET user_id = NULL WHERE user_id = $1', [id]);
+        await client.query('UPDATE raffles SET created_by_user_id = NULL WHERE created_by_user_id = $1', [id]);
+        await client.query('UPDATE data_exclusion_requests SET completed_by_user_id = NULL WHERE completed_by_user_id = $1', [id]);
+        await client.query('UPDATE audit_logs SET user_id = NULL WHERE user_id = $1', [id]);
+
+        // 3. Now, delete the user
+        const result = await client.query('DELETE FROM admin_users WHERE id = $1', [id]);
+
+        // 4. Commit the transaction
+        await client.query('COMMIT');
+
+        // 5. Log the action
+        await logAction({
+            req,
+            action: 'USER_DELETE',
+            status: 'SUCCESS',
+            description: `Utilizador "${req.user.email}" eliminou o utilizador "${userEmailToDelete}" (ID: ${id}).`,
+            target_type: 'user',
+            target_id: id,
+            details: { deleted_user_email: userEmailToDelete }
+        });
+
+        res.status(200).json({ message: "Utilizador eliminado com sucesso. As suas referências foram anonimizadas." });
+
+    } catch (error) {
+        await client.query('ROLLBACK'); // Rollback on any error
+        await logAction({
+            req,
+            action: 'USER_DELETE_FAILURE',
+            status: 'FAILURE',
+            description: `Falha ao eliminar utilizador com ID ${id}. Erro: ${error.message}`,
+            target_type: 'user',
+            target_id: id,
+            details: { error: error.message }
+        });
+        console.error('Erro ao eliminar utilizador:', error);
+        res.status(500).json({ message: "Erro interno do servidor." });
+    } finally {
+        client.release(); // Release the client back to the pool
+    }
 };
 
 

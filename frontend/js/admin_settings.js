@@ -585,12 +585,14 @@ window.initSettingsPage = () => {
             tabsDiv.innerHTML = `
                 <button type="button" class="btn-primary" id="btn-log-activity">Logs de Atividade</button>
                 <button type="button" class="btn-secondary" id="btn-log-system">Logs do Sistema</button>
+                <button type="button" class="btn-secondary" id="btn-log-offline" style="margin-left: auto;"><i class="fas fa-archive" style="margin-right: 5px;"></i>Ver Logs Offline</button>
             `;
             
             filtersContainer.parentElement.insertBefore(tabsDiv, filtersContainer);
 
             document.getElementById('btn-log-activity').addEventListener('click', () => switchLogTab('activity'));
             document.getElementById('btn-log-system').addEventListener('click', () => switchLogTab('system'));
+            document.getElementById('btn-log-offline').addEventListener('click', viewOfflineLogs);
         };
 
         // [NOVO] Função para alternar entre tipos de logs
@@ -667,6 +669,52 @@ window.initSettingsPage = () => {
             // Pequeno delay para animação CSS se houver
             setTimeout(() => modal.classList.remove('hidden'), 10);
         };
+
+        // [NOVO] Função para visualizar os logs offline
+        const viewOfflineLogs = async () => {
+            try {
+                const response = await apiRequest('/api/logs/offline-buffer');
+                const logs = response.data || [];
+
+                let contentHtml = '<p>O ficheiro de logs offline está vazio.</p>';
+
+                if (logs.length > 0) {
+                    contentHtml = `
+                        <p>Encontrados <strong>${logs.length}</strong> erros no ficheiro de log offline. Estes são erros que ocorreram enquanto a base de dados estava indisponível.</p>
+                        <div style="max-height: 50vh; overflow-y: auto; background: #1a202c; padding: 15px; border-radius: 8px; margin-top: 15px;">
+                    `;
+                    logs.forEach(log => {
+                        contentHtml += `
+                            <div style="border-bottom: 1px solid #4a5568; padding-bottom: 10px; margin-bottom: 10px;">
+                                <p><strong>Data/Hora:</strong> ${new Date(log.timestamp).toLocaleString()}</p>
+                                <p><strong>Mensagem:</strong> ${log.errorMessage}</p>
+                                <p><strong>Endpoint:</strong> ${log.requestMethod || 'N/A'} ${log.requestUrl || 'N/A'}</p>
+                                <p><strong>Utilizador:</strong> ${log.userEmail || 'N/A'}</p>
+                            </div>
+                        `;
+                    });
+                    contentHtml += '</div>';
+                }
+
+                const modal = document.createElement('div');
+                modal.className = 'modal-overlay';
+                modal.innerHTML = `
+                    <div class="modal-content large">
+                        <h3>Logs de Erro Offline</h3>
+                        ${contentHtml}
+                        <div class="modal-actions">
+                            <button class="btn-primary" onclick="this.closest('.modal-overlay').remove()">Fechar</button>
+                        </div>
+                    </div>
+                `;
+                document.body.appendChild(modal);
+                setTimeout(() => modal.classList.remove('hidden'), 10);
+
+            } catch (error) {
+                showNotification(`Erro ao buscar logs offline: ${error.message}`, 'error');
+            }
+        };
+
 
         const loadAuditLogs = async (filters = {}) => {
             window.showPagePreloader('A carregar logs de atividade...');

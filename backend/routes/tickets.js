@@ -24,10 +24,10 @@ router.get('/:id', checkPermission('tickets.read'), ticketController.getTicketBy
 router.post('/:id/messages', checkPermission('tickets.read'), ticketController.addMessageToTicket);
 
 // Atribuir um ticket
-router.put('/:id/assign', checkPermission('tickets.manage'), ticketController.assignTicket);
+router.put('/:id/assign', checkPermission('tickets.manage'), ticketController.assignTicket); // Já estava correto
 
 // Mudar o status de um ticket
-router.put('/:id/status', checkPermission('tickets.manage'), ticketController.updateTicketStatus);
+router.put('/:id/status', checkPermission('tickets.manage'), ticketController.updateTicketStatus); // Já estava correto
 
 // Avaliar um ticket
 router.post('/:id/rate', ticketController.addTicketRating); // Não precisa de permissão especial

@@ -192,8 +192,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const openModalForEdit = async (userId) => {
                 try {
-                     const users = await apiRequest('/api/admin/users'); // [CORRIGIDO] A API retorna o array diretamente
-                     const user = users.data.find(u => u.id == userId);
+                     const users = await apiRequest('/api/admin/users');
+                     const user = users.find(u => u.id == userId);
                      if (!user) {
                         showNotification("Erro: Utilizador não encontrado.", 'error');
                         return;

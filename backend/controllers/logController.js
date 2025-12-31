@@ -2,6 +2,8 @@
 // Descrição: Lida com a busca e visualização de logs de auditoria.
 
 const { pool } = require('../connection');
+const fs = require('fs');
+const path = require('path');
 
 /**
  * Busca os logs de auditoria do sistema.
@@ -94,4 +96,24 @@ const getSystemLogs = async (req, res) => {
     }
 };
 
-module.exports = { getAuditLogs, getSystemLogs };
+/**
+ * [NOVO] Lê e retorna o conteúdo do ficheiro de log de erros offline.
+ */
+const getOfflineErrorLog = async (req, res) => {
+    const logFilePath = path.join(__dirname, '../services/offline_error_log.json');
+    try {
+        if (fs.existsSync(logFilePath)) {
+            const fileContent = fs.readFileSync(logFilePath, 'utf-8');
+            const logs = fileContent ? JSON.parse(fileContent) : [];
+            res.json({ success: true, data: logs });
+        } else {
+            res.json({ success: true, data: [] }); // Ficheiro não existe, retorna array vazio
+        }
+    } catch (error) {
+        console.error('Erro ao ler o ficheiro de log offline:', error);
+        res.status(500).json({ success: false, message: 'Erro interno ao ler o ficheiro de log.' });
+    }
+};
+
+
+module.exports = { getAuditLogs, getSystemLogs, getOfflineErrorLog };

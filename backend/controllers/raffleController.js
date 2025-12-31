@@ -249,11 +249,95 @@ const getRouters = async (req, res) => {
     }
 };
 
+// [NOVO] Atualizar um sorteio
+const updateRaffle = async (req, res) => {
+    const { id } = req.params;
+    const { title, observation, filters } = req.body;
+    const { email } = req.user;
+
+    if (!title) {
+        return res.status(400).json({ success: false, message: 'O título é obrigatório.' });
+    }
+
+    try {
+        const result = await pool.query(
+            'UPDATE raffles SET title = $1, observation = $2, filters = $3 WHERE id = $4 RETURNING *',
+            [title, observation, filters, id]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ success: false, message: 'Sorteio não encontrado.' });
+        }
+
+        logAction({
+            req,
+            action: 'RAFFLE_UPDATE',
+            status: 'SUCCESS',
+            description: `Sorteio #${result.rows[0].raffle_number} atualizado por ${email}`,
+            target_id: id,
+            target_type: 'raffle'
+        });
+
+        res.json({ success: true, message: 'Sorteio atualizado com sucesso!', data: result.rows[0] });
+
+    } catch (error) {
+        console.error(`Erro ao atualizar sorteio ${id}:`, error);
+        res.status(500).json({ success: false, message: 'Erro interno do servidor.' });
+    }
+};
+
+// [NOVO] Deletar um sorteio
+const deleteRaffle = async (req, res) => {
+    const { id } = req.params;
+    const { email } = req.user;
+
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+
+        // Obter número do sorteio para o log
+        const raffleInfo = await client.query('SELECT raffle_number FROM raffles WHERE id = $1', [id]);
+        if (raffleInfo.rows.length === 0) {
+            await client.query('ROLLBACK');
+            return res.status(404).json({ success: false, message: 'Sorteio não encontrado.' });
+        }
+        const raffleNumber = raffleInfo.rows[0].raffle_number;
+
+        // Deletar participantes primeiro para evitar violação de chave estrangeira
+        await client.query('DELETE FROM raffle_participants WHERE raffle_id = $1', [id]);
+        
+        // Deletar o sorteio
+        await client.query('DELETE FROM raffles WHERE id = $1', [id]);
+
+        await client.query('COMMIT');
+
+        logAction({
+            req,
+            action: 'RAFFLE_DELETE',
+            status: 'SUCCESS',
+            description: `Sorteio #${raffleNumber} (ID: ${id}) deletado por ${email}`,
+            target_id: id,
+            target_type: 'raffle'
+        });
+
+        res.json({ success: true, message: 'Sorteio e seus participantes foram deletados com sucesso.' });
+
+    } catch (error) {
+        await client.query('ROLLBACK');
+        console.error(`Erro ao deletar sorteio ${id}:`, error);
+        res.status(500).json({ success: false, message: 'Erro interno do servidor.' });
+    } finally {
+        client.release();
+    }
+};
+
 module.exports = {
     createRaffle,
     getAllRaffles,
     getRaffleById,
     drawRaffle,
     getCampaigns,
-    getRouters
+    getRouters,
+    updateRaffle,
+    deleteRaffle
 };

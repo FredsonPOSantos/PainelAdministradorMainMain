@@ -75,8 +75,8 @@ async function checkAndUpgradeSchema(client) {
     // Isto assegura que o Master tenha acesso a tudo (exceto LGPD) e que as permissões apareçam na matriz.
     const systemPermissions = [
         // Dashboard & Analytics
-        { key: 'dashboard.read', feature: 'Dashboard', action: 'Visualizar' },
-        { key: 'analytics.read', feature: 'Analytics', action: 'Visualizar' },
+        { key: 'dashboard.read', feature: 'Dashboard Principal', action: 'Visualizar' },
+        { key: 'analytics.read', feature: 'Dashboard Analítico', action: 'Visualizar' },
         
         // Utilizadores (Admin)
         { key: 'users.read', feature: 'Utilizadores', action: 'Visualizar' },
@@ -89,7 +89,12 @@ async function checkAndUpgradeSchema(client) {
         { key: 'routers.create', feature: 'Roteadores', action: 'Criar' },
         { key: 'routers.update', feature: 'Roteadores', action: 'Editar' },
         { key: 'routers.delete', feature: 'Roteadores', action: 'Eliminar' },
+        { key: 'routers.reboot', feature: 'Roteadores', action: 'Reiniciar/Desligar' },
         { key: 'routers.individual.delete_permanent', feature: 'Roteadores', action: 'Exclusão Permanente' },
+        { key: 'routers.monitoring.read', feature: 'Roteadores', action: 'Ver Monitoramento (NOC)' },
+        { key: 'routers.dashboard.read', feature: 'Roteadores', action: 'Ver Dashboard Individual' },
+        { key: 'routers.dashboard.clients', feature: 'Roteadores', action: 'Ver Clientes no Dashboard' },
+        { key: 'routers.dashboard.interfaces', feature: 'Roteadores', action: 'Ver Interfaces no Dashboard' },
 
         // Templates
         { key: 'templates.read', feature: 'Templates', action: 'Visualizar' },
@@ -116,12 +121,14 @@ async function checkAndUpgradeSchema(client) {
         { key: 'tickets.read', feature: 'Tickets', action: 'Visualizar' },
         { key: 'tickets.create', feature: 'Tickets', action: 'Criar' },
         { key: 'tickets.update', feature: 'Tickets', action: 'Editar' },
+        { key: 'tickets.manage', feature: 'Tickets', action: 'Gerir (Atribuir/Status)' },
         { key: 'tickets.delete', feature: 'Tickets', action: 'Eliminar' },
 
         // Sorteios
         { key: 'raffles.read', feature: 'Sorteios', action: 'Visualizar' },
         { key: 'raffles.create', feature: 'Sorteios', action: 'Criar' },
         { key: 'raffles.update', feature: 'Sorteios', action: 'Editar' },
+        { key: 'raffles.draw', feature: 'Sorteios', action: 'Realizar Sorteio' },
         { key: 'raffles.delete', feature: 'Sorteios', action: 'Eliminar' },
 
         // Configurações
@@ -130,9 +137,16 @@ async function checkAndUpgradeSchema(client) {
         { key: 'settings.smtp', feature: 'Configurações', action: 'SMTP (E-mail)' },
         { key: 'settings.policies', feature: 'Configurações', action: 'Políticas' },
         { key: 'settings.media', feature: 'Configurações', action: 'Gestão de Arquivos' },
+        { key: 'settings.hotspot.read', feature: 'Configurações', action: 'Ver Configs Hotspot' },
+        { key: 'settings.hotspot.update', feature: 'Configurações', action: 'Editar Configs Hotspot' },
+
+        // Funções e Permissões
+        { key: 'permissions.read', feature: 'Funções e Permissões', action: 'Visualizar' },
+        { key: 'permissions.update', feature: 'Funções e Permissões', action: 'Editar' },
 
         // Logs
-        { key: 'logs.read', feature: 'Logs', action: 'Visualizar' },
+        { key: 'logs.activity.read', feature: 'Logs', action: 'Ver Logs de Atividade' },
+        { key: 'logs.system.read', feature: 'Logs', action: 'Ver Logs de Sistema' },
 
         // LGPD (Exclusivo DPO - Master não terá acesso a estas)
         { key: 'lgpd.read', feature: 'LGPD', action: 'Visualizar' },
@@ -176,7 +190,7 @@ const startPgReconnect = () => {
             pgConnectionStatus.connected = false;
             pgConnectionStatus.error = err.message;
         }
-    }, 30000); // Tenta a cada 30 segundos
+    }, 300000); // Tenta a cada 5 minutos
 };
 
 // Função de teste e validação inicial

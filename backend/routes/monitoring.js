@@ -2,6 +2,8 @@ const express = require('express');
 const router = express.Router();
 const { pool } = require('../connection'); // [MODIFICADO] Usa a pool de conexão do PostgreSQL
 const { queryApi, influxBucket } = require('../services/influxService'); // [NOVO] Importa o serviço centralizado do InfluxDB
+const authMiddleware = require('../middlewares/authMiddleware');
+const checkPermission = require('../middlewares/roleMiddleware');
 
 /**
  * @route   GET /api/monitoring/router-status
@@ -21,7 +23,7 @@ router.get('/router-status', /* seuMiddlewareDeAuth, */ async (req, res) => {
  * @access  Private
  * @query   range - O período de tempo (ex: '1h', '6h', '24h', '7d'). Padrão: '1h'.
  */
-router.get('/router/:id/cpu-history', /* seuMiddlewareDeAuth, */ async (req, res) => {
+router.get('/router/:id/cpu-history', [authMiddleware, checkPermission('routers.dashboard.read')], async (req, res) => {
     try {
         const { id } = req.params;
         const range = req.query.range || '1h'; // Padrão de 1 hora se não for especificado
@@ -74,7 +76,7 @@ router.get('/router/:id/cpu-history', /* seuMiddlewareDeAuth, */ async (req, res
  * @access  Private
  * @query   range - O período de tempo (ex: '1h', '6h', '24h', '7d'). Padrão: '24h'.
  */
-router.get('/router/:id/clients', /* seuMiddlewareDeAuth, */ async (req, res) => {
+router.get('/router/:id/metrics', [authMiddleware, checkPermission('routers.dashboard.read')], async (req, res) => {
     try {
         const { id } = req.params;
         const range = req.query.range || '24h';
@@ -209,7 +211,7 @@ router.get('/router/:id/clients', /* seuMiddlewareDeAuth, */ async (req, res) =>
  * @desc    Busca informações sobre clientes conectados (Wi-Fi, DHCP, Hotspot).
  * @access  Private
  */
-router.get('/router/:id/clients', /* seuMiddlewareDeAuth, */ async (req, res) => {
+router.get('/router/:id/clients', [authMiddleware, checkPermission('routers.dashboard.clients')], async (req, res) => {
     try {
         const reqId = Math.random().toString(36).substring(7);
         console.time(`[REQ-${reqId}] GET /clients/${req.params.id}`);
@@ -349,7 +351,7 @@ router.get('/router/:id/clients', /* seuMiddlewareDeAuth, */ async (req, res) =>
  * @access  Private
  * @query   range - O período de tempo. Padrão: '24h'.
  */
-    router.get('/router/:id/detailed-metrics', /* seuMiddlewareDeAuth, */ async (req, res) => {
+router.get('/router/:id/detailed-metrics', [authMiddleware, checkPermission('routers.dashboard.read')], async (req, res) => {
     try {
         const reqId = Math.random().toString(36).substring(7);
         console.time(`[REQ-${reqId}] GET /detailed-metrics/${req.params.id}`);
@@ -558,7 +560,7 @@ router.get('/router/:id/clients', /* seuMiddlewareDeAuth, */ async (req, res) =>
  * @desc    Calcula métricas de disponibilidade (uptime %, quedas, status atual).
  * @access  Private
  */
-router.get('/router/:id/availability', async (req, res) => {
+router.get('/router/:id/availability', [authMiddleware, checkPermission('routers.dashboard.read')], async (req, res) => {
     try {
         const { id } = req.params;
 
@@ -667,7 +669,7 @@ router.get('/router/:id/availability', async (req, res) => {
  * @desc    Busca análises detalhadas sobre clientes Wi-Fi (atuais, 1h, 7d, 30d).
  * @access  Private
  */
-router.get('/router/:id/wifi-analytics', async (req, res) => {
+router.get('/router/:id/wifi-analytics', [authMiddleware, checkPermission('routers.dashboard.clients')], async (req, res) => {
     try {
         const { id } = req.params;
 
@@ -741,7 +743,7 @@ router.get('/router/:id/wifi-analytics', async (req, res) => {
  * @desc    Busca análises detalhadas sobre clientes DHCP.
  * @access  Private
  */
-router.get('/router/:id/dhcp-analytics', async (req, res) => {
+router.get('/router/:id/dhcp-analytics', [authMiddleware, checkPermission('routers.dashboard.clients')], async (req, res) => {
     try {
         const { id } = req.params;
 
@@ -806,7 +808,7 @@ router.get('/router/:id/dhcp-analytics', async (req, res) => {
  * @desc    Busca análises detalhadas sobre clientes Hotspot.
  * @access  Private
  */
-router.get('/router/:id/hotspot-analytics', async (req, res) => {
+router.get('/router/:id/hotspot-analytics', [authMiddleware, checkPermission('routers.dashboard.clients')], async (req, res) => {
     try {
         const { id } = req.params;
 
@@ -887,7 +889,7 @@ router.get('/router/:id/hotspot-analytics', async (req, res) => {
  * @desc    [NOVO] Busca um resumo do estado atual de todos os roteadores para o dashboard NOC.
  * @access  Private
  */
-router.get('/all-routers-status', /* seuMiddlewareDeAuth, */ async (req, res) => {
+router.get('/all-routers-status', [authMiddleware, checkPermission('routers.monitoring.read')], async (req, res) => {
     try {
         // 1. Buscar todos os roteadores com seus grupos e configurações
         // [CORRIGIDO] Remove colunas 'default_interface' e 'bandwidth_limit' que não existem na tabela.
@@ -998,7 +1000,7 @@ router.get('/all-routers-status', /* seuMiddlewareDeAuth, */ async (req, res) =>
  * @query   interface - O nome da interface (obrigatório).
  * @query   range - O período de tempo (ex: '15m', '1h'). Padrão: '15m'.
  */
-router.get('/router/:id/interface-traffic', /* seuMiddlewareDeAuth, */ async (req, res) => {
+router.get('/router/:id/interface-traffic', [authMiddleware, checkPermission('routers.dashboard.interfaces')], async (req, res) => {
     try {
         const { id } = req.params;
         const { interface: interfaceName, range = '15m' } = req.query;
@@ -1053,7 +1055,7 @@ router.get('/router/:id/interface-traffic', /* seuMiddlewareDeAuth, */ async (re
  * @desc    [NOVO] Busca um resumo de métricas em tempo real para um roteador (CPU, Memória, Clientes). Otimizado para chamadas frequentes.
  * @access  Private
  */
-router.get('/router/:id/live-summary', /* seuMiddlewareDeAuth, */ async (req, res) => {
+router.get('/router/:id/live-summary', [authMiddleware, checkPermission('routers.dashboard.read')], async (req, res) => {
     try {
         const reqId = Math.random().toString(36).substring(7);
         console.time(`[REQ-${reqId}] GET /live-summary/${req.params.id}`);
