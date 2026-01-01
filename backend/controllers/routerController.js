@@ -806,6 +806,26 @@ const deleteRouterGroup = async (req, res) => {
     }
 };
 
+// [NOVO] Obtém a distribuição de utilizadores por roteador dentro de um grupo
+const getRouterGroupUserDistribution = async (req, res) => {
+    const { id } = req.params; // ID do Grupo
+    try {
+        const query = `
+            SELECT r.name as router_name, COUNT(u.id)::int as user_count
+            FROM routers r
+            LEFT JOIN userdetails u ON r.name = u.router_name
+            WHERE r.group_id = $1
+            GROUP BY r.name
+            ORDER BY user_count DESC
+        `;
+        const result = await pool.query(query, [id]);
+        
+        res.json({ success: true, data: result.rows });
+    } catch (error) {
+        console.error('Erro ao buscar distribuição de usuários do grupo:', error);
+        res.status(500).json({ success: false, message: "Erro interno do servidor." });
+    }
+};
 
 module.exports = {
   getRoutersStatus, // Exporta a nova função
@@ -820,5 +840,6 @@ module.exports = {
   getAllRouterGroups,
   createRouterGroup,
   updateRouterGroup,
-  deleteRouterGroup
+  deleteRouterGroup,
+  getRouterGroupUserDistribution // [NOVO]
 };

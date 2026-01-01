@@ -35,4 +35,7 @@ router.post('/groups', verifyToken, checkPermission('routers.create'), routerCon
 router.put('/groups/:id', verifyToken, checkPermission('routers.update'), routerController.updateRouterGroup);
 router.delete('/groups/:id', verifyToken, checkPermission('routers.delete'), routerController.deleteRouterGroup);
 
+// [NOVO] Rota para obter a distribuição de utilizadores por roteador dentro de um grupo
+router.get('/groups/:id/user-distribution', verifyToken, checkPermission('analytics.read'), routerController.getRouterGroupUserDistribution);
+
 module.exports = router;

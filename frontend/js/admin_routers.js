@@ -71,6 +71,9 @@ if (window.initRoutersPage) {
         const totalRoutersCard = document.getElementById('totalRouters');
         const totalGroupsCard = document.getElementById('totalGroups');
         
+        // [NOVO] Variável para guardar a instância do gráfico e evitar duplicados
+        let groupAnalyticsChartInstance = null;
+
         let allRouters = [];
         let allGroups = [];
 
@@ -145,13 +148,14 @@ if (window.initRoutersPage) {
             allGroups.forEach(group => {
                 const row = document.createElement('tr');
                 // [MODIFICADO] router_count agora vem da API de grupos
-                const routerCount = allRouters.filter(r => r.group_id === group.id).length;
+                const routerCount = group.router_count || 0;
                 row.innerHTML = `
                     <td>${group.id}</td>
                     <td>${group.name}</td>
                     <td>${group.observacao || 'N/A'}</td>
                     <td>${routerCount}</td> 
                     <td class="action-buttons">
+                        <button class="btn-preview" onclick="window.handleShowGroupAnalytics(${group.id}, '${group.name.replace(/'/g, "\\'")}')" title="Ver Análise de Utilizadores"><i class="fas fa-chart-bar"></i></button>
                         <button class="btn-edit" onclick="openModalForEditGroup(${group.id})">Editar</button>
                         <button class="btn-delete" onclick="handleDeleteGroup(${group.id})">Eliminar</button>
                     </td>
@@ -676,6 +680,93 @@ if (window.initRoutersPage) {
             }
         };
         
+        // [NOVO] Função para renderizar o gráfico de análise do grupo
+        const renderGroupAnalyticsChart = (data) => {
+            const canvas = document.getElementById('groupAnalyticsChart');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+
+            // Destrói instância anterior se existir
+            if (groupAnalyticsChartInstance) {
+                groupAnalyticsChartInstance.destroy();
+            }
+
+            const labels = data.map(item => item.router_name);
+            const values = data.map(item => item.user_count);
+
+            groupAnalyticsChartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Nº de Utilizadores',
+                        data: values,
+                        backgroundColor: 'rgba(66, 153, 225, 0.6)',
+                        borderColor: 'rgba(66, 153, 225, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                color: 'var(--text-tertiary)',
+                                stepSize: 1 // Garante que a escala seja em números inteiros
+                            }
+                        },
+                        x: {
+                            ticks: {
+                                color: 'var(--text-tertiary)'
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: false // Oculta a legenda, pois só há um dataset
+                        }
+                    }
+                }
+            });
+        };
+
+        // [NOVO] Função para mostrar o modal com o gráfico de análise do grupo
+        window.handleShowGroupAnalytics = async (groupId, groupName) => {
+            const modalId = 'groupAnalyticsModal';
+            // Remove modal antigo se existir
+            document.getElementById(modalId)?.remove();
+
+            const modalHtml = `
+                <div id="${modalId}" class="modal-overlay">
+                    <div class="modal-content large">
+                        <button class="modal-close-btn">&times;</button>
+                        <h3>Análise de Utilizadores - Grupo "${groupName}"</h3>
+                        <div id="analyticsChartContainer" style="position: relative; height: 400px; width: 100%; margin-top: 20px;">
+                            <p id="chartLoadingText" style="text-align: center; padding-top: 100px;">A carregar dados do gráfico...</p>
+                            <canvas id="groupAnalyticsChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+            const modalOverlay = document.getElementById(modalId);
+            modalOverlay.querySelector('.modal-close-btn').onclick = () => modalOverlay.remove();
+            setTimeout(() => modalOverlay.classList.remove('hidden'), 10);
+
+            try {
+                const response = await apiRequest(`/api/routers/groups/${groupId}/user-distribution`);
+                if (!response.success || !response.data) throw new Error(response.message || 'Dados não recebidos.');
+                
+                modalOverlay.querySelector('#chartLoadingText').style.display = 'none';
+                renderGroupAnalyticsChart(response.data);
+            } catch (error) {
+                modalOverlay.querySelector('#analyticsChartContainer').innerHTML = `<p style="color: var(--error-text); text-align: center;">Erro ao carregar dados: ${error.message}</p>`;
+            }
+        };
+
         // --- INICIALIZAÇÃO E LISTENERS ---
         loadPageData();
         populatePrefixSelector();
