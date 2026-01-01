@@ -51,6 +51,22 @@ function formatUptime(seconds) {
 }
 
 /**
+ * [NOVO] Aplica um tema visual ao corpo do documento.
+ * @param {string} theme - O nome do tema (ex: 'rota', 'light').
+ */
+function applyTheme(theme) {
+    // Lista de todas as classes de tema para garantir que apenas uma seja aplicada
+    const themeClasses = ['theme-rota', 'theme-cidade-sol', 'theme-expresso', 'theme-oceano', 'theme-light', 'theme-contrast', 'theme-teal', 'theme-gray', 'theme-vscode', 'theme-windows11', 'theme-linux', 'theme-bluelight'];
+    document.body.classList.remove(...themeClasses);
+
+    // Adiciona a classe do novo tema, se não for o padrão
+    if (theme && theme !== 'default') {
+        document.body.classList.add(`theme-${theme}`);
+        console.log(`[applyTheme] Tema '${theme}' aplicado.`);
+    }
+}
+
+/**
  * [NOVO] Realiza uma requisição padronizada para a API do backend.
  * Lida com autenticação, tratamento de erros e parsing de JSON.
  * @param {string} endpoint O endpoint da API (ex: '/api/users').

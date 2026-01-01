@@ -22,6 +22,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const resetModalCancelBtn = document.getElementById('cancelResetBtn');
             const resetPasswordForm = document.getElementById('resetPasswordForm');
             const resetUserEmailSpan = document.getElementById('resetUserEmail');
+            const userRoleSelect = document.getElementById('userRoleSelect'); // [NOVO] Referência ao select
 
             const setupPageByRole = () => {
                 if (!currentUserRole) {
@@ -35,6 +36,26 @@ document.addEventListener('DOMContentLoaded', () => {
                     document.querySelectorAll('.sensitive-data').forEach(el => {
                         el.style.display = 'table-cell';
                     });
+                }
+            };
+
+            // [NOVO] Função para carregar as funções (roles) dinamicamente
+            const loadRolesIntoSelect = async () => {
+                try {
+                    const response = await apiRequest('/api/roles');
+                    const roles = response.data || response;
+                    
+                    userRoleSelect.innerHTML = ''; // Limpa opções existentes
+                    
+                    roles.forEach(role => {
+                        const option = document.createElement('option');
+                        option.value = role.slug;
+                        option.textContent = role.name;
+                        userRoleSelect.appendChild(option);
+                    });
+                } catch (error) {
+                    console.error("Erro ao carregar roles:", error);
+                    showNotification("Erro ao carregar lista de funções.", "error");
                 }
             };
 
@@ -185,8 +206,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 document.getElementById('userPassword').required = true;
                 passwordGroup.style.display = 'block';
                 sensitiveDataGroup.style.display = 'block'; 
-                const roleSelect = document.getElementById('userRoleSelect');
-                roleSelect.querySelector('option[value="master"]').disabled = (currentUserRole !== 'master');
+                
+                // [ATUALIZADO] Lógica dinâmica para desativar master
+                const masterOption = userRoleSelect.querySelector('option[value="master"]');
+                if (masterOption) masterOption.disabled = (currentUserRole !== 'master');
                 userModal.classList.remove('hidden');
             };
 
@@ -211,9 +234,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     document.getElementById('userPassword').required = false;
                     passwordGroup.style.display = 'none'; 
                     
-                    const roleSelect = document.getElementById('userRoleSelect');
-                    roleSelect.querySelector('option[value="master"]').style.display = (currentUserRole === 'master') ? 'block' : 'none';
-                    roleSelect.disabled = (currentUserRole === 'gestao' && user.role === 'master');
+                    // [ATUALIZADO] Lógica dinâmica para esconder master
+                    const masterOption = userRoleSelect.querySelector('option[value="master"]');
+                    if (masterOption) masterOption.style.display = (currentUserRole === 'master') ? 'block' : 'none';
+                    userRoleSelect.disabled = (currentUserRole === 'gestao' && user.role === 'master');
 
                     if (currentUserRole === 'master') {
                         document.getElementById('userSetor').value = user.setor || '';
@@ -271,6 +295,7 @@ document.addEventListener('DOMContentLoaded', () => {
             resetPasswordForm.addEventListener('submit', handleResetPasswordSubmit);
             
             setupPageByRole();
+            loadRolesIntoSelect(); // [NOVO] Carrega as roles ao iniciar
             loadUsers();
         };
     }

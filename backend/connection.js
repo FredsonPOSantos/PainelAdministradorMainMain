@@ -53,6 +53,62 @@ async function checkAndUpgradeSchema(client) {
         return res.rowCount > 0;
     };
 
+    // [NOVO] Verifica se a tabela existe
+    const checkTable = async (tableName) => {
+        const res = await client.query(`
+            SELECT 1 FROM information_schema.tables 
+            WHERE table_schema = 'public' AND table_name = $1
+        `, [tableName]);
+        return res.rowCount > 0;
+    };
+
+    // [NOVO] Correção da tabela 'roles' (Garante que existe e tem a coluna 'slug')
+    const rolesExists = await checkTable('roles');
+    if (!rolesExists) {
+        console.log("   -> Tabela 'roles' não encontrada. Criando...");
+        await client.query(`
+            CREATE TABLE roles (
+                slug VARCHAR(50) PRIMARY KEY,
+                name VARCHAR(100) NOT NULL,
+                description TEXT,
+                is_system BOOLEAN DEFAULT FALSE
+            );
+        `);
+        console.log("   ✅ Tabela 'roles' criada com sucesso.");
+    } else {
+        const slugExists = await checkColumn('roles', 'slug');
+        if (!slugExists) {
+            const roleNameExists = await checkColumn('roles', 'role_name');
+            if (roleNameExists) {
+                console.log("   -> Atualizando tabela 'roles': renomeando 'role_name' para 'slug'...");
+                await client.query('ALTER TABLE roles RENAME COLUMN role_name TO slug');
+                console.log("   ✅ Coluna 'role_name' renomeada para 'slug'.");
+            } else {
+                console.log("   -> Adicionando coluna 'slug' à tabela 'roles'...");
+                await client.query('ALTER TABLE roles ADD COLUMN slug VARCHAR(50)');
+            }
+        }
+
+        // [CORREÇÃO] Verifica e adiciona a coluna 'name' se faltar
+        const nameExists = await checkColumn('roles', 'name');
+        if (!nameExists) {
+            console.log("   -> Adicionando coluna 'name' à tabela 'roles'...");
+            await client.query('ALTER TABLE roles ADD COLUMN name VARCHAR(100)');
+            await client.query("UPDATE roles SET name = slug WHERE name IS NULL"); // Popula com o slug temporariamente
+            console.log("   ✅ Coluna 'name' adicionada e populada.");
+        }
+
+        // [CORREÇÃO] Verifica e adiciona a coluna 'is_system' se faltar
+        const isSystemExists = await checkColumn('roles', 'is_system');
+        if (!isSystemExists) {
+            console.log("   -> Adicionando coluna 'is_system' à tabela 'roles'...");
+            await client.query('ALTER TABLE roles ADD COLUMN is_system BOOLEAN DEFAULT FALSE');
+            // Atualiza roles de sistema conhecidas para evitar que sejam deletadas acidentalmente
+            await client.query("UPDATE roles SET is_system = true WHERE slug IN ('master', 'gestao', 'estetica', 'DPO')");
+            console.log("   ✅ Coluna 'is_system' adicionada.");
+        }
+    }
+
     // Colunas a serem adicionadas na tabela 'routers' para a API do MikroTik
     const columnsToAdd = [
         { name: 'username', type: 'VARCHAR(255)' },
@@ -164,6 +220,26 @@ async function checkAndUpgradeSchema(client) {
             await client.query(
                 'INSERT INTO permissions (permission_key, feature_name, action_name, description) VALUES ($1, $2, $3, $4)',
                 [perm.key, perm.feature, perm.action, `Permissão para ${perm.action} em ${perm.feature}`]
+            );
+        }
+    }
+
+    // [NOVO] Garante que a tabela 'roles' está populada com os perfis de sistema
+    // Isto permite que o sistema funcione mesmo se a tabela tiver sido criada vazia
+    const systemRoles = [
+        { slug: 'master', name: 'Master', description: 'Acesso total ao sistema', is_system: true },
+        { slug: 'gestao', name: 'Gestão', description: 'Gestão de roteadores e usuários', is_system: true },
+        { slug: 'estetica', name: 'Marketing', description: 'Gestão de campanhas e banners', is_system: true }, // Slug 'estetica' mantido para compatibilidade com dados existentes
+        { slug: 'DPO', name: 'DPO', description: 'Encarregado de Proteção de Dados', is_system: true }
+    ];
+
+    for (const role of systemRoles) {
+        const roleCheck = await client.query('SELECT 1 FROM roles WHERE slug = $1', [role.slug]);
+        if (roleCheck.rowCount === 0) {
+            console.log(`   -> Perfil de sistema '${role.slug}' em falta. A adicionar...`);
+            await client.query(
+                'INSERT INTO roles (slug, name, description, is_system) VALUES ($1, $2, $3, $4)',
+                [role.slug, role.name, role.description, role.is_system]
             );
         }
     }

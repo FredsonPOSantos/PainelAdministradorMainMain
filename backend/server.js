@@ -34,6 +34,8 @@ const publicRoutes = require('./routes/publicRoutes'); // [NOVO] Importa as rota
 // [NOVO] Importa as rotas do dashboard analítico
 const dashboardAnalyticsRoutes = require('./routes/AnalyticsRoutes');
 const monitoringRoutes = require('./routes/monitoring'); // <-- 1. IMPORTE A NOVA ROTA
+const profileRoutes = require('./routes/profileRoutes'); // [NOVO]
+const roleRoutes = require('./routes/roleRoutes');       // [NOVO]
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -99,6 +101,8 @@ app.use('/api/monitoring', monitoringRoutes); // <-- 2. USE A NOVA ROTA
 // --- [NOVO] Rotas de Logs ---
 const logRoutes = require('./routes/logRoutes');
 app.use('/api/logs', logRoutes);
+app.use('/api/admin/profile', profileRoutes); // [NOVO] Rota para o perfil
+app.use('/api/roles', roleRoutes);            // [NOVO] Rota para gestão de perfis
  
 
 // --- Rota de Teste Principal ---

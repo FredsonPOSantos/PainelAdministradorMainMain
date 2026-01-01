@@ -282,6 +282,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         'admin_raffles': 'initRafflesPage',
         'analytics_dashboard': 'initAnalyticsDashboard',
         'admin_system_health': 'initSystemHealthPage', // [NOVO]
+        'admin_profile': 'initProfilePage', // [NOVO] Regista a página de perfil
     };
 
     // --- [ATUALIZADO V13.1.3] IDs de verificação para o waitForElement ---
@@ -293,11 +294,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         'admin_banners': '#bannersTable',           
         'admin_campaigns': '#campaignsTable',       
         'admin_routers': '#groupsTable',            
-        'admin_settings': '#tab-perfil',
+        'admin_settings': '#unifiedAppearanceForm', // [ATUALIZADO] Aponta para um elemento existente
         'support': '#support-page-container',
         'admin_raffles': '#createRaffleForm',
         'analytics_dashboard': '#analytics-dashboard-wrapper', // [CORRIGIDO]
         'admin_system_health': '#systemHealthContainer', // [NOVO]
+        'admin_profile': '#profile-page-wrapper', // [NOVO] ID do container da página de perfil
     };
     // --- FIM V13.1.3 ---
 
@@ -324,8 +326,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         
         window.pageParams = params; // Store params globally
 
-        navLinks.forEach(link => link.classList.remove('active'));
+        // [CORRIGIDO] Inicializa a variável antes de qualquer uso
         let currentTitle = pageName; 
+
+        if (pageName === 'admin_profile') {
+            currentTitle = 'Meu Perfil';
+        }
+
+        navLinks.forEach(link => link.classList.remove('active'));
         if (linkElement) {
             linkElement.classList.add('active');
             const txt = (linkElement.textContent || '').trim().replace(/[\u{1F300}-\u{1F5FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '').trim();
@@ -425,40 +433,54 @@ document.addEventListener('DOMContentLoaded', async () => {
         try {
             console.log("fetchUserProfile (V13.6.1): Buscando perfil e permissões...");
             const data = await apiRequest('/api/admin/profile');
-            console.log("API Response (full) for /api/admin/profile:", data);
-            // console.log("API Response (data.data) for /api/admin/profile:", data.data); // Comentado para evitar redundância, o 'data' completo já inclui 'data.data'
-
-            if (!data.data) {
-                console.error("fetchUserProfile (V13.6.1): data.data está ausente.");
-                throw new Error("Perfil inválido ou sem permissões (V13.6.1).");
-            }
-            if (!data.data.profile) {
-                console.error("fetchUserProfile (V13.6.1): data.data.profile está ausente.");
-                throw new Error("Perfil inválido ou sem permissões (V13.6.1).");
-            }
-            if (!data.data.profile.role) {
-                console.error("fetchUserProfile (V13.6.1): data.data.profile.role está ausente.");
-                throw new Error("Perfil inválido ou sem permissões (V13.6.1).");
-            }
-            if (!data.data.profile.permissions) {
-                console.error("fetchUserProfile (V13.6.1): data.data.profile.permissions está ausente.");
-                throw new Error("Perfil inválido ou sem permissões (V13.6.1).");
+            
+            // [CORRIGIDO] Usa a nova resposta simplificada da API
+            if (!data.success || !data.data) {
+                throw new Error(data.message || "Resposta inválida da API de perfil.");
             }
 
-            console.log(`fetchUserProfile (V13.6.1): Perfil recebido (Role: ${data.data.profile.role}).`);
-            window.currentUserProfile = data.data.profile;
+            const userProfile = data.data;
+            console.log(`fetchUserProfile: Perfil recebido (Role: ${userProfile.role}).`);
+            window.currentUserProfile = userProfile;
             isProfileLoaded = true;
 
             // Preenche os elementos no novo cabeçalho
-            if (userNameElement) userNameElement.textContent = data.data.profile.email;
-            if (userRoleElement) userRoleElement.textContent = data.data.profile.role.toUpperCase();
+            if (userNameElement) userNameElement.textContent = userProfile.email;
+            if (userRoleElement) userRoleElement.textContent = userProfile.role.toUpperCase();
+
+            // [NOVO] Atualiza o avatar do cabeçalho
+            const headerAvatar = document.getElementById('headerUserAvatar');
+            if (headerAvatar) {
+                if (userProfile.avatar_url) {
+                    headerAvatar.src = `http://${window.location.hostname}:3000${userProfile.avatar_url}`;
+                    headerAvatar.style.display = 'block';
+                } else {
+                    headerAvatar.style.display = 'none';
+                }
+                // Adiciona o mesmo evento de clique para ir para o perfil
+                headerAvatar.onclick = () => {
+                    navLinks.forEach(link => link.classList.remove('active'));
+                    loadPage('admin_profile', null);
+                };
+            }
+
+            // [NOVO] Torna a área de utilizador clicável para aceder ao perfil
+            const userInfoContainer = document.querySelector('.user-info');
+            if (userInfoContainer) {
+                userInfoContainer.style.cursor = 'pointer';
+                userInfoContainer.title = 'Ir para o Meu Perfil';
+                userInfoContainer.onclick = () => {
+                    navLinks.forEach(link => link.classList.remove('active')); // Remove seleção do menu lateral
+                    loadPage('admin_profile', null);
+                };
+            }
 
             // [NOVO] Lógica para o nome de boas-vindas
             const userFirstNameElement = document.getElementById('userFirstName');
             if (userFirstNameElement) {
                 // Por enquanto, o campo 'nome_completo' não existe. Usaremos um fallback.
-                if (data.data.profile.nome_completo) {
-                    const firstName = data.data.profile.nome_completo.split(' ')[0];
+                if (userProfile.name) { // O backend agora retorna 'name'
+                    const firstName = userProfile.name.split(' ')[0];
                     userFirstNameElement.textContent = firstName;
                 } else {
                     // Fallback se não houver nome completo, esconde a mensagem
@@ -467,7 +489,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
             }
 
-            if (data.data.profile.must_change_password) {
+            if (userProfile.must_change_password) {
                 console.log("fetchUserProfile (V13.6.1): Senha obrigatória.");
                 showForcePasswordChangeModal();
                 return false;
@@ -734,8 +756,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         window.systemSettings = {};
     }
 
-    // 3. [LÓGICA V13.6.1] Aplica permissões ao menu
-    console.log("Dashboard (V13.6.1): Permissões do usuário:", window.currentUserProfile.permissions);
+    // 3. [NOVO] Aplica o tema pessoal do utilizador
+    if (window.currentUserProfile.theme_preference) {
+        applyTheme(window.currentUserProfile.theme_preference);
+    }
+
+    // 4. Aplica permissões ao menu
     applyMenuPermissions(window.currentUserProfile.permissions, window.currentUserProfile.role);
 
     // [NOVO] Inicia a verificação de notificações
@@ -744,7 +770,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
 
-    // 4. Carrega a página inicial
+    // 5. Carrega a página inicial
     console.log("Dashboard (V14.5): Carregando página inicial (admin_home)...");
     const homeLink = document.querySelector('.sidebar-nav .nav-item[data-page="admin_home"]');
     

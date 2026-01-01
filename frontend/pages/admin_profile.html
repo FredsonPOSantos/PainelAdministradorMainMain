@@ -1,0 +1,119 @@
+<!-- Ficheiro: pages/admin_profile.html -->
+<div id="profile-page-wrapper">
+    
+    <!-- Cabeçalho com Botão de Voltar -->
+    <div class="page-header" style="justify-content: space-between;">
+        <button class="btn-secondary" onclick="window.location.reload()" style="max-width: 200px;">
+            <i class="fas fa-arrow-left" style="margin-right: 8px;"></i> Voltar ao Dashboard
+        </button>
+        <h3>Meu Perfil</h3>
+        <div style="width: 200px;"></div> <!-- Espaçador para centralizar o título -->
+    </div>
+
+    <div class="profile-container">
+        
+        <!-- 1. Card de Dados Pessoais -->
+        <div class="content-section profile-card">
+            <div class="profile-header-section">
+                <div class="avatar-wrapper">
+                    <div class="profile-avatar" id="profileAvatarDisplay">
+                        <span id="profileInitials">US</span>
+                        <!-- A imagem será injetada aqui via JS se existir -->
+                    </div>
+                    <button class="btn-icon-small edit-avatar-btn" title="Alterar Foto">
+                        <i class="fas fa-camera"></i>
+                    </button>
+                    <input type="file" id="avatarUpload" accept="image/*" style="display: none;">
+                </div>
+                <div class="profile-info-text">
+                    <h2 id="profileNameDisplay">Carregando...</h2>
+                    <p id="profileRoleDisplay" class="badge role-gestao">...</p>
+                </div>
+            </div>
+
+            <form id="profileDataForm" class="profile-form">
+                <div class="form-row">
+                    <div class="input-group">
+                        <label>Nome Completo</label>
+                        <input type="text" id="profileNameInput" readonly>
+                    </div>
+                    <div class="input-group">
+                        <label>E-mail (Login)</label>
+                        <input type="text" id="profileEmailInput" readonly disabled style="opacity: 0.7;">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="input-group">
+                        <label>Telefone</label>
+                        <input type="text" id="profilePhoneInput" placeholder="(xx) xxxxx-xxxx" readonly>
+                    </div>
+                    <div class="input-group">
+                        <label>Setor / Departamento</label>
+                        <input type="text" id="profileSectorInput" placeholder="Ex: TI, Marketing..." readonly>
+                    </div>
+                </div>
+
+                <div class="form-actions" id="profileActions">
+                    <button type="button" id="btnEditProfile" class="btn-primary">
+                        <i class="fas fa-pencil-alt"></i> Editar Dados
+                    </button>
+                    <div id="editButtons" class="hidden" style="display: flex; gap: 10px; width: 100%;">
+                        <button type="button" id="btnCancelProfile" class="btn-secondary">Cancelar</button>
+                        <button type="submit" id="btnSaveProfile" class="btn-primary">Salvar Alterações</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <!-- 2. Card de Aparência (Temas) -->
+        <div class="content-section profile-card">
+            <div class="section-header" style="border: none; padding-bottom: 0;">
+                <h4>Aparência do Sistema</h4>
+            </div>
+            <p style="color: var(--text-secondary); margin-bottom: 20px; text-align: center;">
+                Personalize as cores do painel para a sua preferência. Esta alteração é visível apenas para você.
+            </p>
+
+            <div class="theme-grid">
+                <!-- Opção Padrão -->
+                <label class="theme-option">
+                    <input type="radio" name="theme" value="default" checked>
+                    <div class="theme-preview theme-default-preview">
+                        <div class="preview-sidebar"></div>
+                        <div class="preview-content">
+                            <div class="preview-header"></div>
+                        </div>
+                    </div>
+                    <span>Padrão do Sistema</span>
+                </label>
+
+                <!-- Temas Personalizados (Gerados via JS ou estáticos) -->
+                <!-- O JS vai preencher isto, mas deixo a estrutura base aqui -->
+                <div id="dynamicThemesContainer" style="display: contents;"></div>
+            </div>
+        </div>
+
+        <!-- 3. Card de Segurança -->
+        <div class="content-section profile-card">
+            <div class="section-header">
+                <h4>Segurança</h4>
+            </div>
+            <form id="changePasswordForm" class="profile-form">
+                <div class="form-row">
+                    <div class="input-group">
+                        <label for="currentPassword">Senha Atual</label>
+                        <input type="password" id="currentPassword" required placeholder="Digite sua senha atual">
+                    </div>
+                    <div class="input-group">
+                        <label for="newPassword">Nova Senha</label>
+                        <input type="password" id="newPassword" required minlength="6" placeholder="Mínimo 6 caracteres">
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn-primary">Atualizar Senha</button>
+                </div>
+            </form>
+        </div>
+
+    </div>
+</div>

@@ -11,53 +11,22 @@
 
 <!-- Navegação em Abas -->
 <nav class="tab-nav">
-    <button class="tab-link active" data-tab="tab-perfil">Meu Perfil</button>
-    <button class="tab-link admin-only" data-tab="tab-empresa">Empresa</button>
+    <button class="tab-link active admin-only" data-tab="tab-empresa">Meus Serviços</button>
     <button class="tab-link admin-only" data-tab="tab-hotspot">Portal Hotspot</button>
-    <button class="tab-link admin-only" data-tab="tab-aparencia">Aparência</button>
+    <button class="tab-link admin-only" data-tab="tab-aparencia">Aparência Geral</button>
     <!-- [ATUALIZADO V13.5.2] Removido master-only daqui para o JS controlar (permite DPO) -->
     <button class="tab-link admin-only" data-tab="tab-permissoes">Funções e Permissões</button>
-    <button class="tab-link admin-only" data-tab="tab-politicas">Políticas</button> <!-- [NOVO] Aba de Políticas -->
-    <button class="tab-link admin-only" data-tab="tab-logs">Logs e Atividades</button>
-    <button class="tab-link admin-only master-only" data-tab="tab-arquivos">Gestão de Arquivos</button> <!-- [NOVO] -->
+    <button class="tab-link admin-only" data-tab="tab-politicas">Políticas de Segurança</button> <!-- [NOVO] Aba de Políticas -->
+    <button class="tab-link admin-only" data-tab="tab-logs">Logs e Atividades do Sistema</button>
+    <button class="tab-link admin-only master-only" data-tab="tab-arquivos">Gestão de Arquivos Locais</button> <!-- [NOVO] -->
     <button class="tab-link admin-only" data-tab="tab-lgpd">Gestão de Dados</button>
 </nav>
 
 <!-- Conteúdo das Abas -->
 <div class="tab-content-container">
 
-    <!-- Aba 1: Meu Perfil (Fase 2.2 - Concluída) -->
-    <div id="tab-perfil" class="tab-content active">
-        <div class="content-section">
-            <div class="section-header">
-                <h4>Alterar Minha Senha</h4>
-            </div>
-            <form id="changeOwnPasswordForm">
-                <div class="input-group">
-                    <!-- [CORRIGIDO] Adicionado 'for' -->
-                    <label for="currentPassword">Senha Atual</label>
-                    <input type="password" id="currentPassword" required>
-                </div>
-                <div class="input-group">
-                    <!-- [CORRIGIDO] Adicionado 'for' -->
-                    <label for="newVoluntaryPassword">Nova Senha (mín. 6 caracteres)</label>
-                    <input type="password" id="newVoluntaryPassword" required minlength="6">
-                </div>
-                <div class="input-group">
-                    <!-- [CORRIGIDO] Adicionado 'for' -->
-                    <label for="confirmNewVoluntaryPassword">Confirmar Nova Senha</label>
-                    <input type="password" id="confirmNewVoluntaryPassword" required minlength="6">
-                </div>
-
-                <div class="form-actions">
-                    <button type="submit" class="btn-primary">Alterar Senha</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
     <!-- Aba 2: Geral (Fase 2.3) -->
-    <div id="tab-empresa" class="tab-content admin-only">
+    <div id="tab-empresa" class="tab-content active admin-only">
         <div class="content-section">
             <div class="section-header">
                 <h4>Configurações do Servidor de E-mail (SMTP)</h4>

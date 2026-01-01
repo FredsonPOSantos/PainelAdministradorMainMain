@@ -11,7 +11,6 @@ window.initSettingsPage = () => {
     let initialAppearanceSettings = {}; // Armazena o estado inicial das configurações de aparência
 
     // --- Seletores de Elementos ---
-    const changeOwnPasswordForm = document.getElementById('changeOwnPasswordForm');
         const unifiedAppearanceForm = document.getElementById('unifiedAppearanceForm');
         const removeBackgroundBtn = document.getElementById('removeBackground');
         const smtpSettingsForm = document.getElementById('smtpSettingsForm'); // [NOVO] Seletor para o novo formulário
@@ -130,6 +129,31 @@ window.initSettingsPage = () => {
             }
         };
 
+        // [NOVO] Função para criar um novo perfil (Role)
+        const handleCreateRole = async () => {
+            const roleName = prompt("Digite o nome do novo perfil (ex: Financeiro, Suporte N1):");
+            if (!roleName || roleName.trim() === "") return;
+
+            // Gera um slug simples (ex: "Suporte N1" -> "suporte_n1")
+            const slug = roleName.toLowerCase()
+                .normalize("NFD").replace(/[\u0300-\u036f]/g, "") // Remove acentos
+                .replace(/[^a-z0-9]/g, "_"); // Substitui não-alfanuméricos por _
+
+            try {
+                const response = await apiRequest('/api/roles', 'POST', {
+                    name: roleName,
+                    slug: slug,
+                    description: `Perfil personalizado: ${roleName}`
+                });
+
+                if (response.success) {
+                    showNotification(`Perfil "${roleName}" criado com sucesso!`, 'success');
+                    loadPermissionsMatrix(); // Recarrega a matriz para mostrar o novo perfil
+                }
+            } catch (error) {
+                showNotification(`Erro ao criar perfil: ${error.message}`, 'error');
+            }
+        };
 
         const renderPermissionsGrid = (matrixData, selectedRole, isMaster) => {
             const grid = permissionsGridContainer.querySelector('.permissions-grid');
@@ -217,23 +241,65 @@ window.initSettingsPage = () => {
                 header.className = 'permissions-header';
                 const inputGroup = document.createElement('div');
                 inputGroup.className = 'input-group';
+                inputGroup.style.display = 'flex'; // Alinha itens na horizontal
+                inputGroup.style.alignItems = 'flex-end'; // Alinha com a base do input
+                inputGroup.style.gap = '10px';
+
                 const label = document.createElement('label');
                 label.htmlFor = 'permissionRoleSelect';
                 label.textContent = 'Selecione a Função para Editar';
                 const select = document.createElement('select');
                 select.id = 'permissionRoleSelect';
+                select.style.marginBottom = '0'; // Remove margem inferior para alinhar com botão
+                select.style.flexGrow = '1';
 
-                matrixData.roles.forEach(roleName => {
-                    if (roleName !== 'master') { // Master não pode ser editado
+                // [ATUALIZADO] Agora 'role' é um objeto { slug, name, is_system }
+                matrixData.roles.forEach(role => {
+                    if (role.slug !== 'master') { // Master não pode ser editado
                         const option = document.createElement('option');
-                        option.value = roleName;
-                        option.textContent = roleName.charAt(0).toUpperCase() + roleName.slice(1);
+                        option.value = role.slug;
+                        option.textContent = role.name;
+                        option.dataset.isSystem = role.is_system; // Guarda info se é sistema
                         select.appendChild(option);
                     }
                 });
                 
-                inputGroup.appendChild(label);
-                inputGroup.appendChild(select);
+                // Container para o label e select
+                const selectWrapper = document.createElement('div');
+                selectWrapper.style.flexGrow = '1';
+                selectWrapper.style.display = 'flex';
+                selectWrapper.style.flexDirection = 'column';
+                selectWrapper.appendChild(label);
+                selectWrapper.appendChild(select);
+
+                // Container para botões
+                const btnGroup = document.createElement('div');
+                btnGroup.style.display = 'flex';
+                btnGroup.style.gap = '10px';
+
+                // Botão de criar novo perfil
+                const btnCreate = document.createElement('button');
+                btnCreate.className = 'btn-secondary';
+                btnCreate.innerHTML = '<i class="fas fa-plus"></i> Novo Perfil';
+                btnCreate.title = "Criar novo perfil personalizado";
+                btnCreate.style.height = '42px'; // Altura para combinar com o input
+                btnCreate.onclick = handleCreateRole;
+
+                // [NOVO] Botão de excluir perfil
+                const btnDelete = document.createElement('button');
+                btnDelete.className = 'btn-delete'; // Usa classe de erro/perigo
+                btnDelete.innerHTML = '<i class="fas fa-trash"></i>';
+                btnDelete.title = "Excluir perfil selecionado";
+                btnDelete.style.height = '42px';
+                btnDelete.style.display = 'none'; // Escondido por padrão
+                btnDelete.onclick = () => handleDeleteRole(select.value, select.options[select.selectedIndex].text);
+
+                btnGroup.appendChild(btnCreate);
+                btnGroup.appendChild(btnDelete);
+
+                inputGroup.appendChild(selectWrapper);
+                inputGroup.appendChild(btnGroup);
+
                 header.appendChild(inputGroup);
                 permissionsGridContainer.appendChild(header);
 
@@ -242,12 +308,22 @@ window.initSettingsPage = () => {
                 grid.className = 'permissions-grid';
                 permissionsGridContainer.appendChild(grid);
 
+                // Função para atualizar visibilidade do botão de excluir
+                const updateDeleteButton = () => {
+                    const selectedOption = select.options[select.selectedIndex];
+                    const isSystem = selectedOption.dataset.isSystem === 'true';
+                    // Só mostra botão de excluir se NÃO for sistema
+                    btnDelete.style.display = isSystem ? 'none' : 'inline-block';
+                };
+
                 // Renderiza as permissões para a role selecionada
                 renderPermissionsGrid(matrixData, select.value, isMaster);
+                updateDeleteButton();
 
                 // Adiciona listener para trocar de role
                 select.addEventListener('change', (e) => {
                     renderPermissionsGrid(matrixData, e.target.value, isMaster);
+                    updateDeleteButton();
                 });
 
                 // [NOVO] Adiciona listener para dependências de permissão
@@ -290,41 +366,6 @@ window.initSettingsPage = () => {
         };
 
         // --- Lógica de Formulários ---
-        const handleChangeOwnPassword = async (e) => {
-            e.preventDefault();
-            const form = e.currentTarget;
-            const submitButton = form.querySelector('button[type="submit"]');
-            const currentPassword = document.getElementById('currentPassword').value;
-            const newVoluntaryPassword = document.getElementById('newVoluntaryPassword').value;
-            const confirmNewVoluntaryPassword = document.getElementById('confirmNewVoluntaryPassword').value;
-
-            if (newVoluntaryPassword !== confirmNewVoluntaryPassword) {
-                showNotification('As novas senhas não coincidem.', 'error');
-                return;
-            }
-            if (newVoluntaryPassword.length < 6) {
-                showNotification('A nova senha deve ter no mínimo 6 caracteres.', 'error');
-                return;
-            }
-
-            submitButton.disabled = true;
-            submitButton.textContent = 'A guardar...';
-
-            try {
-                const result = await apiRequest('/api/admin/profile/change-own-password', 'POST', {
-                    currentPassword,
-                    newPassword: newVoluntaryPassword
-                });
-                showNotification(result.message || 'Operação concluída.', result.success ? 'success' : 'error');
-                if (result.success) form.reset();
-            } catch (error) {
-                showNotification(`Erro ao alterar a senha: ${error.message}`, 'error');
-            } finally {
-                submitButton.disabled = false;
-                submitButton.textContent = 'Alterar Senha';
-            }
-        };
-
         const handleUnifiedAppearance = async (e) => {
             e.preventDefault();
             window.showPagePreloader('A aplicar nova aparência...');
@@ -950,7 +991,7 @@ window.initSettingsPage = () => {
             const role = window.currentUserProfile.role;
             const permissions = window.currentUserProfile.permissions;
             const isMaster = (role === 'master');
-            let firstVisibleTabId = 'tab-perfil';
+            let firstVisibleTabId = 'tab-empresa'; // [ATUALIZADO] Nova aba padrão
 
             // [CORRIGIDO] Lógica de visibilidade da aba de Aparência
             const canSeeAppearance = isMaster || permissions['settings.appearance'] || permissions['settings.login_page'];
@@ -1208,11 +1249,6 @@ window.initSettingsPage = () => {
             })); 
         }
         
-        // [CORRIGIDO] Adiciona o listener para o formulário de troca de senha
-        if (changeOwnPasswordForm) {
-            changeOwnPasswordForm.addEventListener('submit', handleChangeOwnPassword);
-        }
-
         // [CORRIGIDO] Adiciona o listener para o botão de reset de aparência
         if (resetAppearanceBtn) {
             resetAppearanceBtn.addEventListener('click', handleResetAppearance);

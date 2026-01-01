@@ -12,7 +12,7 @@ const getUserProfile = async (req, res) => {
   // O req.user vem do authMiddleware (verifyToken)
   try {
     const profileQuery = await pool.query(
-      'SELECT id, email, role, is_active, setor, matricula, cpf, must_change_password, nome_completo FROM admin_users WHERE id = $1',
+      'SELECT id, email, role, is_active, setor, matricula, cpf, must_change_password, nome_completo, nome_completo as name, avatar_url, theme_preference, phone FROM admin_users WHERE id = $1',
       [req.user.userId]
     );
 
@@ -25,13 +25,8 @@ const getUserProfile = async (req, res) => {
     userProfile.permissions = await getPermissionsForRole(userProfile.role); // Esta chamada agora funcionará
 
     res.json({
-      message: "Perfil do utilizador obtido com sucesso (com permissões atualizadas).",
-      profile: userProfile,
-      // [CORRIGIDO] O frontend espera que o perfil esteja dentro de um objeto 'data'
-      // [CORRIGIDO] O frontend espera que o perfil esteja APENAS dentro de um objeto 'data'
-      data: {
-        profile: userProfile
-      }
+      success: true,
+      data: userProfile
     });
 
   } catch (error) {

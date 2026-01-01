@@ -22,8 +22,9 @@ const getPermissionsMatrix = async (req, res) => {
     console.log("getPermissionsMatrix (V13.5.3 - Batch Mode): Buscando dados...");
     try {
         // 1. Buscar todas as roles (exceto 'master' da edição, mas incluímos para DPO ver)
-        const rolesResult = await pool.query('SELECT role_name FROM roles ORDER BY role_name');
-        const roles = rolesResult.rows.map(r => r.role_name);
+        // [ATUALIZADO] Retorna o objeto completo para saber se é sistema ou não
+        const rolesResult = await pool.query('SELECT slug, name, is_system FROM roles ORDER BY name');
+        const roles = rolesResult.rows; 
         console.log("Roles encontradas:", roles);
 
         // 2. Buscar todas as permissões disponíveis (agrupadas por feature_name para facilitar)
@@ -41,16 +42,16 @@ const getPermissionsMatrix = async (req, res) => {
         // 4. Montar o objeto 'assignments' para consulta rápida no frontend
         const assignments = {};
         // Inicializa o objeto para todas as roles
-        roles.forEach(roleName => {
-            assignments[roleName] = {};
+        roles.forEach(role => {
+            assignments[role.slug] = {}; // ex: assignments['gestao'] = {}
             // Inicializa todas as permissões como 'false' para esta role
             allPermissions.forEach(perm => {
-                 assignments[roleName][perm.permission_key] = false;
+                 assignments[role.slug][perm.permission_key] = false;
             });
         });
         
-        // Preenche com 'true' onde a associação existir
-        rolePermissionsResult.rows.forEach(rp => {
+        // Preenche com 'true' onde a associação existir (role_name é o slug)
+        rolePermissionsResult.rows.forEach(rp => { 
             if (assignments[rp.role_name]) {
                 assignments[rp.role_name][rp.permission_key] = true;
             }
