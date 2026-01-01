@@ -742,8 +742,13 @@ if (window.initRoutersPage) {
                 <div id="${modalId}" class="modal-overlay">
                     <div class="modal-content large">
                         <button class="modal-close-btn">&times;</button>
-                        <h3>Análise de Utilizadores - Grupo "${groupName}"</h3>
-                        <div id="analyticsChartContainer" style="position: relative; height: 400px; width: 100%; margin-top: 20px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-right: 30px;">
+                            <h3 style="margin-bottom: 0;">Análise de Utilizadores - Grupo "${groupName}"</h3>
+                            <button id="exportAnalyticsBtn" class="btn-secondary" style="padding: 5px 15px; font-size: 13px;" disabled>
+                                <i class="fas fa-file-excel"></i> Exportar Excel
+                            </button>
+                        </div>
+                        <div id="analyticsChartContainer" style="position: relative; height: 400px; width: 100%;">
                             <p id="chartLoadingText" style="text-align: center; padding-top: 100px;">A carregar dados do gráfico...</p>
                             <canvas id="groupAnalyticsChart"></canvas>
                         </div>
@@ -762,6 +767,27 @@ if (window.initRoutersPage) {
                 
                 modalOverlay.querySelector('#chartLoadingText').style.display = 'none';
                 renderGroupAnalyticsChart(response.data);
+
+                // Configura o botão de exportação
+                const exportBtn = document.getElementById('exportAnalyticsBtn');
+                if (exportBtn) {
+                    exportBtn.disabled = false;
+                    exportBtn.onclick = () => {
+                        if (typeof XLSX === 'undefined') {
+                            showNotification("Biblioteca XLSX não encontrada.", 'error');
+                            return;
+                        }
+                        const data = response.data.map(item => ({
+                            "Roteador": item.router_name,
+                            "Total de Utilizadores": item.user_count
+                        }));
+                        
+                        const ws = XLSX.utils.json_to_sheet(data);
+                        const wb = XLSX.utils.book_new();
+                        XLSX.utils.book_append_sheet(wb, ws, "Dados do Gráfico");
+                        XLSX.writeFile(wb, `Analise_Grupo_${groupName.replace(/[^a-zA-Z0-9]/g, '_')}.xlsx`);
+                    };
+                }
             } catch (error) {
                 modalOverlay.querySelector('#analyticsChartContainer').innerHTML = `<p style="color: var(--error-text); text-align: center;">Erro ao carregar dados: ${error.message}</p>`;
             }

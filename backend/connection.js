@@ -109,6 +109,38 @@ async function checkAndUpgradeSchema(client) {
         }
     }
 
+    // [NOVO] Garante que a coluna 'role' em 'admin_users' seja VARCHAR e tenha uma chave estrangeira para 'roles'
+    const adminUsersExists = await checkTable('admin_users');
+    if (adminUsersExists) {
+        const roleColumnTypeResult = await client.query(`
+            SELECT data_type FROM information_schema.columns 
+            WHERE table_name = 'admin_users' AND column_name = 'role'
+        `);
+
+        // Se a coluna 'role' não for do tipo 'character varying' (VARCHAR), converte-a.
+        // O tipo 'USER-DEFINED' indica um ENUM, que é o que causa o erro.
+        if (roleColumnTypeResult.rows.length > 0 && roleColumnTypeResult.rows[0].data_type !== 'character varying') {
+            console.log("   -> A converter a coluna 'role' da tabela 'admin_users' de ENUM para VARCHAR...");
+            await client.query('ALTER TABLE admin_users ALTER COLUMN role TYPE VARCHAR(50) USING role::text;');
+            console.log("   ✅ Coluna 'role' convertida com sucesso.");
+        }
+
+        // Verifica se a chave estrangeira já existe
+        const fkCheck = await client.query(`
+            SELECT 1 FROM information_schema.table_constraints 
+            WHERE constraint_name = 'admin_users_role_fkey' AND table_name = 'admin_users'
+        `);
+
+        if (fkCheck.rowCount === 0) {
+            console.log("   -> A adicionar chave estrangeira para 'admin_users.role'...");
+            // Adiciona a chave estrangeira referenciando a tabela 'roles'
+            // ON UPDATE CASCADE: se o slug em 'roles' mudar, atualiza aqui também.
+            // ON DELETE RESTRICT: impede que um perfil seja excluído se ainda estiver em uso.
+            await client.query('ALTER TABLE admin_users ADD CONSTRAINT admin_users_role_fkey FOREIGN KEY (role) REFERENCES roles(slug) ON UPDATE CASCADE ON DELETE RESTRICT;');
+            console.log("   ✅ Chave estrangeira 'admin_users_role_fkey' adicionada.");
+        }
+    }
+
     // Colunas a serem adicionadas na tabela 'routers' para a API do MikroTik
     const columnsToAdd = [
         { name: 'username', type: 'VARCHAR(255)' },

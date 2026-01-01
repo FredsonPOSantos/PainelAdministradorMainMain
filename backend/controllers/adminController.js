@@ -73,9 +73,10 @@ const createAdminUser = async (req, res) => {
     return res.status(400).json({ message: "Campos (email, password, role) são obrigatórios." });
   }
 
-  const validRoles = ['estetica', 'gestao', 'master', 'DPO']; 
-  if (!validRoles.includes(role)) {
-    return res.status(400).json({ message: "A função (role) fornecida é inválida." });
+  // [CORRIGIDO] Validação dinâmica de roles consultando a base de dados
+  const roleCheck = await pool.query('SELECT 1 FROM roles WHERE slug = $1', [role]);
+  if (roleCheck.rowCount === 0) {
+      return res.status(400).json({ message: "A função (role) fornecida é inválida." });
   }
 
   try {
@@ -143,8 +144,8 @@ const updateUser = async (req, res) => {
 
   if (requestingUserRole === 'master') {
     if (role !== undefined) {
-      const validRoles = ['estetica', 'gestao', 'master', 'DPO'];
-      if (!validRoles.includes(role)) return res.status(400).json({ message: "Função inválida." });
+      const roleCheck = await pool.query('SELECT 1 FROM roles WHERE slug = $1', [role]);
+      if (roleCheck.rowCount === 0) return res.status(400).json({ message: "Função inválida." });
       fields.push(`role = $${queryIndex++}`);
       values.push(role);
     }
@@ -166,8 +167,8 @@ const updateUser = async (req, res) => {
       if (role === 'master') {
          return res.status(403).json({ message: "Apenas 'master' pode promover outros a 'master'."});
       }
-      const validRoles = ['estetica', 'gestao', 'DPO']; 
-      if (!validRoles.includes(role)) return res.status(400).json({ message: "Função inválida." });
+      const roleCheck = await pool.query('SELECT 1 FROM roles WHERE slug = $1', [role]);
+      if (roleCheck.rowCount === 0) return res.status(400).json({ message: "Função inválida." });
       fields.push(`role = $${queryIndex++}`);
       values.push(role);
     }
