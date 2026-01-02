@@ -160,6 +160,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const reauthLgpdForm = document.getElementById('reauthLgpdForm');
     const cancelReauthBtn = document.getElementById('cancelReauthBtn');
     const reauthError = document.getElementById('reauthError');
+    const sidebarToggleBtn = document.getElementById('sidebarToggleBtn'); // [NOVO]
 
     // [NOVO] Lógica de Notificações
     const notificationIcon = document.getElementById('notification-icon-wrapper');
@@ -632,6 +633,16 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (page && window.loadPageExternal && correspondingNavLink) {
                     window.loadPageExternal(page, correspondingNavLink);
                 }
+            }
+        });
+    }
+
+    // [NOVO] Lógica para o botão de toggle da sidebar
+    if (sidebarToggleBtn) {
+        sidebarToggleBtn.addEventListener('click', () => {
+            const sidebar = document.querySelector('.sidebar');
+            if (sidebar) {
+                sidebar.classList.toggle('collapsed');
             }
         });
     }

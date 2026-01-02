@@ -29,4 +29,8 @@ router.delete('/users/:id', verifyToken, checkPermission('users.delete'), adminC
 // Resetar a senha de um utilizador (Ação Especial, pode ser considerada uma 'Atualização')
 router.post('/users/:id/reset-password', verifyToken, checkPermission('users.update'), adminController.resetUserPassword);
 
+// [NOVO] Rotas para permissões individuais
+router.get('/users/:id/permissions', verifyToken, checkPermission('permissions.read'), adminController.getUserPermissions);
+router.put('/users/:id/permissions', verifyToken, checkPermission('permissions.update'), adminController.updateUserPermissions);
+
 module.exports = router;

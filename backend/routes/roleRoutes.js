@@ -13,6 +13,9 @@ router.get('/', roleController.getRoles);
 // Criar role (Apenas Master ou quem tem permissão específica - por enquanto Master)
 router.post('/', [checkPermission('permissions.update')], roleController.createRole);
 
+// [NOVO] Atualizar role
+router.put('/:slug', [checkPermission('permissions.update')], roleController.updateRole);
+
 // [NOVO] Eliminar role
 router.delete('/:slug', [checkPermission('permissions.update')], roleController.deleteRole);
 

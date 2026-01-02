@@ -112,6 +112,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     buttons += `<button class="btn-edit" data-user-id="${userId}" title="Editar Utilizador"><i class="fas fa-pencil-alt"></i></button>`;
                     if (!isMasterUser) {
                         buttons += `<button class="btn-delete" data-user-id="${userId}" title="Eliminar Utilizador"><i class="fas fa-trash-alt"></i></button>`;
+                        // [NOVO] Botão de Permissões Individuais
+                        buttons += `<button class="btn-secondary btn-permissions" data-user-id="${userId}" title="Permissões Individuais"><i class="fas fa-shield-alt"></i></button>`;
                         buttons += `<button class="btn-secondary" data-user-id="${userId}" data-user-email="${user.email}" title="Resetar Senha"><i class="fas fa-key"></i></button>`;
                     }
                 } else if (currentUserRole === 'gestao') {
@@ -128,19 +130,27 @@ document.addEventListener('DOMContentLoaded', () => {
             const attachActionListeners = () => {
                 tableBody.querySelectorAll('.btn-edit').forEach(button => {
                     button.addEventListener('click', (e) => {
-                        const userId = e.target.getAttribute('data-user-id');
+                        const userId = e.currentTarget.getAttribute('data-user-id');
                         openModalForEdit(userId);
                     });
                 });
                 tableBody.querySelectorAll('.btn-delete').forEach(button => {
                     button.addEventListener('click', (e) => {
-                        const userId = e.target.getAttribute('data-user-id');
+                        const userId = e.currentTarget.getAttribute('data-user-id');
                         handleDelete(userId);
                     });
                 });
-                tableBody.querySelectorAll('.btn-secondary').forEach(button => {
+                // [NOVO] Listener para o botão de permissões
+                tableBody.querySelectorAll('.btn-permissions').forEach(button => {
                     button.addEventListener('click', (e) => {
-                        const userId = e.target.getAttribute('data-user-id');
+                        const userId = e.currentTarget.getAttribute('data-user-id'); // currentTarget para pegar o botão, não o ícone
+                        openPermissionsModal(userId);
+                    });
+                });
+                // [CORRIGIDO] Seletor mais específico para evitar conflito com o botão de permissões
+                tableBody.querySelectorAll('.btn-secondary[data-user-email]').forEach(button => {
+                    button.addEventListener('click', (e) => {
+                        const userId = e.currentTarget.getAttribute('data-user-id');
                         const userEmail = e.target.getAttribute('data-user-email');
                         openResetPasswordModal(userId, userEmail);
                     });
@@ -252,6 +262,110 @@ document.addEventListener('DOMContentLoaded', () => {
                     
                 } catch (error) {
                     showNotification(`Erro ao buscar dados do utilizador: ${error.message}`, 'error');
+                }
+            };
+
+            // [NOVO] Função para abrir o modal de permissões individuais
+            const openPermissionsModal = async (userId) => {
+                // Cria o modal dinamicamente
+                const modalId = 'userPermissionsModal';
+                document.getElementById(modalId)?.remove(); // Remove se já existir
+
+                const modalHtml = `
+                    <div id="${modalId}" class="modal-overlay">
+                        <div class="modal-content large">
+                            <button class="modal-close-btn">&times;</button>
+                            <h3>Permissões Individuais</h3>
+                            <p class="input-hint">Defina permissões específicas para este utilizador. Estas configurações sobrepõem-se ao perfil.</p>
+                            <div id="userPermissionsGrid" class="permissions-grid" style="max-height: 50vh; overflow-y: auto; margin: 15px 0;">
+                                <p>A carregar...</p>
+                            </div>
+                            <div class="modal-actions">
+                                <button class="btn-secondary modal-close-btn-action">Cancelar</button>
+                                <button id="saveUserPermissionsBtn" class="btn-primary">Salvar Permissões</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                document.body.insertAdjacentHTML('beforeend', modalHtml);
+                const modal = document.getElementById(modalId);
+                const grid = document.getElementById('userPermissionsGrid');
+
+                // Listeners de fechar
+                modal.querySelectorAll('.modal-close-btn, .modal-close-btn-action').forEach(btn => 
+                    btn.onclick = () => modal.remove()
+                );
+                setTimeout(() => modal.classList.remove('hidden'), 10);
+
+                try {
+                    // Carrega a matriz completa e as permissões do utilizador
+                    const [matrixRes, userPermsRes] = await Promise.all([
+                        apiRequest('/api/permissions/matrix'),
+                        apiRequest(`/api/admin/users/${userId}/permissions`)
+                    ]);
+
+                    const matrix = matrixRes.data || matrixRes;
+                    const userPerms = userPermsRes.individual_permissions || [];
+                    const userRole = userPermsRes.role;
+
+                    // Mapa de permissões individuais: key -> boolean
+                    const userMap = {};
+                    userPerms.forEach(p => userMap[p.permission_key] = p.is_granted);
+
+                    // Renderiza a grid
+                    grid.innerHTML = '';
+                    const groups = matrix.permissions.reduce((acc, p) => {
+                        acc[p.feature_name] = acc[p.feature_name] || [];
+                        acc[p.feature_name].push(p);
+                        return acc;
+                    }, {});
+
+                    for (const feature in groups) {
+                        const groupDiv = document.createElement('div');
+                        groupDiv.className = 'permission-group';
+                        groupDiv.innerHTML = `<h4>${feature}</h4>`;
+
+                        groups[feature].forEach(perm => {
+                            const roleHasPerm = matrix.assignments[userRole]?.[perm.permission_key] === true;
+                            const userOverride = userMap[perm.permission_key];
+                            
+                            // Estado visual: Se tem override, usa ele. Se não, usa a role.
+                            const isChecked = userOverride !== undefined ? userOverride : roleHasPerm;
+                            
+                            const itemDiv = document.createElement('div');
+                            itemDiv.className = 'permission-item';
+                            itemDiv.innerHTML = `
+                                <input type="checkbox" id="uperm-${perm.permission_key}" data-key="${perm.permission_key}" ${isChecked ? 'checked' : ''}>
+                                <label for="uperm-${perm.permission_key}">${perm.action_name} ${roleHasPerm ? '<span style="font-size:10px; color:#718096;">(Padrão: Sim)</span>' : ''}</label>
+                            `;
+                            groupDiv.appendChild(itemDiv);
+                        });
+                        grid.appendChild(groupDiv);
+                    }
+
+                    // Salvar
+                    document.getElementById('saveUserPermissionsBtn').onclick = async () => {
+                        const permissions = [];
+                        grid.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+                            const key = cb.dataset.key;
+                            const roleHasPerm = matrix.assignments[userRole]?.[key] === true;
+                            // Se o estado atual for diferente do padrão da role, envia como override.
+                            // Se for igual, envia null para remover o override.
+                            const value = (cb.checked !== roleHasPerm) ? cb.checked : null;
+                            permissions.push({ key, value });
+                        });
+
+                        try {
+                            await apiRequest(`/api/admin/users/${userId}/permissions`, 'PUT', { permissions });
+                            showNotification('Permissões atualizadas!', 'success');
+                            modal.remove();
+                        } catch (err) {
+                            showNotification('Erro ao salvar: ' + err.message, 'error');
+                        }
+                    };
+
+                } catch (error) {
+                    grid.innerHTML = `<p style="color:red">Erro ao carregar dados: ${error.message}</p>`;
                 }
             };
 

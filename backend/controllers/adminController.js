@@ -330,6 +330,67 @@ const changeOwnPassword = async (req, res) => {
   }
 };
 
+// [NOVO] Obter permissões individuais de um utilizador
+const getUserPermissions = async (req, res) => {
+    const { id } = req.params;
+    try {
+        // Busca permissões individuais
+        const userPerms = await pool.query('SELECT permission_key, is_granted FROM user_permissions WHERE user_id = $1', [id]);
+        
+        // Busca a role do utilizador para referência no frontend
+        const userRole = await pool.query('SELECT role FROM admin_users WHERE id = $1', [id]);
+        
+        if (userRole.rows.length === 0) return res.status(404).json({ message: "Utilizador não encontrado." });
+
+        res.json({
+            success: true,
+            role: userRole.rows[0].role,
+            individual_permissions: userPerms.rows
+        });
+    } catch (error) {
+        console.error('Erro ao buscar permissões do utilizador:', error);
+        res.status(500).json({ message: "Erro interno." });
+    }
+};
+
+// [NOVO] Atualizar permissões individuais de um utilizador
+const updateUserPermissions = async (req, res) => {
+    const { id } = req.params;
+    const { permissions } = req.body; // Array de { key: '...', value: true/false/null }
+    // null significa remover a entrada (voltar ao padrão da role)
+
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+
+        for (const perm of permissions) {
+            if (perm.value === null) {
+                // Remove override (volta ao padrão da role)
+                await client.query('DELETE FROM user_permissions WHERE user_id = $1 AND permission_key = $2', [id, perm.key]);
+            } else {
+                // Adiciona ou atualiza override
+                await client.query(`
+                    INSERT INTO user_permissions (user_id, permission_key, is_granted)
+                    VALUES ($1, $2, $3)
+                    ON CONFLICT (user_id, permission_key) 
+                    DO UPDATE SET is_granted = $3
+                `, [id, perm.key, perm.value]);
+            }
+        }
+
+        await client.query('COMMIT');
+        
+        await logAction({ req, action: 'USER_PERMISSIONS_UPDATE', status: 'SUCCESS', target_type: 'user', target_id: id, description: `Permissões individuais atualizadas para o utilizador ID ${id}.` });
+        
+        res.json({ success: true, message: "Permissões atualizadas com sucesso." });
+    } catch (error) {
+        await client.query('ROLLBACK');
+        console.error('Erro ao atualizar permissões do utilizador:', error);
+        res.status(500).json({ message: "Erro interno." });
+    } finally {
+        client.release();
+    }
+};
 
 // Função para eliminar um utilizador (Apenas 'master')
 const deleteUser = async (req, res) => {
@@ -407,5 +468,7 @@ module.exports = {
   updateUser,
   deleteUser,
   resetUserPassword,
-  changeOwnPassword 
+  changeOwnPassword,
+  getUserPermissions,   // [NOVO]
+  updateUserPermissions // [NOVO]
 };

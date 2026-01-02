@@ -56,8 +56,16 @@ body {
 
 /* Grupos de input */
 .input-group { margin-bottom: 20px; text-align: center; }
-.input-group label { display: block; font-size: 14px; font-weight: 500; margin-bottom: 8px; color: var(--label-color); }
-.input-group input, .input-group select, .input-group textarea { width: 100%; max-width: 300px; margin: 0 auto; padding: 8px 12px; background-color: var(--background-dark); border: 1px solid var(--border-color); color: var(--text-primary); border-radius: 8px; font-size: 16px; transition: border-color 0.2s, box-shadow 0.2s; font-family: 'Inter', sans-serif; }
+.input-group label { display: block; font-size: 14px; font-weight: 600; margin-bottom: 8px; color: var(--label-color); }
+.input-group input, .input-group select, .input-group textarea { width: 100%; max-width: 300px; margin: 0 auto; padding: 8px 12px; background-color: var(--background-medium); border: 1px solid var(--border-color); color: var(--text-primary); border-radius: 8px; font-size: 16px; transition: border-color 0.2s, box-shadow 0.2s; font-family: 'Inter', sans-serif; }
+
+/* [CORREÇÃO] Garante contraste dos inputs dentro de modais em temas claros */
+.modal-content .input-group input,
+.modal-content .input-group select,
+.modal-content .input-group textarea {
+    background-color: var(--background-dark);
+}
+
 .content-section { 
     display: flex; flex-direction: column; align-items: center; background-color: var(--background-medium); padding: 24px; border-radius: 12px; margin-bottom: 32px; border: 1px solid var(--border-color); 
 }
@@ -78,7 +86,7 @@ body {
 .message-container { margin-top: 20px; }
 .form-message { display: none !important; }
 .form-message.error { display: none !important; }
-.form-message.success { display: none !important; }
+.form-message.success { display: none !important; } 
 .form-message.warning { display: none !important; }
 
 /* --- DASHBOARD --- */
@@ -115,7 +123,13 @@ body {
 .table-container table tbody tr { transition: background-color 0.15s; }
 .table-container table tbody tr:hover { background-color: var(--background-light); }
 
-.badge { padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: 700; text-transform: uppercase; display: inline-block; line-height: 1.2; }
+.badge { 
+    padding: 4px 10px; border-radius: 12px; font-size: 11px; 
+    font-weight: 700; text-transform: uppercase; display: inline-block; 
+    line-height: 1.2;
+    /* [NOVO] Cor padrão para novos perfis */
+    background-color: #718096; color: #fff; 
+}
 .role-master { background-color: #c53030; color: #fff; } .role-gestao { background-color: #dd6b20; color: #fff; } .role-estetica { background-color: #3182ce; color: #fff; } .role-DPO { background-color: #702459; color: #fff; }
 .status-active { background-color: #38a169; color: #fff; } .status-inactive { background-color: #718096; color: #fff; }
 
@@ -295,6 +309,31 @@ input[type="color"]::-webkit-color-swatch { border: none; border-radius: 6px; }
     background-color: var(--background-medium);
     border-bottom: 1px solid var(--background-dark);
     color: var(--text-primary);
+}
+
+.sidebar-toggle-btn {
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: 5px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.2s, color 0.2s;
+}
+.sidebar-toggle-btn:hover {
+    background-color: var(--background-light);
+    color: var(--text-primary);
+}
+
+/* [NOVO] Estilos para sidebar recolhida */
+.sidebar.collapsed {
+    width: 0;
+    padding: 0;
+    overflow: hidden;
+    border-right: none;
 }
 
 .notification-icon-wrapper {
@@ -988,13 +1027,13 @@ body.theme-light {
     --background-medium: #ffffff;  /* Cards brancos */
     --background-light: #e5e7eb;
     --text-primary: #111827;       /* Quase preto para leitura */
-    --text-secondary: #374151;     /* Cinza escuro */
+    --text-secondary: #4b5563;     /* Cinza escuro */
     --text-tertiary: #4b5563;
     --border-color: #d1d5db;
     --sidebar-color: #ffffff;
     --nav-title-color: #4b5563;
-    --label-color: #111827;
-    --placeholder-color: #6b7280;
+    --label-color: #374151;        /* Cinza mais escuro para labels */
+    --placeholder-color: #9ca3af;  /* Cinza mais claro para placeholders */
 }
 
 /* Tema Alto Contraste */
@@ -1002,7 +1041,7 @@ body.theme-contrast {
     --primary-color: #ffff00;      /* Amarelo vivo */
     --primary-color-dark: #e6e600;
     --background-dark: #000000;    /* Preto absoluto */
-    --background-medium: #000000;
+    --background-medium: #1a1a1a;
     --background-light: #1a1a1a;
     --text-primary: #ffffff;
     --text-secondary: #ffffff;
@@ -1097,4 +1136,6 @@ body.theme-bluelight {
     --border-color: #bae6fd;       /* Sky 200 */
     --sidebar-color: #ffffff;      /* Sidebar branca */
     --nav-title-color: #0ea5e9;    /* Títulos em azul vivo */
+    --label-color: var(--text-primary); /* Usa a cor de texto principal para labels */
+    --placeholder-color: #7dd3fc; /* Um azul claro para placeholder */
 }

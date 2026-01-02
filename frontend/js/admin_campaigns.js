@@ -102,13 +102,28 @@ if (window.initCampaignsPage) {
                 }
                 campaigns.forEach(campaign => { // [CORRIGIDO] A API retorna o array diretamente
                     const row = document.createElement('tr');
+                    
+                    // [NOVO] Lógica para verificar expiração visualmente
+                    let statusBadge = `<span class="badge status-${campaign.is_active ? 'active' : 'inactive'}">${campaign.is_active ? 'Ativa' : 'Inativa'}</span>`;
+                    
+                    if (campaign.is_active && campaign.end_date) {
+                        const endDate = new Date(campaign.end_date);
+                        const today = new Date();
+                        today.setHours(0,0,0,0); // Zera horas para comparar apenas datas
+                        
+                        // Se a data de fim for anterior a hoje, está expirada
+                        if (endDate < today) {
+                            statusBadge = `<span class="badge status-inactive" style="background-color: #e53e3e;" title="Expirou em ${endDate.toLocaleDateString()}">Expirada</span>`;
+                        }
+                    }
+
                     // Ajustado para mostrar as novas colunas
                     row.innerHTML = `
                         <td>${campaign.id}</td>
                         <td>${campaign.name}</td>
                         <td>${campaign.template_name || 'N/A'}</td>
                         <td>${campaign.target_type}</td>
-                        <td><span class="badge status-${campaign.is_active ? 'active' : 'inactive'}">${campaign.is_active ? 'Ativa' : 'Inativa'}</span></td>
+                        <td>${statusBadge}</td>
                         <td class="action-buttons">
                             <button class="btn-preview" title="Pré-visualizar Campanha">
                                 <i class="fas fa-eye"></i>

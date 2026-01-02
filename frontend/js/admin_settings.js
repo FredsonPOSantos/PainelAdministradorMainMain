@@ -155,6 +155,25 @@ window.initSettingsPage = () => {
             }
         };
 
+        // [NOVO] Função para editar nome do perfil
+        const handleEditRole = async (slug, currentName) => {
+            const newName = prompt(`Editar nome do perfil "${currentName}":`, currentName);
+            if (!newName || newName.trim() === "" || newName === currentName) return;
+
+            try {
+                const response = await apiRequest(`/api/roles/${slug}`, 'PUT', {
+                    name: newName,
+                    description: `Atualizado em ${new Date().toLocaleDateString()}`
+                });
+                if (response.success) {
+                    showNotification('Perfil atualizado com sucesso!', 'success');
+                    loadPermissionsMatrix(); // Recarrega
+                }
+            } catch (error) {
+                showNotification(`Erro ao atualizar perfil: ${error.message}`, 'error');
+            }
+        };
+
         const renderPermissionsGrid = (matrixData, selectedRole, isMaster) => {
             const grid = permissionsGridContainer.querySelector('.permissions-grid');
             if (!grid) return;
@@ -285,6 +304,14 @@ window.initSettingsPage = () => {
                 btnCreate.style.height = '42px'; // Altura para combinar com o input
                 btnCreate.onclick = handleCreateRole;
 
+                // [NOVO] Botão de editar perfil
+                const btnEdit = document.createElement('button');
+                btnEdit.className = 'btn-secondary';
+                btnEdit.innerHTML = '<i class="fas fa-pencil-alt"></i>';
+                btnEdit.title = "Editar nome do perfil";
+                btnEdit.style.height = '42px';
+                btnEdit.onclick = () => handleEditRole(select.value, select.options[select.selectedIndex].text);
+
                 // [NOVO] Botão de excluir perfil
                 const btnDelete = document.createElement('button');
                 btnDelete.className = 'btn-delete'; // Usa classe de erro/perigo
@@ -295,6 +322,7 @@ window.initSettingsPage = () => {
                 btnDelete.onclick = () => handleDeleteRole(select.value, select.options[select.selectedIndex].text);
 
                 btnGroup.appendChild(btnCreate);
+                btnGroup.appendChild(btnEdit); // Adiciona o botão de editar
                 btnGroup.appendChild(btnDelete);
 
                 inputGroup.appendChild(selectWrapper);

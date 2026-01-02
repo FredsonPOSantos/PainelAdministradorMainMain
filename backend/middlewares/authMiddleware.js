@@ -56,6 +56,21 @@ const verifyToken = async (req, res, next) => {
             });
         }
 
+        // [NOVO] 3. Buscar e aplicar permissões individuais (Overrides)
+        const userPermsResult = await pool.query(
+            'SELECT permission_key, is_granted FROM user_permissions WHERE user_id = $1',
+            [user.id]
+        );
+
+        userPermsResult.rows.forEach(up => {
+            // Se is_granted for true, adiciona/sobrescreve. Se false, remove a permissão.
+            if (up.is_granted) {
+                permissions[up.permission_key] = true;
+            } else {
+                delete permissions[up.permission_key];
+            }
+        });
+
         // Garante que DPO sempre tenha a permissão de logs
         if (user.role === 'DPO') {
             permissions['logs.read'] = true;

@@ -22,6 +22,9 @@ const pgConnectionStatus = {
     error: null,
 };
 
+// [NOVO] Flag para garantir que a manutenção só inicia uma vez
+let maintenanceIntervalStarted = false;
+
 // Evento: ligação estabelecida
 pool.on('connect', () => {
   // Este evento é por cliente, não para a pool inteira. A verificação inicial é mais fiável.
@@ -139,6 +142,21 @@ async function checkAndUpgradeSchema(client) {
             await client.query('ALTER TABLE admin_users ADD CONSTRAINT admin_users_role_fkey FOREIGN KEY (role) REFERENCES roles(slug) ON UPDATE CASCADE ON DELETE RESTRICT;');
             console.log("   ✅ Chave estrangeira 'admin_users_role_fkey' adicionada.");
         }
+    }
+
+    // [NOVO] Tabela para permissões individuais de utilizadores (Overrides)
+    const userPermissionsExists = await checkTable('user_permissions');
+    if (!userPermissionsExists) {
+        console.log("   -> Tabela 'user_permissions' não encontrada. Criando...");
+        await client.query(`
+            CREATE TABLE user_permissions (
+                user_id INTEGER REFERENCES admin_users(id) ON DELETE CASCADE,
+                permission_key VARCHAR(100) NOT NULL,
+                is_granted BOOLEAN NOT NULL,
+                PRIMARY KEY (user_id, permission_key)
+            );
+        `);
+        console.log("   ✅ Tabela 'user_permissions' criada.");
     }
 
     // Colunas a serem adicionadas na tabela 'routers' para a API do MikroTik
@@ -276,6 +294,19 @@ async function checkAndUpgradeSchema(client) {
         }
     }
 
+    // [NOVO] Verifica e desativa campanhas expiradas (Limpeza na inicialização)
+    const campaignsExists = await checkTable('campaigns');
+    if (campaignsExists) {
+        const result = await client.query(`
+            UPDATE campaigns 
+            SET is_active = false 
+            WHERE is_active = true AND end_date < CURRENT_DATE
+        `);
+        if (result.rowCount > 0) {
+            console.log(`   ✅ [AUTO-CLEANUP] ${result.rowCount} campanhas expiradas foram desativadas.`);
+        }
+    }
+
     console.log('✅ [DB-UPGRADE] Verificação do esquema concluída.');
 }
 
@@ -339,6 +370,32 @@ const testInitialConnection = async () => {
         console.warn('⚠️ [DB-UPGRADE] Aviso: Não foi possível atualizar as colunas automaticamente (permissão negada).');
         console.warn(`   -> Erro: ${schemaError.message}`);
         console.warn('   -> O servidor continuará, mas algumas funcionalidades podem falhar até que o SQL seja executado manualmente.');
+    }
+
+    // [NOVO] Inicia verificação periódica de campanhas (1x por hora)
+    if (!maintenanceIntervalStarted) {
+        maintenanceIntervalStarted = true;
+        console.log('🕒 [MAINTENANCE] Agendada verificação de campanhas expiradas (1h).');
+        setInterval(async () => {
+            try {
+                // Usa uma nova conexão da pool para não interferir
+                const client = await pool.connect();
+                try {
+                    const result = await client.query(`
+                        UPDATE campaigns 
+                        SET is_active = false 
+                        WHERE is_active = true AND end_date < CURRENT_DATE
+                    `);
+                    if (result.rowCount > 0) {
+                        console.log(`[MAINTENANCE] ${result.rowCount} campanhas expiradas foram desativadas.`);
+                    }
+                } finally {
+                    client.release();
+                }
+            } catch (err) {
+                console.error('[MAINTENANCE] Erro ao verificar campanhas:', err.message);
+            }
+        }, 3600000); // 3600000 ms = 1 hora
     }
 
     client.release();

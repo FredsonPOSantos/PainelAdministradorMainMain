@@ -44,6 +44,35 @@ const createRole = async (req, res) => {
     }
 };
 
+// [NOVO] Atualizar perfil (Nome e Descrição)
+const updateRole = async (req, res) => {
+    const { slug } = req.params;
+    const { name, description } = req.body;
+
+    if (!name) return res.status(400).json({ success: false, message: 'O nome é obrigatório.' });
+
+    try {
+        await pool.query(
+            'UPDATE roles SET name = $1, description = $2 WHERE slug = $3',
+            [name, description, slug]
+        );
+
+        await logAction({
+            req,
+            action: 'ROLE_UPDATE',
+            status: 'SUCCESS',
+            description: `Perfil "${slug}" atualizado para nome "${name}".`,
+            target_type: 'role',
+            target_id: slug
+        });
+
+        res.json({ success: true, message: 'Perfil atualizado com sucesso.' });
+    } catch (error) {
+        console.error('Erro ao atualizar perfil:', error);
+        res.status(500).json({ success: false, message: 'Erro ao atualizar perfil.' });
+    }
+};
+
 // [NOVO] Eliminar perfil
 const deleteRole = async (req, res) => {
     const { slug } = req.params;
@@ -91,4 +120,4 @@ const deleteRole = async (req, res) => {
     }
 };
 
-module.exports = { getRoles, createRole, deleteRole };
+module.exports = { getRoles, createRole, updateRole, deleteRole };
