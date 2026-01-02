@@ -56,8 +56,8 @@ if (window.initBannersPage) {
                         <td>${banner.type}</td>
                         <td><span class="badge status-${banner.is_active ? 'active' : 'inactive'}">${banner.is_active ? 'Ativo' : 'Inativo'}</span></td>
                         <td class="action-buttons">
-                            <button class="btn-edit" data-banner-id="${banner.id}">Editar</button>
-                            <button class="btn-delete" data-banner-id="${banner.id}">Eliminar</button>
+                            <button class="btn-edit" data-banner-id="${banner.id}" title="Editar Banner"><i class="fas fa-pencil-alt"></i></button>
+                            <button class="btn-delete" data-banner-id="${banner.id}" title="Eliminar Banner"><i class="fas fa-trash-alt"></i></button>
                         </td>
                     `;
                     tableBody.appendChild(row);

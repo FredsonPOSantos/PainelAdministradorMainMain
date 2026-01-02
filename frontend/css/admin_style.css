@@ -761,11 +761,16 @@ trix-editor {
     background-color: #c53030;
     color: white;
     border: none;
-    padding: 5px 10px;
-    border-radius: 4px;
-    font-size: 11px;
+    padding: 0;
+    border-radius: 6px;
+    font-size: 14px;
     cursor: pointer;
-    width: 100%;
+    width: 34px;
+    height: 34px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto;
 }
 
 .btn-delete-media:hover {

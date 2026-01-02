@@ -97,9 +97,9 @@ window.initRafflesPage = () => {
                 <td>${raffle.title}</td>
                 <td>${new Date(raffle.created_at).toLocaleString()}</td>
                 <td>${raffle.winner_email || 'N/A'}</td>
-                <td>
-                    <button class="btn-secondary view-raffle-btn" data-id="${raffle.id}">Ver</button>
-                    <button class="btn-primary draw-raffle-btn" data-id="${raffle.id}" ${raffle.winner_id ? 'disabled' : ''}>Sortear</button>
+                <td class="action-buttons">
+                    <button class="btn-secondary view-raffle-btn" data-id="${raffle.id}" title="Ver Detalhes"><i class="fas fa-eye"></i></button>
+                    <button class="btn-primary draw-raffle-btn" data-id="${raffle.id}" ${raffle.winner_id ? 'disabled' : ''} title="Realizar Sorteio"><i class="fas fa-trophy"></i></button>
                 </td>
             `;
             rafflesTableBody.appendChild(row);

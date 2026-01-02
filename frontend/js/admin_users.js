@@ -109,16 +109,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 const isSelf = (user.id === currentUserId);
                 const isMasterUser = (user.id === 1);
                 if (currentUserRole === 'master') {
-                    buttons += `<button class="btn-edit" data-user-id="${userId}">Editar</button>`;
+                    buttons += `<button class="btn-edit" data-user-id="${userId}" title="Editar Utilizador"><i class="fas fa-pencil-alt"></i></button>`;
                     if (!isMasterUser) {
-                        buttons += `<button class="btn-delete" data-user-id="${userId}">Eliminar</button>`;
-                        buttons += `<button class="btn-secondary" data-user-id="${userId}" data-user-email="${user.email}">Resetar Senha</button>`;
+                        buttons += `<button class="btn-delete" data-user-id="${userId}" title="Eliminar Utilizador"><i class="fas fa-trash-alt"></i></button>`;
+                        buttons += `<button class="btn-secondary" data-user-id="${userId}" data-user-email="${user.email}" title="Resetar Senha"><i class="fas fa-key"></i></button>`;
                     }
                 } else if (currentUserRole === 'gestao') {
                     if (!isMasterUser) {
-                        buttons += `<button class="btn-edit" data-user-id="${userId}">Editar</button>`;
+                        buttons += `<button class="btn-edit" data-user-id="${userId}" title="Editar Utilizador"><i class="fas fa-pencil-alt"></i></button>`;
                         if (!isSelf) {
-                           buttons += `<button class="btn-secondary" data-user-id="${userId}" data-user-email="${user.email}">Resetar Senha</button>`;
+                           buttons += `<button class="btn-secondary" data-user-id="${userId}" data-user-email="${user.email}" title="Resetar Senha"><i class="fas fa-key"></i></button>`;
                         }
                     }
                 }

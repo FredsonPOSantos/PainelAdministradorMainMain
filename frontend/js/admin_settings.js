@@ -873,7 +873,7 @@ window.initSettingsPage = () => {
                         <td title="${log.error_message}" style="max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${log.error_message}</td>
                         <td><span class="badge role-estetica">${log.request_method || '-'}</span> ${log.request_url || '-'}</td>
                         <td>${log.user_email || 'N/A'}</td>
-                        <td><button class="btn-secondary" style="padding: 4px 8px; font-size: 12px;" onclick="showErrorDetails(${log.id})">Detalhes</button></td>
+                        <td><button class="btn-secondary" style="padding: 0; width: 30px; height: 30px; display: inline-flex; align-items: center; justify-content: center;" onclick="showErrorDetails(${log.id})" title="Ver Detalhes"><i class="fas fa-info-circle"></i></button></td>
                     `;
                     tableBody.appendChild(row);
                 });
@@ -1191,7 +1191,7 @@ window.initSettingsPage = () => {
                         <img src="http://${window.location.hostname}:3000${file.url}" alt="${file.name}" class="media-preview">
                         <div class="media-info">
                             <span class="media-name" title="${file.name}">${file.name}</span>
-                            <button class="btn-delete-media" data-filename="${file.name}">Excluir Permanentemente</button>
+                            <button class="btn-delete-media" data-filename="${file.name}" title="Excluir Permanentemente"><i class="fas fa-trash-alt"></i></button>
                         </div>
                     `;
                     

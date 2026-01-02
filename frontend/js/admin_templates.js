@@ -71,8 +71,8 @@ if (window.initTemplatesPage) {
                         <td>${template.base_model}</td>
                         <td>${template.login_type}</td>
                         <td class="action-buttons">
-                            <button class="btn-edit">Editar</button>
-                            <button class="btn-delete">Eliminar</button>
+                            <button class="btn-edit" title="Editar Template"><i class="fas fa-pencil-alt"></i></button>
+                            <button class="btn-delete" title="Eliminar Template"><i class="fas fa-trash-alt"></i></button>
                         </td>
                     `;
                     row.querySelector('.btn-edit').addEventListener('click', () => openModalForEdit(template));
