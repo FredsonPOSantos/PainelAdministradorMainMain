@@ -24,43 +24,50 @@ if (window.initRoutersPage) {
 
         // [NOVO] Cria e injeta o botão de exportar para Excel ao lado dos outros botões de ação
         if (checkStatusBtn && checkStatusBtn.parentElement) {
-            const exportExcelBtn = document.createElement('button');
-            exportExcelBtn.id = 'exportExcelBtn';
-            exportExcelBtn.className = 'btn-secondary';
-            exportExcelBtn.innerHTML = '<i class="fas fa-file-excel" style="margin-right: 8px;"></i>Exportar Excel';
-            // Adiciona o botão no mesmo container que o "Verificar Status"
-            checkStatusBtn.parentElement.appendChild(exportExcelBtn);
+            // Verifica se já existe para não duplicar
+            if (!document.getElementById('exportExcelBtn')) {
+                const exportExcelBtn = document.createElement('button');
+                exportExcelBtn.id = 'exportExcelBtn';
+                exportExcelBtn.className = 'btn-secondary';
+                exportExcelBtn.innerHTML = '<i class="fas fa-file-excel" style="margin-right: 8px;"></i>Exportar Excel';
+                // Adiciona o botão no mesmo container que o "Verificar Status"
+                checkStatusBtn.parentElement.appendChild(exportExcelBtn);
+            }
 
             // [NOVO] Cria e injeta o campo de pesquisa
-            const searchInput = document.createElement('input');
-            searchInput.type = 'text';
-            searchInput.id = 'routerSearchInput';
-            searchInput.placeholder = 'Pesquisar (Nome/IP)...';
-            searchInput.style.cssText = 'padding: 6px 12px; margin-left: 10px; border: 1px solid #4B5563; border-radius: 4px; background-color: #374151; color: #fff; width: 200px;';
-            
-            searchInput.addEventListener('input', (e) => {
-                const term = e.target.value.toLowerCase();
-                const filtered = allRouters.filter(r => r.name.toLowerCase().includes(term) || (r.ip_address && r.ip_address.includes(term)));
-                displayRouters(filtered, 1); // [NOVO] Reseta para a primeira página ao pesquisar
-            });
-            checkStatusBtn.parentElement.appendChild(searchInput);
+            if (!document.getElementById('routerSearchInput')) {
+                const searchInput = document.createElement('input');
+                searchInput.type = 'text';
+                searchInput.id = 'routerSearchInput';
+                searchInput.placeholder = 'Pesquisar (Nome/IP)...';
+                searchInput.style.cssText = 'padding: 6px 12px; margin-left: 10px; border: 1px solid #4B5563; border-radius: 4px; background-color: #374151; color: #fff; width: 200px;';
+                
+                searchInput.addEventListener('input', (e) => {
+                    const term = e.target.value.toLowerCase();
+                    const filtered = allRouters.filter(r => r.name.toLowerCase().includes(term) || (r.ip_address && r.ip_address.includes(term)));
+                    displayRouters(filtered, 1); // [NOVO] Reseta para a primeira página ao pesquisar
+                });
+                checkStatusBtn.parentElement.appendChild(searchInput);
+            }
 
             // [NOVO] Cria e injeta o seletor de período para disponibilidade
-            const periodSelect = document.createElement('select');
-            periodSelect.id = 'availabilityPeriodSelect';
-            periodSelect.style.cssText = 'padding: 6px 12px; margin-left: 10px; border: 1px solid #4B5563; border-radius: 4px; background-color: #374151; color: #fff;';
-            periodSelect.innerHTML = `
-                <option value="24h" selected>24 Horas</option>
-                <option value="7d">7 Dias</option>
-                <option value="30d">30 Dias</option>
-            `;
-            // Insere antes do botão de verificar status
-            checkStatusBtn.parentElement.insertBefore(periodSelect, checkStatusBtn);
+            if (!document.getElementById('availabilityPeriodSelect')) {
+                const periodSelect = document.createElement('select');
+                periodSelect.id = 'availabilityPeriodSelect';
+                periodSelect.style.cssText = 'padding: 6px 12px; margin-left: 10px; border: 1px solid #4B5563; border-radius: 4px; background-color: #374151; color: #fff;';
+                periodSelect.innerHTML = `
+                    <option value="24h" selected>24 Horas</option>
+                    <option value="7d">7 Dias</option>
+                    <option value="30d">30 Dias</option>
+                `;
+                // Insere antes do botão de verificar status
+                checkStatusBtn.parentElement.insertBefore(periodSelect, checkStatusBtn);
+            }
         }
         
         // [NOVO] Cria e injeta o container da paginação abaixo da tabela
         const tableContainer = document.querySelector('#routersTable')?.parentElement;
-        if (tableContainer) {
+        if (tableContainer && !document.getElementById('routersPagination')) {
             const paginationContainer = document.createElement('div');
             paginationContainer.id = 'routersPagination';
             paginationContainer.className = 'pagination-container';
@@ -549,8 +556,7 @@ if (window.initRoutersPage) {
                 showNotification(result.message, 'success');
                 discoverModal.classList.add('hidden');
                 loadPageData();
-            } catch (error)
- {
+            } catch (error) {
                 showNotification(`Erro ao adicionar roteadores: ${error.message}`, 'error');
             }
         };
@@ -744,9 +750,14 @@ if (window.initRoutersPage) {
                         <button class="modal-close-btn">&times;</button>
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-right: 30px;">
                             <h3 style="margin-bottom: 0;">Análise de Utilizadores - Grupo "${groupName}"</h3>
-                            <button id="exportAnalyticsBtn" class="btn-secondary" style="padding: 5px 15px; font-size: 13px;" disabled>
-                                <i class="fas fa-file-excel"></i> Exportar Excel
-                            </button>
+                            <div style="display: flex; gap: 10px;">
+                                <button id="exportAnalyticsBtn" class="btn-secondary" style="padding: 5px 15px; font-size: 13px;" disabled>
+                                    <i class="fas fa-file-excel"></i> Excel
+                                </button>
+                                <button id="exportAnalyticsPdfBtn" class="btn-secondary" style="padding: 5px 15px; font-size: 13px;" disabled>
+                                    <i class="fas fa-file-pdf"></i> PDF
+                                </button>
+                            </div>
                         </div>
                         <div id="analyticsChartContainer" style="position: relative; height: 400px; width: 100%;">
                             <p id="chartLoadingText" style="text-align: center; padding-top: 100px;">A carregar dados do gráfico...</p>
@@ -768,8 +779,9 @@ if (window.initRoutersPage) {
                 modalOverlay.querySelector('#chartLoadingText').style.display = 'none';
                 renderGroupAnalyticsChart(response.data);
 
-                // Configura o botão de exportação
+                // Configura os botões de exportação
                 const exportBtn = document.getElementById('exportAnalyticsBtn');
+                const exportPdfBtn = document.getElementById('exportAnalyticsPdfBtn');
                 if (exportBtn) {
                     exportBtn.disabled = false;
                     exportBtn.onclick = () => {
@@ -786,6 +798,35 @@ if (window.initRoutersPage) {
                         const wb = XLSX.utils.book_new();
                         XLSX.utils.book_append_sheet(wb, ws, "Dados do Gráfico");
                         XLSX.writeFile(wb, `Analise_Grupo_${groupName.replace(/[^a-zA-Z0-9]/g, '_')}.xlsx`);
+                    };
+                }
+
+                if (exportPdfBtn) {
+                    exportPdfBtn.disabled = false;
+                    exportPdfBtn.onclick = () => {
+                        if (!window.jspdf) {
+                            showNotification("Biblioteca PDF não encontrada.", 'error');
+                            return;
+                        }
+                        const { jsPDF } = window.jspdf;
+                        const doc = new jsPDF();
+
+                        // Título
+                        doc.setFontSize(16);
+                        doc.text(`Análise de Utilizadores - Grupo "${groupName}"`, 14, 20);
+                        doc.setFontSize(10);
+                        doc.text(`Data: ${new Date().toLocaleString()}`, 14, 28);
+
+                        // Tabela
+                        const tableData = response.data.map(item => [item.router_name, item.user_count]);
+                        
+                        doc.autoTable({
+                            startY: 35,
+                            head: [['Roteador', 'Total de Utilizadores']],
+                            body: tableData,
+                        });
+
+                        doc.save(`Analise_Grupo_${groupName.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`);
                     };
                 }
             } catch (error) {

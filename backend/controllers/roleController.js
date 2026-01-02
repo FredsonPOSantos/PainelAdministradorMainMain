@@ -58,6 +58,17 @@ const deleteRole = async (req, res) => {
             return res.status(403).json({ success: false, message: 'Não é permitido excluir perfis padrão do sistema.' });
         }
 
+        // [NOVO] Verifica se existem utilizadores associados a este perfil antes de excluir
+        const userCountResult = await pool.query('SELECT COUNT(*) FROM admin_users WHERE role = $1', [slug]);
+        const userCount = parseInt(userCountResult.rows[0].count, 10);
+
+        if (userCount > 0) {
+            return res.status(409).json({ 
+                success: false, 
+                message: `Não é possível excluir este perfil pois ele está atribuído a ${userCount} utilizador(es). Por favor, reatribua esses utilizadores a outro perfil antes de excluir.` 
+            });
+        }
+
         // Remove o perfil (as permissões em role_permissions devem ser removidas via CASCADE se configurado no DB, 
         // mas por segurança podemos remover manualmente ou confiar na constraint)
         // Vamos assumir que precisamos limpar referências manuais se não houver CASCADE
