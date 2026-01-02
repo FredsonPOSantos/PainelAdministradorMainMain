@@ -809,15 +809,26 @@ const deleteRouterGroup = async (req, res) => {
 // [NOVO] Obtém a distribuição de utilizadores por roteador dentro de um grupo
 const getRouterGroupUserDistribution = async (req, res) => {
     const { id } = req.params; // ID do Grupo
+    const { period } = req.query; // '24h', '7d', '30d', 'all'
+
     try {
+        let dateFilter = "";
+        // Filtra por data de criação do utilizador (novos registos)
+        if (period && period !== 'all') {
+            if (period === '24h') dateFilter = "AND u.created_at >= NOW() - INTERVAL '24 hours'";
+            else if (period === '7d') dateFilter = "AND u.created_at >= NOW() - INTERVAL '7 days'";
+            else if (period === '30d') dateFilter = "AND u.created_at >= NOW() - INTERVAL '30 days'";
+        }
+
         const query = `
             SELECT r.name as router_name, COUNT(u.id)::int as user_count
             FROM routers r
-            LEFT JOIN userdetails u ON r.name = u.router_name
+            LEFT JOIN userdetails u ON r.name = u.router_name ${dateFilter}
             WHERE r.group_id = $1
             GROUP BY r.name
             ORDER BY user_count DESC
         `;
+        
         const result = await pool.query(query, [id]);
         
         res.json({ success: true, data: result.rows });

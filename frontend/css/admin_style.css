@@ -128,13 +128,15 @@ body {
 /* Regra base para TODOS os elementos de ação (botões e links) */
 .action-buttons button,
 .action-buttons a.btn-preview {
-    padding: 6px 12px;
+    padding: 0; /* Removido para dar lugar a width/height */
+    width: 34px; /* Largura fixa */
+    height: 34px; /* Altura fixa */
     border: none;
     border-radius: 6px;
     cursor: pointer;
     font-weight: 600;
     transition: transform 0.1s, opacity 0.2s;
-    font-size: 12px;
+    font-size: 14px; /* Tamanho do ícone */
     display: inline-flex;
     align-items: center;
     justify-content: center;

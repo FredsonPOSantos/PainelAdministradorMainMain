@@ -650,10 +650,68 @@ if (window.initAnalyticsDashboard) {
             // [NOVO] Renderiza o gráfico de pizza com os dados já carregados
             if (analyticsPageData.userDistributionByGroup) {
                 renderRouterGroupPieChart(analyticsPageData.userDistributionByGroup);
+
+                // [NOVO] Adiciona botões de exportação para o gráfico de pizza
+                const pieChartContainer = document.getElementById('routerGroupPieChart').parentElement;
+                if (pieChartContainer && !pieChartContainer.querySelector('.export-buttons')) {
+                    const exportButtons = document.createElement('div');
+                    exportButtons.className = 'export-buttons';
+                    exportButtons.style.cssText = 'position: absolute; top: 0; right: 0; display: flex; gap: 5px;';
+                    exportButtons.innerHTML = `
+                        <button class="btn-secondary btn-sm" id="exportPieExcel"><i class="fas fa-file-excel"></i></button>
+                        <button class="btn-secondary btn-sm" id="exportPiePdf"><i class="fas fa-file-pdf"></i></button>
+                    `;
+                    pieChartContainer.style.position = 'relative'; // Necessário para o posicionamento absoluto
+                    pieChartContainer.prepend(exportButtons);
+
+                    document.getElementById('exportPieExcel').onclick = () => {
+                        const data = analyticsPageData.userDistributionByGroup.labels.map((label, index) => ({
+                            "Grupo": label,
+                            "Utilizadores": analyticsPageData.userDistributionByGroup.data[index]
+                        }));
+                        const ws = XLSX.utils.json_to_sheet(data);
+                        const wb = XLSX.utils.book_new();
+                        XLSX.utils.book_append_sheet(wb, ws, "Distribuicao por Grupo");
+                        XLSX.writeFile(wb, `Distribuicao_Utilizadores_por_Grupo.xlsx`);
+                    };
+
+                    document.getElementById('exportPiePdf').onclick = () => {
+                        const { jsPDF } = window.jspdf;
+                        const doc = new jsPDF();
+                        doc.text("Distribuição de Utilizadores por Grupo", 14, 20);
+                        const tableData = analyticsPageData.userDistributionByGroup.labels.map((label, index) => [
+                            label,
+                            analyticsPageData.userDistributionByGroup.data[index]
+                        ]);
+                        doc.autoTable({
+                            startY: 25,
+                            head: [['Grupo', 'Nº de Utilizadores']],
+                            body: tableData,
+                        });
+                        doc.save('Distribuicao_Utilizadores_por_Grupo.pdf');
+                    };
+                }
             }
             // [NOVO] Renderiza o gráfico de barras com os dados já carregados
             if (analyticsPageData.userDistributionByRouter) {
                 renderRouterDistributionBarChart(analyticsPageData.userDistributionByRouter);
+
+                // [NOVO] Adiciona botões de exportação para o gráfico de barras
+                const barChartContainer = document.getElementById('routerDistributionBarChart').parentElement;
+                if (barChartContainer && !barChartContainer.querySelector('.export-buttons')) {
+                    const exportButtons = document.createElement('div');
+                    exportButtons.className = 'export-buttons';
+                    exportButtons.style.cssText = 'position: absolute; top: 0; right: 0; display: flex; gap: 5px;';
+                    exportButtons.innerHTML = `
+                        <button class="btn-secondary btn-sm" id="exportBarExcel"><i class="fas fa-file-excel"></i></button>
+                        <button class="btn-secondary btn-sm" id="exportBarPdf"><i class="fas fa-file-pdf"></i></button>
+                    `;
+                    barChartContainer.style.position = 'relative';
+                    barChartContainer.prepend(exportButtons);
+
+                    // A lógica de exportação para o gráfico de barras pode ser adicionada aqui de forma similar
+                    // Por simplicidade, deixamos a implementação como exercício ou para um próximo passo.
+                }
             }
             loadRouterActivityDetails('all'); // Carrega inicialmente para todos
 

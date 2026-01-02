@@ -162,9 +162,9 @@ if (window.initRoutersPage) {
                     <td>${group.observacao || 'N/A'}</td>
                     <td>${routerCount}</td> 
                     <td class="action-buttons">
-                        <button class="btn-preview" onclick="window.handleShowGroupAnalytics(${group.id}, '${group.name.replace(/'/g, "\\'")}')" title="Ver Análise de Utilizadores"><i class="fas fa-chart-bar"></i></button>
-                        <button class="btn-edit" onclick="openModalForEditGroup(${group.id})">Editar</button>
-                        <button class="btn-delete" onclick="handleDeleteGroup(${group.id})">Eliminar</button>
+                        <button class="btn-preview" onclick="window.handleShowGroupAnalytics(${group.id}, '${group.name.replace(/'/g, "\\'")}')" title="Ver Análise de Utilizadores"><i class="fas fa-eye"></i></button>
+                        <button class="btn-edit" onclick="openModalForEditGroup(${group.id})" title="Editar Grupo"><i class="fas fa-pencil-alt"></i></button>
+                        <button class="btn-delete" onclick="handleDeleteGroup(${group.id})" title="Eliminar Grupo"><i class="fas fa-trash-alt"></i></button>
                     </td>
                 `;
                 groupsTableBody.appendChild(row);
@@ -201,8 +201,8 @@ if (window.initRoutersPage) {
                     <td>${groupName}</td>
                     <td>${router.observacao || 'N/A'}</td> 
                     <td class="action-buttons">
-                        <button class="btn-edit" onclick="openModalForEditRouter(${router.id})">Editar</button>
-                        <button class="btn-delete" onclick="handleDeleteRouter(${router.id})">Eliminar</button>
+                        <button class="btn-edit" onclick="openModalForEditRouter(${router.id})" title="Editar Roteador"><i class="fas fa-pencil-alt"></i></button>
+                        <button class="btn-delete" onclick="handleDeleteRouter(${router.id})" title="Eliminar Roteador"><i class="fas fa-trash-alt"></i></button>
                     </td>
                 `;
                 routersTableBody.appendChild(row);
@@ -748,13 +748,22 @@ if (window.initRoutersPage) {
                 <div id="${modalId}" class="modal-overlay">
                     <div class="modal-content large">
                         <button class="modal-close-btn">&times;</button>
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-right: 30px;">
-                            <h3 style="margin-bottom: 0;">Análise de Utilizadores - Grupo "${groupName}"</h3>
-                            <div style="display: flex; gap: 10px;">
-                                <button id="exportAnalyticsBtn" class="btn-secondary" style="padding: 5px 15px; font-size: 13px;" disabled>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-right: 30px; flex-wrap: wrap; gap: 10px;">
+                            <h3 style="margin-bottom: 0; margin-right: auto;">Análise de Utilizadores - Grupo "${groupName}"</h3>
+                            
+                            <div style="display: flex; gap: 10px; align-items: center;">
+                                <!-- [NOVO] Seletor de Período -->
+                                <select id="analyticsPeriodSelect" style="padding: 6px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--background-dark); color: var(--text-primary); font-size: 13px;">
+                                    <option value="all">Todo o Período</option>
+                                    <option value="30d">Últimos 30 Dias</option>
+                                    <option value="7d">Últimos 7 Dias</option>
+                                    <option value="24h">Últimas 24 Horas</option>
+                                </select>
+
+                                <button id="exportAnalyticsBtn" class="btn-secondary" style="padding: 6px 12px; font-size: 13px;" disabled title="Exportar Excel">
                                     <i class="fas fa-file-excel"></i> Excel
                                 </button>
-                                <button id="exportAnalyticsPdfBtn" class="btn-secondary" style="padding: 5px 15px; font-size: 13px;" disabled>
+                                <button id="exportAnalyticsPdfBtn" class="btn-secondary" style="padding: 6px 12px; font-size: 13px;" disabled title="Exportar PDF">
                                     <i class="fas fa-file-pdf"></i> PDF
                                 </button>
                             </div>
@@ -772,12 +781,40 @@ if (window.initRoutersPage) {
             modalOverlay.querySelector('.modal-close-btn').onclick = () => modalOverlay.remove();
             setTimeout(() => modalOverlay.classList.remove('hidden'), 10);
 
-            try {
-                const response = await apiRequest(`/api/routers/groups/${groupId}/user-distribution`);
-                if (!response.success || !response.data) throw new Error(response.message || 'Dados não recebidos.');
+            // Função interna para carregar dados com base no período
+            const loadChartData = async (period) => {
+                const chartContainer = modalOverlay.querySelector('#analyticsChartContainer');
+                const loadingText = modalOverlay.querySelector('#chartLoadingText');
                 
-                modalOverlay.querySelector('#chartLoadingText').style.display = 'none';
-                renderGroupAnalyticsChart(response.data);
+                // Mostra loading se não for a primeira carga
+                if (groupAnalyticsChartInstance) {
+                    loadingText.style.display = 'block';
+                    loadingText.textContent = 'A atualizar dados...';
+                }
+
+                try {
+                    const response = await apiRequest(`/api/routers/groups/${groupId}/user-distribution?period=${period}`);
+                    if (!response.success || !response.data) throw new Error(response.message || 'Dados não recebidos.');
+                    
+                    loadingText.style.display = 'none';
+                    renderGroupAnalyticsChart(response.data);
+                    return response.data; // Retorna dados para exportação
+                } catch (error) {
+                    chartContainer.innerHTML = `<p style="color: var(--error-text); text-align: center; padding-top: 100px;">Erro ao carregar dados: ${error.message}</p>`;
+                    return null;
+                }
+            };
+
+            // Carregamento inicial
+            let currentData = await loadChartData('all');
+
+            // Listener para mudança de período
+            const periodSelect = document.getElementById('analyticsPeriodSelect');
+            if (periodSelect) {
+                periodSelect.addEventListener('change', async (e) => {
+                    currentData = await loadChartData(e.target.value);
+                });
+            }
 
                 // Configura os botões de exportação
                 const exportBtn = document.getElementById('exportAnalyticsBtn');
@@ -785,11 +822,12 @@ if (window.initRoutersPage) {
                 if (exportBtn) {
                     exportBtn.disabled = false;
                     exportBtn.onclick = () => {
+                        if (!currentData) return; // Garante que há dados
                         if (typeof XLSX === 'undefined') {
                             showNotification("Biblioteca XLSX não encontrada.", 'error');
                             return;
                         }
-                        const data = response.data.map(item => ({
+                        const data = currentData.map(item => ({
                             "Roteador": item.router_name,
                             "Total de Utilizadores": item.user_count
                         }));
@@ -804,6 +842,7 @@ if (window.initRoutersPage) {
                 if (exportPdfBtn) {
                     exportPdfBtn.disabled = false;
                     exportPdfBtn.onclick = () => {
+                        if (!currentData) return;
                         if (!window.jspdf) {
                             showNotification("Biblioteca PDF não encontrada.", 'error');
                             return;
@@ -818,7 +857,7 @@ if (window.initRoutersPage) {
                         doc.text(`Data: ${new Date().toLocaleString()}`, 14, 28);
 
                         // Tabela
-                        const tableData = response.data.map(item => [item.router_name, item.user_count]);
+                        const tableData = currentData.map(item => [item.router_name, item.user_count]);
                         
                         doc.autoTable({
                             startY: 35,
@@ -829,9 +868,6 @@ if (window.initRoutersPage) {
                         doc.save(`Analise_Grupo_${groupName.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`);
                     };
                 }
-            } catch (error) {
-                modalOverlay.querySelector('#analyticsChartContainer').innerHTML = `<p style="color: var(--error-text); text-align: center;">Erro ao carregar dados: ${error.message}</p>`;
-            }
         };
 
         // --- INICIALIZAÇÃO E LISTENERS ---
