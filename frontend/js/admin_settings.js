@@ -42,6 +42,16 @@ window.initSettingsPage = () => {
         const policyTypeField = document.getElementById('policyTypeField');
         const policyEditForm = document.getElementById('policyEditForm');
 
+        // [NOVO] Elementos do Modal de Perfis
+        const roleModal = document.getElementById('roleModal');
+        const roleForm = document.getElementById('roleForm');
+        const roleModalTitle = document.getElementById('roleModalTitle');
+        const roleNameInput = document.getElementById('roleName');
+        const roleSlugInput = document.getElementById('roleSlug');
+        const roleSlugGroup = document.getElementById('roleSlugGroup');
+        const roleDescriptionInput = document.getElementById('roleDescription');
+        const roleSlugOriginalInput = document.getElementById('roleSlugOriginal');
+
         // [NOVO] Elementos da Aba de Arquivos
         const mediaTypeSelect = document.getElementById('mediaTypeSelect');
         const refreshMediaBtn = document.getElementById('refreshMediaBtn');
@@ -130,47 +140,61 @@ window.initSettingsPage = () => {
         };
 
         // [NOVO] Função para criar um novo perfil (Role)
-        const handleCreateRole = async () => {
-            const roleName = prompt("Digite o nome do novo perfil (ex: Financeiro, Suporte N1):");
-            if (!roleName || roleName.trim() === "") return;
-
-            // Gera um slug simples (ex: "Suporte N1" -> "suporte_n1")
-            const slug = roleName.toLowerCase()
-                .normalize("NFD").replace(/[\u0300-\u036f]/g, "") // Remove acentos
-                .replace(/[^a-z0-9]/g, "_"); // Substitui não-alfanuméricos por _
-
-            try {
-                const response = await apiRequest('/api/roles', 'POST', {
-                    name: roleName,
-                    slug: slug,
-                    description: `Perfil personalizado: ${roleName}`
-                });
-
-                if (response.success) {
-                    showNotification(`Perfil "${roleName}" criado com sucesso!`, 'success');
-                    loadPermissionsMatrix(); // Recarrega a matriz para mostrar o novo perfil
-                }
-            } catch (error) {
-                showNotification(`Erro ao criar perfil: ${error.message}`, 'error');
-            }
+        const handleCreateRole = () => {
+            roleForm.reset();
+            roleSlugOriginalInput.value = '';
+            roleModalTitle.textContent = 'Criar Novo Perfil';
+            roleSlugGroup.style.display = 'block'; // Mostra slug na criação
+            roleSlugInput.required = true;
+            roleSlugInput.disabled = false;
+            roleModal.classList.remove('hidden');
         };
 
         // [NOVO] Função para editar nome do perfil
-        const handleEditRole = async (slug, currentName) => {
-            const newName = prompt(`Editar nome do perfil "${currentName}":`, currentName);
-            if (!newName || newName.trim() === "" || newName === currentName) return;
+        const handleEditRole = (slug, currentName, currentDescription) => {
+            roleForm.reset();
+            roleSlugOriginalInput.value = slug;
+            roleModalTitle.textContent = 'Editar Perfil';
+            roleNameInput.value = currentName;
+            roleSlugInput.value = slug;
+            roleDescriptionInput.value = currentDescription || '';
+            
+            roleSlugGroup.style.display = 'none'; // Esconde slug na edição (não editável)
+            roleSlugInput.required = false;
+            
+            roleModal.classList.remove('hidden');
+        };
+
+        // [NOVO] Handler para submissão do formulário de perfil
+        const handleRoleFormSubmit = async (e) => {
+            e.preventDefault();
+            const isEdit = !!roleSlugOriginalInput.value;
+            const name = roleNameInput.value;
+            const description = roleDescriptionInput.value;
+            const slug = isEdit ? roleSlugOriginalInput.value : roleSlugInput.value;
+            const submitBtn = roleForm.querySelector('button[type="submit"]');
+
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'A guardar...';
 
             try {
-                const response = await apiRequest(`/api/roles/${slug}`, 'PUT', {
-                    name: newName,
-                    description: `Atualizado em ${new Date().toLocaleDateString()}`
-                });
+                let response;
+                if (isEdit) {
+                    response = await apiRequest(`/api/roles/${slug}`, 'PUT', { name, description });
+                } else {
+                    response = await apiRequest('/api/roles', 'POST', { name, slug, description });
+                }
+
                 if (response.success) {
-                    showNotification('Perfil atualizado com sucesso!', 'success');
-                    loadPermissionsMatrix(); // Recarrega
+                    showNotification(response.message || 'Operação realizada com sucesso!', 'success');
+                    roleModal.classList.add('hidden');
+                    loadPermissionsMatrix();
                 }
             } catch (error) {
-                showNotification(`Erro ao atualizar perfil: ${error.message}`, 'error');
+                showNotification(`Erro: ${error.message}`, 'error');
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Salvar';
             }
         };
 
@@ -279,6 +303,7 @@ window.initSettingsPage = () => {
                         option.value = role.slug;
                         option.textContent = role.name;
                         option.dataset.isSystem = role.is_system; // Guarda info se é sistema
+                        option.dataset.description = role.description || ''; // [NOVO] Guarda descrição
                         select.appendChild(option);
                     }
                 });
@@ -310,7 +335,10 @@ window.initSettingsPage = () => {
                 btnEdit.innerHTML = '<i class="fas fa-pencil-alt"></i>';
                 btnEdit.title = "Editar nome do perfil";
                 btnEdit.style.height = '42px';
-                btnEdit.onclick = () => handleEditRole(select.value, select.options[select.selectedIndex].text);
+                btnEdit.onclick = () => {
+                    const selectedOption = select.options[select.selectedIndex];
+                    handleEditRole(select.value, selectedOption.text, selectedOption.dataset.description);
+                };
 
                 // [NOVO] Botão de excluir perfil
                 const btnDelete = document.createElement('button');
@@ -1342,6 +1370,24 @@ window.initSettingsPage = () => {
         }
         if (archiveMediaBtn) {
             archiveMediaBtn.addEventListener('click', handleArchiveMedia);
+        }
+
+        // [NOVO] Listeners para o Modal de Perfis
+        if (roleForm) {
+            roleForm.addEventListener('submit', handleRoleFormSubmit);
+            // Geração automática de slug
+            roleNameInput.addEventListener('input', () => {
+                if (!roleSlugOriginalInput.value) { // Apenas na criação
+                    const slug = roleNameInput.value.toLowerCase()
+                        .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+                        .replace(/[^a-z0-9]/g, "_");
+                    roleSlugInput.value = slug;
+                }
+            });
+            // Fechar modal
+            roleModal.querySelectorAll('.modal-close-btn, .modal-close-btn-action').forEach(btn => {
+                btn.addEventListener('click', () => roleModal.classList.add('hidden'));
+            });
         }
 
         // --- [SOLUÇÃO DEFINITIVA PARA "MODAL FANTASMA"] ---

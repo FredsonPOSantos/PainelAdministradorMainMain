@@ -23,7 +23,7 @@ const getPermissionsMatrix = async (req, res) => {
     try {
         // 1. Buscar todas as roles (exceto 'master' da edição, mas incluímos para DPO ver)
         // [ATUALIZADO] Retorna o objeto completo para saber se é sistema ou não
-        const rolesResult = await pool.query('SELECT slug, name, is_system FROM roles ORDER BY name');
+        const rolesResult = await pool.query('SELECT slug, name, description, is_system FROM roles ORDER BY name');
         const roles = rolesResult.rows; 
         console.log("Roles encontradas:", roles);
 

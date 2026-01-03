@@ -455,4 +455,32 @@
         </div>
     </div>
 
+    <!-- [NOVO] Modal para Criar/Editar Perfis -->
+    <div id="roleModal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <button class="modal-close-btn">&times;</button>
+            <h3 id="roleModalTitle">Novo Perfil</h3>
+            <form id="roleForm">
+                <input type="hidden" id="roleSlugOriginal"> <!-- Para edição -->
+                <div class="input-group">
+                    <label for="roleName">Nome do Perfil</label>
+                    <input type="text" id="roleName" required placeholder="Ex: Financeiro">
+                </div>
+                <div class="input-group" id="roleSlugGroup">
+                    <label for="roleSlug">Identificador (Slug)</label>
+                    <input type="text" id="roleSlug" placeholder="Ex: financeiro (gerado automaticamente)">
+                    <p class="input-hint">Usado internamente pelo sistema. Apenas letras minúsculas e underscores.</p>
+                </div>
+                <div class="input-group">
+                    <label for="roleDescription">Descrição</label>
+                    <textarea id="roleDescription" rows="3" placeholder="Breve descrição das responsabilidades deste perfil."></textarea>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn-secondary modal-close-btn-action">Cancelar</button>
+                    <button type="submit" class="btn-primary">Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
 </div>
