@@ -203,9 +203,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
             // Atualiza a contagem
             fetchUnreadCount();
-            // Redireciona para a página de suporte
-            const supportLink = document.querySelector('.sidebar-nav .nav-item[data-page="support"]');
-            loadPage('support', supportLink, { ticketId: notification.related_ticket_id });
+            // [CORREÇÃO] Navega para o portal de suporte dedicado com o ID do ticket no hash
+            window.location.href = `support_portal.html#${notification.related_ticket_id}`;
         } catch (error) {
             console.error('Erro ao marcar notificação como lida:', error);
         }
@@ -613,6 +612,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     // --- Navegação ---
     navLinks.forEach(link => {
         link.addEventListener('click', (e) => {
+            const href = link.getAttribute('href');
+            // [CORREÇÃO] Se o link apontar para uma página real (não #), permite a navegação padrão
+            // Isso permite abrir o support_portal.html
+            if (href && href !== '#' && !href.startsWith('javascript:')) {
+                return;
+            }
+
             e.preventDefault();
             const page = link.getAttribute('data-page');
             if(page) loadPage(page, link);

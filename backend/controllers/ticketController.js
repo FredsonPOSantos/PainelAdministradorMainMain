@@ -4,6 +4,7 @@
 const { pool } = require('../connection');
 const { logAction } = require('../services/auditLogService');
 const { sendEmail } = require('../emailService');
+const aiService = require('../services/aiService'); // [NOVO] Importa o serviço de IA
 
 // Função para gerar o número do ticket no formato DDMMAAAAHHMM-ID
 const generateTicketNumber = (ticketId) => {
@@ -95,6 +96,23 @@ const createTicket = async (req, res) => {
             target_type: 'ticket'
         });
 
+        // [NOVO] Após criar o ticket, tenta gerar uma resposta automática com a IA
+        // Esta parte é "fire-and-forget" para não atrasar a resposta ao utilizador.
+        (async () => {
+            try {
+                const aiResponse = await aiService.generateInitialResponse(title, message);
+                if (aiResponse) {
+                    // Insere a resposta da IA como uma nova mensagem com user_id NULO
+                    await pool.query(
+                        'INSERT INTO ticket_messages (ticket_id, user_id, message) VALUES ($1, NULL, $2)',
+                        [ticketId, aiResponse]
+                    );
+                }
+            } catch (aiError) {
+                console.error(`[AI-RESPONSE-ERROR] Falha ao adicionar resposta da IA para o ticket ${ticketId}:`, aiError);
+            }
+        })();
+
         res.status(201).json({ success: true, message: 'Ticket criado com sucesso!', data: { ticketId, ticketNumber } });
 
     } catch (error) {
@@ -116,8 +134,14 @@ const getAllTickets = async (req, res) => {
         const whereClauses = [];
 
         if (!['master', 'gestao'].includes(role)) {
-            whereClauses.push(`(t.created_by_user_id = $${params.length + 1} OR t.assigned_to_user_id = $${params.length + 1})`);
+            // [MODIFICADO] Permite que o utilizador veja tickets que criou, que lhe foram atribuídos, OU onde foi mencionado.
+            const userSpecificClause = `
+                (t.created_by_user_id = $${params.length + 1} 
+                 OR t.assigned_to_user_id = $${params.length + 1}
+                 OR t.id IN (SELECT related_ticket_id FROM notifications WHERE user_id = $${params.length + 1} AND type = 'mention'))
+            `;
             params.push(userId);
+            whereClauses.push(userSpecificClause);
         }
 
         if (status) {
@@ -214,9 +238,9 @@ const getTicketById = async (req, res) => {
         }
 
         const messagesResult = await pool.query(`
-            SELECT m.id, m.message, m.created_at, u.email AS user_email
+            SELECT m.id, m.message, m.created_at, m.user_id, u.email AS user_email
             FROM ticket_messages m
-            JOIN admin_users u ON m.user_id = u.id
+            LEFT JOIN admin_users u ON m.user_id = u.id
             WHERE m.ticket_id = $1
             ORDER BY m.created_at ASC
         `, [id]);

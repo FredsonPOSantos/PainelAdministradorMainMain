@@ -594,10 +594,16 @@ const listMediaFiles = async (req, res) => {
         }
 
         const files = fs.readdirSync(absolutePath);
-        // Filtra apenas imagens
-        const imageFiles = files.filter(file => /\.(jpg|jpeg|png|gif|svg|webp)$/i.test(file));
+        
+        // [CORREÇÃO] Define extensões permitidas com base no tipo
+        let allowedExtensions = /\.(jpg|jpeg|png|gif|svg|webp)$/i;
+        if (type === 'ticket_attachments') {
+            allowedExtensions = /\.(jpg|jpeg|png|gif|svg|webp|pdf|doc|docx|txt|zip|rar|7z|csv|xls|xlsx)$/i;
+        }
 
-        const fileList = imageFiles.map(file => {
+        const filteredFiles = files.filter(file => allowedExtensions.test(file));
+
+        const fileList = filteredFiles.map(file => {
             let urlFolder = 'banners';
             if (type === 'backgrounds') urlFolder = 'Background';
             else if (type === 'hotspot_backgrounds') urlFolder = 'Background_hotspot';
@@ -683,7 +689,8 @@ const archiveMediaFiles = async (req, res) => {
     try {
         // Verifica se há ficheiros para arquivar
         const files = fs.readdirSync(sourceDir).filter(file => {
-            return fs.lstatSync(path.join(sourceDir, file)).isFile() && /\.(jpg|jpeg|png|gif|pdf|doc|docx)$/i.test(file);
+            // [CORREÇÃO] Expande a lista de extensões para incluir todos os tipos suportados (igual ao listMediaFiles)
+            return fs.lstatSync(path.join(sourceDir, file)).isFile() && /\.(jpg|jpeg|png|gif|svg|webp|pdf|doc|docx|txt|zip|rar|7z|csv|xls|xlsx)$/i.test(file);
         });
 
         if (files.length === 0) {

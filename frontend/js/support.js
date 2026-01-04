@@ -3,7 +3,7 @@
 if (window.initSupportPage) {
     console.warn("Tentativa de carregar support.js múltiplas vezes.");
 } else {
-    window.initSupportPage = () => {
+    window.initSupportPage = (params = {}) => {
         console.log("A inicializar a página de Suporte...");
 
         const ticketListDiv = document.getElementById('ticket-list');
@@ -145,11 +145,13 @@ if (window.initSupportPage) {
             let messagesHtml = '';
             ticket.messages.forEach(msg => {
                 const isCurrentUser = msg.user_email === window.currentUserProfile.email;
+            // [NOVO] Adiciona uma classe específica para mensagens da IA (onde user_email é nulo)
+            const aiClass = !msg.user_email ? 'ai-message' : '';
                 messagesHtml += `
-                    <div class="message-item ${isCurrentUser ? 'sent' : 'received'}">
+                <div class="message-item ${isCurrentUser ? 'sent' : `received ${aiClass}`}">
                         <div class="message-content">${msg.message}</div>
                         <div class="message-meta">
-                            <span>${msg.user_email}</span> em 
+                        <span>${msg.user_email || 'Assistente Virtual'}</span> em 
                             <span>${new Date(msg.created_at).toLocaleString('pt-BR')}</span>
                         </div>
                     </div>
@@ -285,8 +287,10 @@ if (window.initSupportPage) {
                 newTicketModal.classList.add('hidden');
                 newTicketForm.reset();
                 showNotification('Ticket criado com sucesso!', 'success');
-                loadTickets(); // Recarrega a lista de tickets // [CORRIGIDO]
-                loadTicketDetails(response.data.data.ticketId); // Carrega o novo ticket
+                loadTickets(); // Recarrega a lista de tickets
+                // [CORREÇÃO] A API retorna o ID em response.data.ticketId
+                const newTicketId = response.data?.ticketId;
+                if (newTicketId) loadTicketDetails(newTicketId);
             } catch (error) {
                 showNotification(`Erro ao criar ticket: ${error.message}`, 'error');
             }
@@ -300,7 +304,8 @@ if (window.initSupportPage) {
             try {
                 const response = await apiRequest('/api/tickets/attachments', 'POST', formData);
                 if (response.success) {
-                    const url = response.data.url;
+                    // [CORRIGIDO] A URL vem na raiz da resposta, não dentro de 'data'
+                    const url = response.url;
                     attachment.setAttributes({
                         url: url,
                         href: url
@@ -363,12 +368,13 @@ if (window.initSupportPage) {
             // Carrega a lista inicial de tickets
             await loadTickets();
 
-            // [NOVO] Verifica se um ticketId foi passado via parâmetros da página
-            if (window.pageParams && window.pageParams.ticketId) {
-                console.log(`A carregar ticket ${window.pageParams.ticketId} a partir da notificação...`);
-                loadTicketDetails(window.pageParams.ticketId);
-                // Limpa os parâmetros para não recarregar na próxima navegação
-                window.pageParams = {}; 
+            // [MODIFICADO] Verifica se um ticketId foi passado via parâmetros (do portal) ou pelo método antigo (SPA)
+            const ticketIdToLoad = params.ticketId || window.pageParams?.ticketId;
+            if (ticketIdToLoad) {
+                console.log(`A carregar ticket ${ticketIdToLoad} a partir da URL/notificação...`);
+                loadTicketDetails(ticketIdToLoad);
+                // Limpa os parâmetros globais para não recarregar na próxima navegação interna
+                if (window.pageParams) window.pageParams = {};
             }
         };
 

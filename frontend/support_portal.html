@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portal de Suporte - Rota Hotspot</title>
+    
+    <!-- Reutiliza os estilos existentes para manter a identidade visual -->
+    <link rel="stylesheet" href="css/admin_style.css">
+    <link rel="stylesheet" href="css/notifications.css">
+    <link rel="stylesheet" href="css/confirmation_modal.css">
+    <link rel="stylesheet" href="css/support.css">
+    
+    <!-- Trix Editor -->
+    <link rel="stylesheet" type="text/css" href="https://unpkg.com/trix@2.0.0/dist/trix.css">
+    <script type="text/javascript" src="https://unpkg.com/trix@2.0.0/dist/trix.umd.min.js"></script>
+    
+    <!-- Fontes e Ícones -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        /* Ajustes específicos para o modo Portal Dedicado */
+        body { display: flex; flex-direction: column; height: 100vh; background-color: var(--background-dark); }
+        .portal-header { 
+            background-color: var(--background-medium); 
+            padding: 15px 30px; 
+            border-bottom: 1px solid var(--border-color);
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .portal-content { flex: 1; padding: 20px; overflow: hidden; }
+        .support-container { height: 100%; }
+        .user-profile-summary { display: flex; align-items: center; gap: 10px; color: var(--text-primary); }
+        .back-link { color: var(--text-secondary); text-decoration: none; font-size: 0.9rem; display: flex; align-items: center; gap: 5px; }
+        .back-link:hover { color: var(--primary-color); }
+    </style>
+</head>
+<body>
+
+    <header class="portal-header">
+        <div style="display: flex; align-items: center; gap: 20px;">
+            <a href="admin_dashboard.html" class="back-link"><i class="fas fa-arrow-left"></i> Voltar ao Admin</a>
+            <h2 style="margin: 0; color: var(--text-primary);">Central de Atendimento</h2>
+        </div>
+        <div class="user-profile-summary">
+            <span id="portalUserName">Carregando...</span>
+            <button id="logoutBtn" class="btn-secondary btn-sm"><i class="fas fa-sign-out-alt"></i></button>
+        </div>
+    </header>
+
+    <main class="portal-content">
+        <!-- O container de suporte será injetado aqui pelo JS -->
+        <div id="support-page-container" style="height: 100%;"></div>
+    </main>
+
+    <div id="notification-container"></div>
+
+    <!-- Scripts -->
+    <script src="js/utils.js"></script>
+    <script src="js/notifications.js"></script>
+    <script src="js/trix_mentions.js"></script>
+    <script src="js/support_portal.js"></script> <!-- Script dedicado -->
+</body>
+</html>
