@@ -1,7 +1,7 @@
 // Ficheiro: backend/services/auditLogService.js
 // Descrição: Serviço centralizado para gravação de logs de auditoria.
 
-const { pool } = require('../connection');
+const { pool, logOfflineEvent } = require('../connection');
 
 /**
  * Grava uma ação de auditoria no banco de dados.
@@ -43,6 +43,9 @@ const logAction = async (logData) => {
         );
     } catch (error) {
         console.error('Falha ao gravar no log de auditoria:', error);
+        if (logOfflineEvent) {
+            logOfflineEvent('AUDIT_LOG_FAILURE', 'Falha ao gravar log de auditoria', error.message);
+        }
     }
 };
 

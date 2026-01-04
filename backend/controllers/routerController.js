@@ -5,8 +5,7 @@ const { logAction } = require('../services/auditLogService');
 // [NOVO] Importa o serviço centralizado do InfluxDB
 const { queryApi, influxBucket } = require('../services/influxService');
 
-// [CORRIGIDO] Importação robusta para a biblioteca node-routeros para resolver o erro 'is not a constructor'.
-// Diferentes versões da biblioteca podem exportar a classe de maneiras distintas.
+// [REVERTIDO] Volta a usar node-routeros para melhor compatibilidade de autenticação
 let RouterOSClient;
 try {
     const routeros = require('node-routeros');
@@ -490,20 +489,21 @@ const rebootRouter = async (req, res) => {
 
         console.log(`[ROUTER-CMD] A conectar a ${name} (${ip_address}:${port})...`);
 
-        // [CORRIGIDO] Verifica se a biblioteca foi carregada corretamente antes de usar
         if (!RouterOSClient) {
             throw new Error("A biblioteca de conexão com o MikroTik (node-routeros) não pôde ser carregada.");
         }
 
-        // [MODIFICADO] Implementação com node-routeros
+        // [REVERTIDO] Implementação com node-routeros
         const client = new RouterOSClient({
             host: ip_address,
             user: user,
             password: pass,
             port: port,
             keepalive: false,
-            timeout: 20 // Timeout em segundos
+            timeout: 60 // Timeout em segundos
         });
+
+        client.on('error', (err) => console.error(`[ROUTER-CMD] Erro no cliente (Reboot): ${err.message}`));
 
         try {
             await client.connect();
@@ -838,6 +838,393 @@ const getRouterGroupUserDistribution = async (req, res) => {
     }
 };
 
+/**
+ * [NOVO] Busca a lista de leases DHCP ativos diretamente do roteador.
+ */
+const getDhcpLeases = async (req, res) => {
+    const { id } = req.params;
+    const { username, password } = req.body;
+
+    if (!username || !password) {
+        return res.status(400).json({ message: 'Credenciais de API são obrigatórias.' });
+    }
+
+    try {
+        const routerResult = await pool.query('SELECT name, ip_address, api_port FROM routers WHERE id = $1', [id]);
+        if (routerResult.rowCount === 0) {
+            return res.status(404).json({ message: 'Roteador não encontrado.' });
+        }
+        const { name, ip_address, api_port } = routerResult.rows[0];
+
+        if (!ip_address) return res.status(400).json({ message: 'IP não configurado para este roteador.' });
+
+        if (!RouterOSClient) {
+            throw new Error("A biblioteca de conexão com o MikroTik (node-routeros) não pôde ser carregada.");
+        }
+
+        const client = new RouterOSClient({ host: ip_address, user: username, password: password, port: api_port || 8797, keepalive: false, timeout: 60 });
+
+        // [CORREÇÃO] Adiciona tratamento de erro para evitar crash do servidor
+        const leases = await new Promise(async (resolve, reject) => {
+            client.on('error', reject);
+            try {
+                await client.connect();
+                const result = await client.write('/ip/dhcp-server/lease/print');
+                resolve(result);
+            } catch (err) {
+                reject(err);
+            } finally {
+                client.close();
+            }
+        });
+
+        // Filtra apenas os leases ativos ('bound')
+        // [CORREÇÃO] Garante que leases é um array antes de filtrar e trata erros de string
+        const leasesList = Array.isArray(leases) ? leases : [];
+        const activeLeases = leasesList.filter(lease => lease.status === 'bound');
+
+        res.json({ success: true, data: activeLeases });
+
+    } catch (error) {
+        console.error(`Erro ao buscar leases DHCP do roteador ${id}:`, error);
+        // [CORREÇÃO] Retorna um status HTTP mais apropriado para timeouts
+        if (error.message && error.message.toLowerCase().includes('timeout')) {
+            return res.status(504).json({ message: `Gateway Timeout: O roteador não respondeu a tempo ao buscar leases DHCP.` });
+        }
+        const errorMessage = error.message || (typeof error === 'string' ? error : 'Erro desconhecido');
+        res.status(500).json({ message: `Erro ao buscar leases DHCP: ${errorMessage}` });
+    }
+};
+
+/**
+ * [NOVO] Busca a lista de clientes Wi-Fi conectados diretamente do roteador.
+ */
+const getWifiClients = async (req, res) => {
+    const { id } = req.params;
+    const { username, password } = req.body;
+
+    if (!username || !password) {
+        return res.status(400).json({ message: 'Credenciais de API são obrigatórias.' });
+    }
+
+    try {
+        const routerResult = await pool.query('SELECT name, ip_address, api_port FROM routers WHERE id = $1', [id]);
+        if (routerResult.rowCount === 0) {
+            return res.status(404).json({ message: 'Roteador não encontrado.' });
+        }
+        const { name, ip_address, api_port } = routerResult.rows[0];
+
+        if (!ip_address) return res.status(400).json({ message: 'IP não configurado para este roteador.' });
+
+        if (!RouterOSClient) throw new Error("A biblioteca de conexão com o MikroTik (node-routeros) não pôde ser carregada.");
+
+        const client = new RouterOSClient({ host: ip_address, user: username, password: password, port: api_port || 8797, keepalive: false, timeout: 60 });
+
+        // [CORREÇÃO] Adiciona tratamento de erro para evitar crash do servidor
+        const clients = await new Promise(async (resolve, reject) => {
+            client.on('error', reject);
+            try {
+                await client.connect();
+                let result = [];
+                // Lógica de deteção automática para diferentes drivers Wi-Fi (Legacy vs WifiWave2/Wifi)
+                try {
+                    // 1. Tenta o comando legado (Wireless) - Padrão antigo
+                    result = await client.write('/interface/wireless/registration-table/print');
+                } catch (legacyError) {
+                    // Se falhar com erro de comando inexistente, tenta os novos padrões
+                    const msg = legacyError.message || '';
+                    if (msg.includes('no such command') || msg.includes('directory')) {
+                        try {
+                            // 2. Tenta o novo pacote 'wifi' (RouterOS 7.13+)
+                            result = await client.write('/interface/wifi/registration-table/print');
+                        } catch (wifiError) {
+                            // 3. Tenta o pacote 'wifiwave2' (RouterOS 7.x versões anteriores)
+                            result = await client.write('/interface/wifiwave2/registration-table/print');
+                        }
+                    } else {
+                        throw legacyError; // Se for outro erro (ex: timeout), relança
+                    }
+                }
+                resolve(result);
+            } catch (err) {
+                reject(err);
+            } finally {
+                client.close();
+            }
+        });
+
+        // [CORREÇÃO] Garante que clients é um array
+        const clientsList = Array.isArray(clients) ? clients : [];
+        res.json({ success: true, data: clientsList });
+
+    } catch (error) {
+        console.error(`Erro ao buscar clientes Wi-Fi do roteador ${id}:`, error);
+        if (error.message && error.message.toLowerCase().includes('timeout')) {
+            return res.status(504).json({ message: `Gateway Timeout: O roteador não respondeu a tempo ao buscar clientes Wi-Fi.` });
+        }
+        const errorMessage = error.message || (typeof error === 'string' ? error : 'Erro desconhecido');
+        res.status(500).json({ message: `Erro ao buscar clientes Wi-Fi: ${errorMessage}` });
+    }
+};
+
+/**
+ * [NOVO] Busca a lista de utilizadores Hotspot ativos diretamente do roteador.
+ */
+const getHotspotActive = async (req, res) => {
+    const { id } = req.params;
+    const { username, password } = req.body;
+
+    if (!username || !password) {
+        return res.status(400).json({ message: 'Credenciais de API são obrigatórias.' });
+    }
+
+    try {
+        const routerResult = await pool.query('SELECT name, ip_address, api_port FROM routers WHERE id = $1', [id]);
+        if (routerResult.rowCount === 0) {
+            return res.status(404).json({ message: 'Roteador não encontrado.' });
+        }
+        const { name, ip_address, api_port } = routerResult.rows[0];
+
+        if (!ip_address) return res.status(400).json({ message: 'IP não configurado para este roteador.' });
+
+        if (!RouterOSClient) throw new Error("A biblioteca de conexão com o MikroTik (node-routeros) não pôde ser carregada.");
+
+        const client = new RouterOSClient({ host: ip_address, user: username, password: password, port: api_port || 8797, keepalive: false, timeout: 60 });
+
+        // [CORREÇÃO] Adiciona tratamento de erro para evitar crash do servidor
+        const activeUsers = await new Promise(async (resolve, reject) => {
+            client.on('error', reject);
+            try {
+                await client.connect();
+                const result = await client.write('/ip/hotspot/active/print');
+                resolve(result);
+            } catch (err) {
+                reject(err);
+            } finally {
+                client.close();
+            }
+        });
+
+        // [CORREÇÃO] Garante que activeUsers é um array
+        const activeUsersList = Array.isArray(activeUsers) ? activeUsers : [];
+        res.json({ success: true, data: activeUsersList });
+
+    } catch (error) {
+        console.error(`Erro ao buscar utilizadores Hotspot do roteador ${id}:`, error);
+        if (error.message && error.message.toLowerCase().includes('timeout')) {
+            return res.status(504).json({ message: `Gateway Timeout: O roteador não respondeu a tempo ao buscar utilizadores Hotspot.` });
+        }
+        const errorMessage = error.message || (typeof error === 'string' ? error : 'Erro desconhecido');
+        res.status(500).json({ message: `Erro ao buscar utilizadores Hotspot: ${errorMessage}` });
+    }
+};
+
+/**
+ * [NOVO] Desconecta (Kick) um cliente.
+ */
+const kickClient = async (req, res) => {
+    const { id } = req.params;
+    const { username, password, type, clientId } = req.body; // clientId pode ser o ID interno (.id) ou MAC
+
+    if (!username || !password || !type || !clientId) {
+        return res.status(400).json({ message: 'Dados insuficientes para realizar a ação.' });
+    }
+
+    try {
+        const routerResult = await pool.query('SELECT ip_address, api_port FROM routers WHERE id = $1', [id]);
+        if (routerResult.rowCount === 0) return res.status(404).json({ message: 'Roteador não encontrado.' });
+        const { ip_address, api_port } = routerResult.rows[0];
+
+        const client = new RouterOSClient({ host: ip_address, user: username, password: password, port: api_port || 8797, keepalive: false, timeout: 45 });
+        
+        // [CORREÇÃO] Adiciona tratamento de erro para evitar crash do servidor
+        await new Promise(async (resolve, reject) => {
+            client.on('error', reject);
+            try {
+                await client.connect();
+                if (type === 'hotspot') {
+                    await client.write('/ip/hotspot/active/remove', { '.id': clientId });
+                } else if (type === 'wifi') {
+                    try {
+                        await client.write('/interface/wireless/registration-table/remove', { '.id': clientId });
+                    } catch (e) {
+                        try {
+                            await client.write('/interface/wifi/registration-table/remove', { '.id': clientId });
+                        } catch (e2) {
+                            await client.write('/interface/wifiwave2/registration-table/remove', { '.id': clientId });
+                        }
+                    }
+                } else if (type === 'dhcp') {
+                    await client.write('/ip/dhcp-server/lease/remove', { '.id': clientId });
+                }
+                resolve();
+            } catch (err) {
+                reject(err);
+            } finally {
+                client.close();
+            }
+        });
+
+        res.json({ success: true, message: 'Cliente desconectado com sucesso.' });
+    } catch (error) {
+        console.error(`Erro ao desconectar cliente no roteador ${id}:`, error);
+        if (error.message && error.message.toLowerCase().includes('timeout')) {
+            return res.status(504).json({ message: `Gateway Timeout: O roteador não respondeu a tempo.` });
+        }
+        const errorMessage = error.message || (typeof error === 'string' ? error : 'Erro desconhecido');
+        res.status(500).json({ message: errorMessage });
+    }
+};
+
+/**
+ * [NOVO] Executa ferramentas de diagnóstico (Ping).
+ */
+const runDiagnostics = async (req, res) => {
+    const { id } = req.params;
+    const { username, password, tool, target } = req.body;
+
+    // [NOVO] Validação no backend para garantir que o alvo não está vazio
+    if (tool === 'ping' && (!target || target.trim() === '')) {
+        return res.status(400).json({ message: 'O alvo (target) do ping é obrigatório.' });
+    }
+
+    try {
+        const routerResult = await pool.query('SELECT ip_address, api_port FROM routers WHERE id = $1', [id]);
+        if (routerResult.rowCount === 0) return res.status(404).json({ message: 'Roteador não encontrado.' });
+        const { ip_address, api_port } = routerResult.rows[0];
+
+        const client = new RouterOSClient({ host: ip_address, user: username, password: password, port: api_port || 8797, keepalive: false, timeout: 90 });
+        
+        // [CORREÇÃO] Adiciona tratamento de erro para evitar crash do servidor
+        const result = await new Promise(async (resolve, reject) => {
+            client.on('error', reject);
+            try {
+                await client.connect();
+                if (tool === 'ping') {
+                    // [REVERTIDO] Passagem de parâmetros como array de strings com prefixo '='
+                    const pingResult = await client.write('/ping', [
+                        `=address=${target}`,
+                        '=count=4',
+                        '=interval=1'
+                    ]);
+                    resolve(pingResult);
+                } else {
+                    resolve([]);
+                }
+            } catch (err) {
+                reject(err);
+            } finally {
+                client.close();
+            }
+        });
+
+        res.json({ success: true, data: result });
+    } catch (error) {
+        // [CORREÇÃO] Retorna um status HTTP mais apropriado para timeouts
+        if (error.message && error.message.toLowerCase().includes('timeout')) {
+            return res.status(504).json({ message: `Gateway Timeout: O roteador não respondeu a tempo. (${error.message})` });
+        }
+        const errorMessage = error.message || (typeof error === 'string' ? error : 'Erro desconhecido');
+        res.status(500).json({ message: errorMessage });
+    }
+};
+
+/**
+ * [NOVO] Obtém dados de saúde do hardware (Temperatura, Voltagem).
+ */
+const getHardwareHealth = async (req, res) => {
+    const { id } = req.params;
+    const { username, password } = req.body;
+
+    try {
+        const routerResult = await pool.query('SELECT ip_address, api_port FROM routers WHERE id = $1', [id]);
+        if (routerResult.rowCount === 0) return res.status(404).json({ message: 'Roteador não encontrado.' });
+        const { ip_address, api_port } = routerResult.rows[0];
+
+        const client = new RouterOSClient({ host: ip_address, user: username, password: password, port: api_port || 8797, keepalive: false, timeout: 45 });
+        
+        // [CORREÇÃO] Adiciona tratamento de erro para evitar crash do servidor
+        const health = await new Promise(async (resolve, reject) => {
+            client.on('error', reject);
+            try {
+                await client.connect();
+                const result = await client.write('/system/health/print');
+                resolve(result);
+            } catch (err) {
+                reject(err);
+            } finally {
+                client.close();
+            }
+        });
+        
+        res.json({ success: true, data: health });
+    } catch (error) {
+        if (error.message && error.message.toLowerCase().includes('timeout')) {
+            return res.status(504).json({ message: `Gateway Timeout: O roteador não respondeu a tempo.` });
+        }
+        const errorMessage = error.message || (typeof error === 'string' ? error : 'Erro desconhecido');
+        res.status(500).json({ message: errorMessage });
+    }
+};
+
+/**
+ * [NOVO] Gestão de Backups (Listar, Criar, Restaurar).
+ */
+const manageBackups = async (req, res) => {
+    const { id } = req.params;
+    const { username, password, action, fileName } = req.body;
+
+    try {
+        const routerResult = await pool.query('SELECT ip_address, api_port FROM routers WHERE id = $1', [id]);
+        if (routerResult.rowCount === 0) return res.status(404).json({ message: 'Roteador não encontrado.' });
+        const { ip_address, api_port } = routerResult.rows[0];
+
+        const client = new RouterOSClient({ host: ip_address, user: username, password: password, port: api_port || 8797, keepalive: false, timeout: 120 });
+        
+        // [CORREÇÃO] Adiciona tratamento de erro para evitar crash do servidor
+        const { data, message } = await new Promise(async (resolve, reject) => {
+            client.on('error', reject);
+            try {
+                await client.connect();
+                let responseData = null;
+                let responseMessage = '';
+
+                if (action === 'list') {
+                    const files = await client.write('/file/print');
+                    responseData = files.filter(f => f.type === 'backup' || (f.name && f.name.endsWith('.backup')));
+                } else if (action === 'create') {
+                    const name = fileName || `backup_painel_${new Date().toISOString().slice(0,10).replace(/-/g,'')}`;
+                    await client.write('/system/backup/save', { 'name': name });
+                    responseMessage = 'Backup criado com sucesso.';
+                } else if (action === 'restore') {
+                    try {
+                        await client.write('/system/backup/load', { 'name': fileName, 'password': '' });
+                    } catch (e) {
+                        if (!e.message.includes('closed') && !e.message.includes('ended')) throw e;
+                    }
+                    responseMessage = 'Comando de restauração enviado. O roteador irá reiniciar.';
+                } else if (action === 'delete') {
+                    await client.write('/file/remove', { '.id': fileName });
+                    responseMessage = 'Backup excluído.';
+                }
+                resolve({ data: responseData, message: responseMessage });
+            } catch (err) {
+                reject(err);
+            } finally {
+                client.close();
+            }
+        });
+
+        res.json({ success: true, message, data });
+    } catch (error) {
+        if (error.message && error.message.toLowerCase().includes('timeout')) {
+            return res.status(504).json({ message: `Gateway Timeout: O roteador não respondeu a tempo.` });
+        }
+        const errorMessage = error.message || (typeof error === 'string' ? error : 'Erro desconhecido');
+        res.status(500).json({ message: errorMessage });
+    }
+};
+
 module.exports = {
   getRoutersStatus, // Exporta a nova função
   getAllRouters,
@@ -852,5 +1239,12 @@ module.exports = {
   createRouterGroup,
   updateRouterGroup,
   deleteRouterGroup,
-  getRouterGroupUserDistribution // [NOVO]
+  getRouterGroupUserDistribution, // [NOVO]
+  getDhcpLeases, // [NOVO]
+  getWifiClients, // [NOVO]
+  getHotspotActive, // [NOVO]
+  kickClient, // [NOVO]
+  runDiagnostics, // [NOVO]
+  getHardwareHealth, // [NOVO]
+  manageBackups // [NOVO]
 };

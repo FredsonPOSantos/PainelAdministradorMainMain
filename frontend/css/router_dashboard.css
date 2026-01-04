@@ -104,6 +104,8 @@ body {
     auto-flow: dense;
 }
 
+
+
 @media (min-width: 1600px) {
     .metrics-grid {
         grid-template-columns: repeat(5, 1fr);

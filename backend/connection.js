@@ -4,6 +4,8 @@
 let pgReconnectInterval = null;
 require('dotenv').config();
 const { Pool } = require('pg');
+const fs = require('fs');
+const path = require('path');
 
 // Cria a pool de conexões usando as variáveis de ambiente
 const pool = new Pool({
@@ -25,6 +27,21 @@ const pgConnectionStatus = {
 // [NOVO] Flag para garantir que a manutenção só inicia uma vez
 let maintenanceIntervalStarted = false;
 
+// [NOVO] Função para registar logs em ficheiro quando a BD está offline
+const logOfflineEvent = (type, message, details = null) => {
+    const logDir = path.join(__dirname, '../logs');
+    if (!fs.existsSync(logDir)) {
+        fs.mkdirSync(logDir, { recursive: true });
+    }
+    const logFile = path.join(logDir, 'offline_events.log');
+    const timestamp = new Date().toISOString();
+    const logEntry = JSON.stringify({ timestamp, type, message, details }) + '\n';
+    
+    fs.appendFile(logFile, logEntry, (err) => {
+        if (err) console.error('❌ Falha ao escrever no log offline:', err);
+    });
+};
+
 // Evento: ligação estabelecida
 pool.on('connect', () => {
   // Este evento é por cliente, não para a pool inteira. A verificação inicial é mais fiável.
@@ -35,6 +52,7 @@ pool.on('error', (err) => {
   console.error('❌ [SRV-ADM] Erro inesperado no cliente da base de dados:', err);
   pgConnectionStatus.connected = false;
   pgConnectionStatus.error = err.message;
+  logOfflineEvent('DB_ERROR', 'Erro inesperado no cliente da base de dados', err.message); // [NOVO]
   // Inicia a tentativa de reconexão se não estiver a decorrer
   if (!pgReconnectInterval) {
       startPgReconnect();
@@ -318,7 +336,13 @@ const startPgReconnect = () => {
         console.log('🔄 [PG-RECONNECT] A tentar reconectar ao PostgreSQL...');
         try {
             const client = await pool.connect();
+            // [CORREÇÃO] Proteção para o cliente de reconexão
+            client.on('error', (err) => {
+                console.error('❌ [PG-RECONNECT] Erro no cliente de teste:', err.message);
+            });
+
             console.log('✅ [PG-RECONNECT] Conexão com o PostgreSQL restabelecida!');
+            logOfflineEvent('RECONNECT_SUCCESS', 'Conexão com o PostgreSQL restabelecida'); // [NOVO]
             pgConnectionStatus.connected = true;
             pgConnectionStatus.error = null;
             clearInterval(pgReconnectInterval); // Para as tentativas
@@ -328,10 +352,11 @@ const startPgReconnect = () => {
             // Aqui poderíamos emitir um evento para reiniciar serviços dependentes, como o 'startPeriodicRouterCheck'
         } catch (err) {
             console.error('❌ [PG-RECONNECT] Tentativa de reconexão falhou:', err.message);
+            logOfflineEvent('RECONNECT_FAIL', 'Tentativa de reconexão falhou', err.message); // [NOVO]
             pgConnectionStatus.connected = false;
             pgConnectionStatus.error = err.message;
         }
-    }, 300000); // Tenta a cada 5 minutos
+    }, 30000); // Tenta a cada 30 segundos
 };
 
 // Função de teste e validação inicial
@@ -372,6 +397,28 @@ const testInitialConnection = async () => {
         console.warn('   -> O servidor continuará, mas algumas funcionalidades podem falhar até que o SQL seja executado manualmente.');
     }
 
+    // [NOVO] Executa sincronização inicial de logins do FreeRADIUS (Correção Imediata)
+    try {
+        const checkRadacct = await client.query("SELECT 1 FROM information_schema.tables WHERE table_name = 'radacct'");
+        if (checkRadacct.rowCount > 0) {
+            console.log('🔄 [SYNC] A sincronizar histórico de logins do FreeRADIUS...');
+            const syncResult = await client.query(`
+                UPDATE userdetails u
+                SET ultimo_login = r.last_login
+                FROM (
+                    SELECT username, MAX(acctstarttime) as last_login
+                    FROM radacct
+                    GROUP BY username
+                ) r
+                WHERE u.username = r.username
+                AND (u.ultimo_login IS NULL OR u.ultimo_login < r.last_login)
+            `);
+            console.log(`   ✅ [SYNC] ${syncResult.rowCount} registos de último login atualizados.`);
+        }
+    } catch (syncError) {
+        console.warn('⚠️ [SYNC] Aviso: Falha na sincronização inicial de logins (verifique se o FreeRADIUS está configurado):', syncError.message);
+    }
+
     // [NOVO] Inicia verificação periódica de campanhas (1x por hora)
     if (!maintenanceIntervalStarted) {
         maintenanceIntervalStarted = true;
@@ -380,6 +427,10 @@ const testInitialConnection = async () => {
             try {
                 // Usa uma nova conexão da pool para não interferir
                 const client = await pool.connect();
+                // [CORREÇÃO] Proteção para o cliente de manutenção
+                client.on('error', (err) => {
+                    console.error('❌ [MAINTENANCE] Erro no cliente de campanhas:', err.message);
+                });
                 try {
                     const result = await client.query(`
                         UPDATE campaigns 
@@ -396,6 +447,44 @@ const testInitialConnection = async () => {
                 console.error('[MAINTENANCE] Erro ao verificar campanhas:', err.message);
             }
         }, 3600000); // 3600000 ms = 1 hora
+
+        // [NOVO] Tarefas frequentes (5 min) - Sincronização de Logs Hotspot
+        console.log('🕒 [MAINTENANCE] Agendada sincronização de logins do FreeRADIUS (5m).');
+        setInterval(async () => {
+            try {
+                const client = await pool.connect();
+                // [CORREÇÃO] Proteção para o cliente de manutenção
+                client.on('error', (err) => {
+                    console.error('❌ [MAINTENANCE] Erro no cliente de logs:', err.message);
+                });
+                try {
+                    // Verifica se a tabela radacct existe
+                    const checkRadacct = await client.query("SELECT 1 FROM information_schema.tables WHERE table_name = 'radacct'");
+                    
+                    if (checkRadacct.rowCount > 0) {
+                        // Sincroniza o último login da tabela radacct para userdetails
+                        const syncResult = await client.query(`
+                            UPDATE userdetails u
+                            SET ultimo_login = r.last_login
+                            FROM (
+                                SELECT username, MAX(acctstarttime) as last_login
+                                FROM radacct
+                                GROUP BY username
+                            ) r
+                            WHERE u.username = r.username
+                            AND (u.ultimo_login IS NULL OR u.ultimo_login < r.last_login)
+                        `);
+                        if (syncResult.rowCount > 0) {
+                            console.log(`[MAINTENANCE] Sincronizados ${syncResult.rowCount} registos de último login do Hotspot.`);
+                        }
+                    }
+                } finally {
+                    client.release();
+                }
+            } catch (err) {
+                console.error('[MAINTENANCE] Erro na sincronização de logins:', err.message);
+            }
+        }, 300000); // 5 minutos
     }
 
     client.release();
@@ -409,4 +498,4 @@ const testInitialConnection = async () => {
   }
 };
 
-module.exports = { pool, testInitialConnection, pgConnectionStatus };
+module.exports = { pool, testInitialConnection, pgConnectionStatus, logOfflineEvent, startPgReconnect };

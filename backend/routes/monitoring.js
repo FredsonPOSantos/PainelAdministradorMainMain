@@ -211,12 +211,14 @@ router.get('/router/:id/metrics', [authMiddleware, checkPermission('routers.dash
  * @desc    Busca informações sobre clientes conectados (Wi-Fi, DHCP, Hotspot).
  * @access  Private
  */
-router.get('/router/:id/clients', [authMiddleware, checkPermission('routers.dashboard.clients')], async (req, res) => {
+router.get('/router/:id/clients', [authMiddleware, checkPermission('routers.dashboard.clients')], async (req, res) => { // [MODIFICADO]
     try {
         const reqId = Math.random().toString(36).substring(7);
         console.time(`[REQ-${reqId}] GET /clients/${req.params.id}`);
         console.log(`[${new Date().toISOString()}] [REQ-${reqId}] Iniciando busca de clientes...`);
         const { id } = req.params;
+        const { range } = req.query; // [NOVO] Aceita um parâmetro de range
+        const queryRange = range || '1h'; // [NOVO] Usa o range fornecido ou '1h' como padrão
 
         // 1. Buscar o IP do roteador no PostgreSQL
         const routerQuery = await pool.query(
@@ -252,7 +254,7 @@ router.get('/router/:id/clients', [authMiddleware, checkPermission('routers.dash
         // 2. Buscar clientes DHCP
         const dhcpQuery = `
             from(bucket: "${influxBucket}")
-              |> range(start: -1h) // [OTIMIZAÇÃO] Reduzido de 24h para 1h para evitar timeouts
+              |> range(start: -${queryRange}) // [CORRIGIDO] Removidas as aspas para ser um literal de duração válido
               |> filter(fn: (r) => r._measurement == "ip_dhcp_server_lease")
               |> filter(fn: (r) => r.router_host == "${routerIp}")
               |> filter(fn: (r) => r._field == "address" or r._field == "mac_address" or r._field == "status" or r._field == "host_name" or r._field == "server" or r._field == "active_address")
@@ -276,7 +278,7 @@ router.get('/router/:id/clients', [authMiddleware, checkPermission('routers.dash
         // 3. Buscar clientes Hotspot
         const hotspotQuery = `
             from(bucket: "${influxBucket}")
-              |> range(start: -1h) // [OTIMIZAÇÃO] Reduzido de 24h para 1h
+              |> range(start: -${queryRange}) // [CORRIGIDO] Removidas as aspas
               |> filter(fn: (r) => r._measurement == "hotspot_active")
               |> filter(fn: (r) => r.router_host == "${routerIp}")
               |> rename(columns: {user: "hotspot_user_tag"}) // [FIX] Renomeia a tag 'user' para evitar conflito no pivot
@@ -301,7 +303,7 @@ router.get('/router/:id/clients', [authMiddleware, checkPermission('routers.dash
         // 3. Buscar clientes Wi-Fi (wireless registration table)
         const wifiQuery = `
             from(bucket: "${influxBucket}")
-              |> range(start: -1h) // [OTIMIZAÇÃO] Reduzido de 24h para 1h
+              |> range(start: -${queryRange}) // [CORRIGIDO] Removidas as aspas
               |> filter(fn: (r) => r._measurement == "interface_wireless_registration_table")
               |> filter(fn: (r) => r.router_host == "${routerIp}")
               |> filter(fn: (r) => r._field == "mac_address" or r._field == "interface" or r._field == "uptime" or r._field == "last_ip")

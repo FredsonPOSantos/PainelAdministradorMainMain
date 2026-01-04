@@ -703,14 +703,42 @@ if (window.initAnalyticsDashboard) {
                     exportButtons.className = 'export-buttons';
                     exportButtons.style.cssText = 'position: absolute; top: 0; right: 0; display: flex; gap: 5px;';
                     exportButtons.innerHTML = `
-                        <button class="btn-secondary btn-sm" id="exportBarExcel"><i class="fas fa-file-excel"></i></button>
-                        <button class="btn-secondary btn-sm" id="exportBarPdf"><i class="fas fa-file-pdf"></i></button>
+                        <button class="btn-secondary btn-sm" id="exportBarExcel" title="Exportar Excel"><i class="fas fa-file-excel"></i></button>
+                        <button class="btn-secondary btn-sm" id="exportBarPdf" title="Exportar PDF"><i class="fas fa-file-pdf"></i></button>
                     `;
                     barChartContainer.style.position = 'relative';
                     barChartContainer.prepend(exportButtons);
 
-                    // A lógica de exportação para o gráfico de barras pode ser adicionada aqui de forma similar
-                    // Por simplicidade, deixamos a implementação como exercício ou para um próximo passo.
+                    // [CORREÇÃO] Implementação da lógica de exportação para Excel
+                    document.getElementById('exportBarExcel').onclick = () => {
+                        if (!analyticsPageData.userDistributionByRouter) return;
+                        const data = analyticsPageData.userDistributionByRouter.labels.map((label, index) => ({
+                            "Roteador": label,
+                            "Utilizadores": analyticsPageData.userDistributionByRouter.data[index]
+                        }));
+                        const ws = XLSX.utils.json_to_sheet(data);
+                        const wb = XLSX.utils.book_new();
+                        XLSX.utils.book_append_sheet(wb, ws, "Top Roteadores");
+                        XLSX.writeFile(wb, `Top_Roteadores_por_Usuarios.xlsx`);
+                    };
+
+                    // [CORREÇÃO] Implementação da lógica de exportação para PDF
+                    document.getElementById('exportBarPdf').onclick = () => {
+                        if (!analyticsPageData.userDistributionByRouter) return;
+                        const { jsPDF } = window.jspdf;
+                        const doc = new jsPDF();
+                        doc.text("Top Roteadores por Usuários", 14, 20);
+                        const tableData = analyticsPageData.userDistributionByRouter.labels.map((label, index) => [
+                            label,
+                            analyticsPageData.userDistributionByRouter.data[index]
+                        ]);
+                        doc.autoTable({
+                            startY: 25,
+                            head: [['Roteador', 'Nº de Utilizadores']],
+                            body: tableData,
+                        });
+                        doc.save('Top_Roteadores_por_Usuarios.pdf');
+                    };
                 }
             }
             loadRouterActivityDetails('all'); // Carrega inicialmente para todos

@@ -1,7 +1,8 @@
 // Ficheiro: frontend/js/router_dashboard.js
 // Dashboard de Roteador com Cards Interativos
 
-document.addEventListener('DOMContentLoaded', () => {
+// [MODIFICADO] Função de inicialização nomeada para suportar carregamento dinâmico (SPA) e direto
+const initRouterDashboard = () => {
     // ===== VARIÁVEIS GLOBAIS =====
     const routerId = window.location.hash.substring(1);
     // [CORRIGIDO] Define o range padrão para o modal. O range do dashboard principal agora é fixo.
@@ -60,12 +61,12 @@ document.addEventListener('DOMContentLoaded', () => {
     // Mostra o preloader imediatamente
     window.showPagePreloader('A carregar dashboard do roteador...');
 
-    // [CORRIGIDO] Carrega os dados de resumo com o range fixo de 24h para garantir que os valores de MÍN/MÁX/MÉD sejam consistentes.
+    // [MODIFICADO] Carrega os dados e SÓ ENTÃO inicia as atualizações ao vivo.
     loadMetrics(DASHBOARD_SUMMARY_RANGE).finally(() => {
         window.hidePagePreloader();
+        startLiveUpdates(); // Inicia as atualizações em tempo real APÓS o carregamento inicial.
     });
     setupEventListeners();
-    startLiveUpdates(); // [NOVO] Inicia as atualizações em tempo real por padrão
 
     // ===== FUNÇÕES PRINCIPAIS =====
 
@@ -73,6 +74,9 @@ document.addEventListener('DOMContentLoaded', () => {
      * Carrega as métricas da API
      */
     async function loadMetrics(range) {
+        // [NOVO] Pausa as atualizações em tempo real durante o carregamento principal.
+        stopLiveUpdates();
+
         try {
             const response = await apiRequest(`/api/monitoring/router/${routerId}/detailed-metrics?range=${range}`);
 
@@ -94,15 +98,27 @@ document.addEventListener('DOMContentLoaded', () => {
             if (titleEl) {
                 titleEl.innerHTML = `${routerName}${routerVersion ? ` <span class="router-version-tag">${routerVersion}</span>` : ''}`;
                 
-                // [NOVO] Injeta o botão de reiniciar se não existir
+                // [RESTAURADO] Injeta o botão de reiniciar
                 if (!document.getElementById('rebootRouterBtn')) {
                     const btn = document.createElement('button');
                     btn.id = 'rebootRouterBtn';
                     btn.className = 'btn-danger';
                     btn.style.cssText = 'margin-left: 15px; padding: 5px 15px; font-size: 0.9rem; display: inline-flex; align-items: center; gap: 5px; vertical-align: middle; cursor: pointer; border: none; border-radius: 5px; color: white; background-color: #ef4444;';
                     btn.innerHTML = '<i class="fas fa-power-off"></i> Reiniciar';
-                    btn.onclick = () => handleRebootRouter(metricsData.routerId, metricsData.routerName);
+                    btn.onclick = () => window.handleRebootRouter(routerId, routerName);
                     titleEl.appendChild(btn);
+                }
+
+                // [NOVO] Injeta o ícone de Engrenagem (Gestão)
+                if (!document.getElementById('manageRouterBtn')) {
+                    const gearBtn = document.createElement('button');
+                    gearBtn.id = 'manageRouterBtn';
+                    gearBtn.className = 'btn-secondary';
+                    gearBtn.style.cssText = 'margin-left: 10px; padding: 5px 10px; font-size: 1.1rem; cursor: pointer; border: none; border-radius: 5px; color: #e5e7eb; background-color: #374151;';
+                    gearBtn.innerHTML = '<i class="fas fa-cog"></i>';
+                    gearBtn.title = "Ferramentas de Gestão";
+                    gearBtn.onclick = () => window.openManagementModal();
+                    titleEl.appendChild(gearBtn);
                 }
             }
 
@@ -120,8 +136,11 @@ document.addEventListener('DOMContentLoaded', () => {
             uptimeDisplay.textContent = `Uptime: ${formatUptime(metricsData.currentUptime)}`;
             
             // [NOVO] Preenche os valores iniciais do cabeçalho de tempo real
-            document.getElementById('liveCpu').textContent = metricsData.system?.cpu?.stats?.current.toFixed(2) + '%' || '0%';
-            document.getElementById('liveMemory').textContent = metricsData.system?.memory?.stats?.current.toFixed(2) + '%' || '0%';
+            // [CORREÇÃO] Validação robusta para evitar erro de .toFixed() em undefined
+            const currentCpu = metricsData.system?.cpu?.stats?.current;
+            const currentMem = metricsData.system?.memory?.stats?.current;
+            document.getElementById('liveCpu').textContent = (typeof currentCpu === 'number' ? currentCpu.toFixed(2) : '0') + '%';
+            document.getElementById('liveMemory').textContent = (typeof currentMem === 'number' ? currentMem.toFixed(2) : '0') + '%';
 
             // Atualizar cards
             await updateCards(); // [MODIFICADO] Agora aguarda a atualização completa dos cards
@@ -129,6 +148,11 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (error) {
             console.error('Erro ao carregar métricas:', error);
             showErrorState(error.message);
+        } finally {
+            // [NOVO] Retoma as atualizações em tempo real após o carregamento, se o toggle estiver ativo.
+            if (liveUpdateToggle && liveUpdateToggle.checked) {
+                startLiveUpdates();
+            }
         }
     }
 
@@ -162,18 +186,25 @@ document.addEventListener('DOMContentLoaded', () => {
     /**
      * [NOVO] Lida com o clique no botão de reiniciar
      */
-    const handleRebootRouter = async (id, name) => {
-        const credentials = await showCredentialPrompt(`Reiniciar Roteador "${name}"`);
+    window.handleRebootRouter = async (id, name) => {
+        let credentials = window.tempApiCredentials;
+        if (!credentials) {
+            credentials = await showCredentialPrompt(`Reiniciar Roteador "${name}"`);
+        }
 
         if (!credentials) {
             // O utilizador cancelou
             return;
         }
 
+        // Verifica se o botão existe antes de tentar manipulá-lo
         const btn = document.getElementById('rebootRouterBtn');
-        const originalText = btn.innerHTML;
-        btn.disabled = true;
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> A reiniciar...';
+        let originalText = '';
+        if (btn) {
+            originalText = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> A reiniciar...';
+        }
 
         try {
             // Envia as credenciais no corpo da requisição
@@ -186,8 +217,10 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (error) {
             alert(`Erro ao reiniciar: ${error.message}`);
         } finally {
-            btn.disabled = false;
-            btn.innerHTML = originalText;
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+            }
         }
     };
 
@@ -229,10 +262,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const resolveAndClose = (value) => {
                 modalOverlay.classList.remove('visible');
-                modalOverlay.addEventListener('transitionend', () => {
+                // [CORREÇÃO ROBUSTA] Usa setTimeout para garantir que o modal fecha e resolve a Promise
+                // Evita bloqueios se o evento 'transitionend' não disparar, que é um problema comum.
+                const a = setTimeout(() => {
                     modalOverlay.remove();
+                    clearTimeout(a);
                     resolve(value);
-                });
+                }, 300);
             };
 
             confirmBtn.onclick = () => {
@@ -617,9 +653,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const maxEl = document.getElementById(`${metric}-max`);
         const avgEl = document.getElementById(`${metric}-avg`);
 
-        if (minEl) minEl.textContent = formatValue(stats.min, metric);
-        if (maxEl) maxEl.textContent = formatValue(stats.max, metric);
-        if (avgEl) avgEl.textContent = formatValue(stats.avg, metric);
+        // [CORREÇÃO CRÍTICA] A variável 'stats' não existia. O correto é 'data.stats'.
+        if (minEl && data.stats) minEl.textContent = formatValue(data.stats.min, metric);
+        if (maxEl && data.stats) maxEl.textContent = formatValue(data.stats.max, metric);
+        if (avgEl && data.stats) avgEl.textContent = formatValue(data.stats.avg, metric);
     }
 
     /**
@@ -684,31 +721,35 @@ document.addEventListener('DOMContentLoaded', () => {
      * [NOVO] Atualiza as métricas de uma interface específica quando o período é alterado
      */
     window.updateInterfaceMetrics = async (interfaceName, range) => {
+        // [NOVO] Adiciona feedback de carregamento
         const ids = [
             `rx-min-${interfaceName}`, `rx-max-${interfaceName}`, `rx-avg-${interfaceName}`,
             `tx-min-${interfaceName}`, `tx-max-${interfaceName}`, `tx-avg-${interfaceName}`
         ];
         
-        // Mostrar loading
+        // [NOVO] Mostrar loading
         ids.forEach(id => {
             const el = document.getElementById(id);
             if (el) el.textContent = '...';
         });
 
         try {
+            // A API busca todos os dados, então precisamos filtrar para a interface correta
             const response = await apiRequest(`/api/monitoring/router/${routerId}/detailed-metrics?range=${range}`);
             if (response.success && response.data && response.data.interfaces && response.data.interfaces[interfaceName]) {
                 const data = response.data.interfaces[interfaceName];
                 const rxStats = data.rx?.stats || { min: 0, max: 0, avg: 0 };
                 const txStats = data.tx?.stats || { min: 0, max: 0, avg: 0 };
 
-                document.getElementById(`rx-min-${interfaceName}`).textContent = formatBitsPerSecond(rxStats.min);
-                document.getElementById(`rx-max-${interfaceName}`).textContent = formatBitsPerSecond(rxStats.max);
-                document.getElementById(`rx-avg-${interfaceName}`).textContent = formatBitsPerSecond(rxStats.avg);
+                document.getElementById(`rx-min-${interfaceName}`).textContent = formatBitsPerSecond(rxStats.min); // formatBitsPerSecond is not defined here. It's in utils.js
+                document.getElementById(`rx-max-${interfaceName}`).textContent = formatBitsPerSecond(rxStats.max); // I need to check if utils.js is loaded.
+                document.getElementById(`rx-avg-${interfaceName}`).textContent = formatBitsPerSecond(rxStats.avg); // Yes, admin_dashboard.html loads utils.js.
 
-                document.getElementById(`tx-min-${interfaceName}`).textContent = formatBitsPerSecond(txStats.min);
-                document.getElementById(`tx-max-${interfaceName}`).textContent = formatBitsPerSecond(txStats.max);
-                document.getElementById(`tx-avg-${interfaceName}`).textContent = formatBitsPerSecond(txStats.avg);
+                document.getElementById(`tx-min-${interfaceName}`).textContent = formatBitsPerSecond(txStats.min); // formatBitsPerSecond is not defined here. It's in utils.js
+                document.getElementById(`tx-max-${interfaceName}`).textContent = formatBitsPerSecond(txStats.max); // I need to check if utils.js is loaded.
+                document.getElementById(`tx-avg-${interfaceName}`).textContent = formatBitsPerSecond(txStats.avg); // Yes, admin_dashboard.html loads utils.js.
+            } else {
+                throw new Error("Dados da interface não encontrados na resposta.");
             }
         } catch (error) {
             console.error('Erro ao atualizar métricas da interface:', error);
@@ -851,6 +892,17 @@ document.addEventListener('DOMContentLoaded', () => {
      * Expande um card para mostrar o gráfico
      */
     window.expandMetric = async function(metric) {
+        // [NOVO] Pede credenciais para dados em tempo real
+        if (metric === 'dhcp-clients' || metric === 'wifi-clients' || metric === 'hotspot-clients') {
+            const credentials = await showCredentialPrompt(`Buscar Clientes em Tempo Real`);
+            if (!credentials) {
+                showNotification('Operação cancelada. Não é possível buscar dados em tempo real sem credenciais.', 'info');
+                return; // Cancela se o utilizador não fornecer credenciais
+            }
+            // Armazena as credenciais temporariamente para a próxima função usar
+            window.tempApiCredentials = credentials;
+        }
+
         currentExpandedMetric = metric;
         currentChartType = 'both';
         currentChartVisualization = 'area';
@@ -859,6 +911,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const modalTitle = document.getElementById('modalTitle');
         const chartTypeFilters = document.getElementById('chartTypeFilters');
         const chartVisualizationFilters = document.getElementById('chartVisualizationFilters');
+        // [NOVO] Adiciona um seletor para os filtros de período do modal
+        const modalPeriodFilters = document.querySelector('#expandedModal .modal-filters');
         const expandedChartContainer = document.getElementById('expandedChart');
 
         // Determinar o título
@@ -879,18 +933,23 @@ document.addEventListener('DOMContentLoaded', () => {
             modalTitle.textContent = `Tráfego - ${getInterfaceDisplayName(interfaceName)}`;
             chartTypeFilters.style.display = 'flex';
             chartVisualizationFilters.style.display = 'flex';
+            if (modalPeriodFilters) modalPeriodFilters.style.display = 'flex'; // Mostra filtros de período
         } else if (metric === 'dhcp-clients') {
             modalTitle.textContent = 'Clientes DHCP Ativos';
             chartTypeFilters.style.display = 'none';
             chartVisualizationFilters.style.display = 'none';
+            if (modalPeriodFilters) modalPeriodFilters.style.display = 'none'; // [MODIFICADO] Esconde filtros de período
         } else if (metric === 'wifi-clients') {
             modalTitle.textContent = 'Clientes Wi-Fi Conectados';
             chartTypeFilters.style.display = 'none';
             chartVisualizationFilters.style.display = 'none';
+            if (modalPeriodFilters) modalPeriodFilters.style.display = 'none'; // [MODIFICADO] Esconde filtros de período
         } else if (metric === 'hotspot-clients') {
             modalTitle.textContent = 'Usuários Hotspot Ativos';
             chartTypeFilters.style.display = 'none';
             chartVisualizationFilters.style.display = 'none';
+            // [MODIFICADO] Esconde os filtros de período para o modal de hotspot
+            if (modalPeriodFilters) modalPeriodFilters.style.display = 'none';
         }
 
         // Resetar botões
@@ -993,30 +1052,49 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             } else if (currentExpandedMetric.startsWith('interface-')) {
                 const interfaceName = currentExpandedMetric.replace('interface-', '');
-                const interfaceData = apiData.interfaces?.[interfaceName];
-                
-                if (interfaceData) {
+                const interfaceData = apiData.interfaces?.[interfaceName];                
+                if (interfaceData) { // [MODIFICADO]
                     createDualChart(chartContainer, interfaceName, interfaceData);
                 } else {
                     chartContainer.innerHTML = '<p style="color: #f0f0f0; padding: 20px;">Sem dados disponíveis para esta interface</p>';
                 }
-            } else if (currentExpandedMetric.endsWith('-clients')) {
-                // Lógica para exibir listas de clientes
+            } else if (currentExpandedMetric === 'wifi-clients' || currentExpandedMetric === 'dhcp-clients' || currentExpandedMetric === 'hotspot-clients') {
+                // [MODIFICADO] Busca dados em tempo real do MikroTik
                 const clientType = currentExpandedMetric.replace('-clients', '');
-                const clientData = metricsData[`${clientType}Clients`];
-                if (clientData && clientData.length > 0) {
-                    createClientList(chartContainer, clientData, clientType);
-                } else if (clientType === 'wifi' && metricsData.wifiAnalytics) { // Gráfico Wi-Fi
-                    // [CORREÇÃO] A chamada estava para uma função de gráfico de pizza que não existe (`createGenericPieChart`) e os dados não são para pizza.
-                    // A chamada correta é para o gráfico de barras de Wi-Fi, que já está definido.
-                    createWifiBarChart(chartContainer, 'Clientes Wi-Fi Únicos', metricsData.wifiAnalytics);
-                } else if (clientType === 'dhcp' && metricsData.dhcpAnalytics) { // Gráfico DHCP
-                    createGenericDistributionChart(chartContainer, 'Distribuição de Clientes DHCP', metricsData.dhcpAnalytics);
-                } else if (clientType === 'hotspot' && metricsData.hotspotAnalytics) { // Gráfico Hotspot
-                    createHotspotBarChart(chartContainer, 'Clientes Hotspot Únicos', metricsData.hotspotAnalytics);
+                chartContainer.innerHTML = '<p style="color: #f0f0f0; padding: 20px;">A buscar dados em tempo real do roteador...</p>';
+    
+                if (!window.tempApiCredentials) {
+                    chartContainer.innerHTML = `<p style="color: #ff6b6b; padding: 20px;">Erro: Credenciais de API não fornecidas.</p>`;
+                    return;
                 }
-                else {
-                    chartContainer.innerHTML = `<p style="color: #f0f0f0; padding: 20px;">Nenhum cliente ${clientType} encontrado.</p>`;
+    
+                let endpoint = '';
+                if (clientType === 'wifi') endpoint = `/api/routers/${routerId}/wifi-clients`;
+                else if (clientType === 'dhcp') endpoint = `/api/routers/${routerId}/dhcp-leases`;
+                else if (clientType === 'hotspot') endpoint = `/api/routers/${routerId}/hotspot-active`;
+    
+                try {
+                    const response = await apiRequest(endpoint, 'POST', window.tempApiCredentials);
+                    
+                    if (!response.success) throw new Error(response.message);
+    
+                    const clientData = response.data || [];
+                    
+                    if (clientData.length > 0) {
+                        createClientList(chartContainer, clientData, clientType);
+                    } else {
+                        chartContainer.innerHTML = `<p style="color: #f0f0f0; padding: 20px;">Nenhum cliente ${clientType} ativo encontrado no roteador.</p>`;
+                    }
+    
+                } catch (realtimeError) {
+                    console.error(`Erro ao buscar dados em tempo real para ${clientType}:`, realtimeError);
+                    let errorMsg = realtimeError.message;
+                    if (errorMsg.includes('404')) {
+                        errorMsg = "Funcionalidade não encontrada no servidor (404). Verifique se o backend foi atualizado e reiniciado.";
+                    }
+                    chartContainer.innerHTML = `<p style="color: #ff6b6b; padding: 20px;">Falha ao buscar dados: ${errorMsg}</p>`;
+                } finally {
+                    delete window.tempApiCredentials;
                 }
             }
 
@@ -1169,10 +1247,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const table = document.createElement('table');
         table.className = 'client-table';
 
-        // Cabeçalho da tabela
-        let headers = ['MAC Address', 'IP Address', 'Uptime'];
-        if (type === 'dhcp') headers = ['MAC Address', 'IP Address', 'Host Name', 'Status'];
-        if (type === 'hotspot') headers = ['User', 'MAC Address', 'IP Address', 'Uptime'];
+        // [MODIFICADO] Adiciona coluna de Ações
+        let headers = ['MAC Address', 'IP Address', 'Uptime', 'Ações'];
+        if (type === 'dhcp') headers = ['MAC Address', 'IP Address', 'Host Name', 'Status', 'Ações'];
+        if (type === 'hotspot') headers = ['User', 'MAC Address', 'IP Address', 'Uptime', 'Ações'];
 
         const thead = table.createTHead();
         const headerRow = thead.insertRow();
@@ -1187,20 +1265,330 @@ document.addEventListener('DOMContentLoaded', () => {
         clients.forEach(client => {
             const row = tbody.insertRow();
             // A ordem e os campos dependem do que a API retorna para 'details'
-            // Este é um exemplo genérico
             const mac = client['mac-address'] || client.mac_address || 'N/A';
             const ip = client.address || 'N/A';
             const uptime = client.uptime || 'N/A';
             const host = client['host-name'] || 'N/A';
             const user = client.user || 'N/A';
+            const id = client['.id']; // ID interno do MikroTik
 
-            if (type === 'dhcp') row.innerHTML = `<td>${mac}</td><td>${ip}</td><td>${host}</td><td>${client.status || 'N/A'}</td>`;
-            else if (type === 'hotspot') row.innerHTML = `<td>${user}</td><td>${mac}</td><td>${ip}</td><td>${uptime}</td>`;
-            else row.innerHTML = `<td>${mac}</td><td>${ip}</td><td>${uptime}</td>`;
+            // Botão de Kick
+            // [CORREÇÃO] Usa 'btn-delete' para ícone vermelho
+            const kickBtn = `<button class="btn-delete" onclick="handleKickClient('${type}', '${id}', '${mac}')" title="Desconectar"><i class="fas fa-power-off"></i></button>`;
+
+            // [CORREÇÃO] Adiciona a classe 'action-buttons' à célula da tabela para estilizar o botão corretamente
+            if (type === 'dhcp') row.innerHTML = `<td>${mac}</td><td>${ip}</td><td>${host}</td><td>${client.status || 'N/A'}</td><td class="action-buttons">${kickBtn}</td>`;
+            else if (type === 'hotspot') row.innerHTML = `<td>${user}</td><td>${mac}</td><td>${ip}</td><td>${uptime}</td><td class="action-buttons">${kickBtn}</td>`;
+            else row.innerHTML = `<td>${mac}</td><td>${ip}</td><td>${uptime}</td><td class="action-buttons">${kickBtn}</td>`;
         });
 
         container.appendChild(table);
     }
+
+    /**
+     * [NOVO] Lida com a ação de desconectar (Kick)
+     */
+    window.handleKickClient = async (type, clientId, mac) => {
+        if (!confirm(`Tem a certeza que deseja desconectar o cliente ${mac}?`)) return;
+
+        // Usa credenciais temporárias se disponíveis, senão pede
+        let credentials = window.tempApiCredentials;
+        if (!credentials) {
+            credentials = await showCredentialPrompt("Confirmar Desconexão");
+            if (!credentials) return;
+        }
+
+        try {
+            const response = await apiRequest(`/api/routers/${routerId}/kick-client`, 'POST', {
+                ...credentials,
+                type,
+                clientId
+            });
+            if (response.success) {
+                alert('Cliente desconectado com sucesso.');
+                // Atualiza a lista
+                expandMetric(`${type}-clients`);
+            } else {
+                alert('Erro: ' + response.message);
+            }
+        } catch (error) {
+            alert('Erro ao desconectar: ' + error.message);
+        }
+    };
+
+    /**
+     * [NOVO] Abre o Modal de Gestão Avançada
+     */
+    window.openManagementModal = () => {
+        // [MODIFICADO] Abre diretamente sem pedir senha inicial
+        const rName = (metricsData && metricsData.routerName) ? metricsData.routerName : 'Roteador';
+        const safeRName = rName.replace(/'/g, "\\'"); // [CORREÇÃO] Escapa aspas simples para evitar erros no onclick
+
+        const modalId = 'managementModal';
+        document.getElementById(modalId)?.remove();
+
+        const modalHtml = `
+            <div id="${modalId}" class="modal-overlay hidden" style="z-index: 9999;">
+                <div class="modal-content large" style="max-width: 800px;">
+                    <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid #4B5563; padding-bottom: 15px;">
+                        <h3 style="margin: 0; color: #e5e7eb; font-size: 1.25rem;">Gestão Avançada - ${rName}</h3>
+                        <button class="modal-close-btn" style="background: none; border: none; color: #9CA3AF; font-size: 1.5rem; cursor: pointer;">&times;</button>
+                    </div>
+                    
+                    <div class="tab-nav" style="margin-bottom: 20px; border-bottom: 1px solid #4B5563; display: flex; gap: 10px;">
+                        <button class="tab-link active" onclick="switchMgmtTab(event, 'diag')" style="padding: 10px 15px; background: none; border: none; color: #9CA3AF; cursor: pointer; border-bottom: 2px solid transparent;">Diagnóstico</button>
+                        <button class="tab-link" onclick="switchMgmtTab(event, 'health')" style="padding: 10px 15px; background: none; border: none; color: #9CA3AF; cursor: pointer; border-bottom: 2px solid transparent;">Hardware</button>
+                        <button class="tab-link" onclick="switchMgmtTab(event, 'backup')" style="padding: 10px 15px; background: none; border: none; color: #9CA3AF; cursor: pointer; border-bottom: 2px solid transparent;">Backup</button>
+                        <button class="tab-link" onclick="switchMgmtTab(event, 'system')" style="padding: 10px 15px; background: none; border: none; color: #9CA3AF; cursor: pointer; border-bottom: 2px solid transparent;">Sistema</button>
+                    </div>
+
+                    <!-- Aba Diagnóstico -->
+                    <div id="tab-diag" class="mgmt-tab-content">
+                        <h4 style="color: #e5e7eb; margin-bottom: 10px;">Ferramenta de Ping</h4>
+                        <div class="input-group" style="display:flex; gap:10px; align-items:center; margin-bottom: 15px;">
+                            <input type="text" id="pingTarget" placeholder="IP ou Domínio (ex: 8.8.8.8)" style="flex:1; padding: 10px; background: #374151; border: 1px solid #4B5563; color: white; border-radius: 4px;">
+                            <button class="btn-primary" onclick="runPing()" style="padding: 10px 20px;">Executar</button>
+                        </div>
+                        <pre id="pingResult" style="background:#111827; padding:15px; border-radius:6px; min-height:150px; color:#10b981; font-family:monospace; margin-top:10px; border: 1px solid #374151; overflow: auto;"></pre>
+                    </div>
+
+                    <!-- Aba Hardware -->
+                    <div id="tab-health" class="mgmt-tab-content hidden">
+                        <div style="margin-bottom: 15px;"><button class="btn-secondary" onclick="checkHealth()">Atualizar Leitura</button></div>
+                        <div id="healthResult" style="margin-top:15px; display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                            <p>Carregando...</p>
+                        </div>
+                    </div>
+
+                    <!-- Aba Backup -->
+                    <div id="tab-backup" class="mgmt-tab-content hidden">
+                        <div style="display:flex; gap:10px; margin-bottom:20px; align-items:center;">
+                            <input type="text" id="backupName" placeholder="Nome do Backup (opcional)" style="flex:1; padding: 10px; background: #374151; border: 1px solid #4B5563; color: white; border-radius: 4px;">
+                            <button class="btn-primary" onclick="createBackup()" style="padding: 10px 20px;">Criar Backup</button>
+                        </div>
+                        <div id="backupList" style="max-height:300px; overflow-y:auto;"></div>
+                    </div>
+
+                    <!-- Aba Sistema -->
+                    <div id="tab-system" class="mgmt-tab-content hidden">
+                        <h4>Ações do Sistema</h4>
+                        <div class="form-actions" style="justify-content: flex-start; border-top:none; padding-top:15px;">
+                            <button class="btn-danger" style="background-color: #ef4444; color: white; padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; font-size: 14px;" onclick="window.handleRebootRouter('${routerId}', '${safeRName}')"><i class="fas fa-power-off"></i> Reiniciar Roteador</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+        const modal = document.getElementById(modalId);
+        
+        if (!modal) return;
+
+        modal.querySelector('.modal-close-btn').onclick = () => {
+            modal.remove();
+            window.tempApiCredentials = null; // [SEGURANÇA] Limpa credenciais ao fechar
+        };
+        
+        // [CORREÇÃO] Usa requestAnimationFrame para garantir que a classe é removida no próximo ciclo de pintura
+        // Isso é mais fiável que setTimeout para transições CSS
+        requestAnimationFrame(() => {
+            modal.classList.remove('hidden');
+            // [CORREÇÃO FORÇADA] Define estilos inline para garantir visibilidade, ignorando problemas de CSS/Cache
+            modal.style.opacity = '1';
+            modal.style.visibility = 'visible';
+        });
+
+        // Funções internas do modal
+        window.switchMgmtTab = (event, tab) => {
+            document.querySelectorAll('.mgmt-tab-content').forEach(el => el.classList.add('hidden'));
+            document.getElementById(`tab-${tab}`).classList.remove('hidden');
+            document.querySelectorAll('.tab-link').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tab-link').forEach(el => {
+                el.style.color = '#9CA3AF';
+                el.style.borderBottomColor = 'transparent';
+            });
+            event.currentTarget.classList.add('active'); // [CORREÇÃO] Usa currentTarget para garantir que o botão receba a classe, não o ícone
+            event.currentTarget.style.color = '#3b82f6';
+            event.currentTarget.style.borderBottomColor = '#3b82f6';
+            if (tab === 'health') checkHealth();
+            if (tab === 'backup') listBackups();
+        };
+
+        // [NOVO] Helper para garantir autenticação antes de ações
+        const ensureAuth = async (actionName) => {
+            if (window.tempApiCredentials) return true;
+            const creds = await showCredentialPrompt(actionName);
+            if (creds) {
+                window.tempApiCredentials = creds;
+                return true;
+            }
+            return false;
+        };
+
+        window.runPing = async () => {
+            if (!await ensureAuth("Autenticação para Ping")) return;
+            const target = document.getElementById('pingTarget').value;
+            // [NOVO] Validação no frontend para evitar requisição inútil e o erro 'missing =address='
+            if (!target || target.trim() === '') {
+                const out = document.getElementById('pingResult');
+                out.textContent = 'Por favor, insira um IP ou domínio para executar o ping.';
+                out.style.color = '#f59e0b'; // Cor de aviso
+                return;
+            }
+            const out = document.getElementById('pingResult');
+            out.textContent = 'Executando ping...';
+            out.style.color = '#e5e7eb'; // Cor de texto padrão
+            try {
+                const res = await apiRequest(`/api/routers/${routerId}/diagnostics`, 'POST', { ...window.tempApiCredentials, tool: 'ping', target });
+                if (res.success) {
+                    // [MODIFICADO] Lógica de formatação restaurada para exibir todos os detalhes
+                    out.textContent = res.data.map(p => {
+                        // Objeto de resumo final (contém 'packet-loss')
+                        if (p['packet-loss']) { 
+                            return `\n--- Estatísticas ---\nEnviados: ${p.sent}, Recebidos: ${p.received}, Perda: ${p['packet-loss']}\nMin/Avg/Max RTT: ${p['min-rtt'] || 'N/A'}/${p['avg-rtt'] || 'N/A'}/${p['max-rtt'] || 'N/A'}`;
+                        }
+                        // Linhas de resposta individuais
+                        const parts = [];
+                        if (p.seq !== undefined) parts.push(`Seq: ${p.seq}`);
+                        if (p.host) parts.push(`Host: ${p.host}`);
+                        if (p.size) parts.push(`Size: ${p.size}`);
+                        if (p.ttl) parts.push(`TTL: ${p.ttl}`);
+                        if (p.time) parts.push(`Time: ${p.time}`);
+                        if (p.status && p.status !== 'timeout') parts.push(`Status: ${p.status}`); // Só mostra status se for relevante
+                        return parts.join(', ');
+                    }).join('\n');
+                    out.style.color = '#10b981'; // Verde para sucesso
+                } else {
+                    out.textContent = 'Erro: ' + res.message;
+                    out.style.color = '#ef4444'; // Vermelho para erro
+                }
+            } catch (e) { 
+                out.textContent = 'Erro: ' + e.message; 
+                out.style.color = '#ef4444'; // Vermelho para erro
+            }
+        };
+
+        window.checkHealth = async () => {
+            if (!await ensureAuth("Ler Sensores de Hardware")) return;
+            const div = document.getElementById('healthResult');
+            div.innerHTML = '<p>A ler sensores...</p>';
+            try {
+                const res = await apiRequest(`/api/routers/${routerId}/hardware-health`, 'POST', window.tempApiCredentials);
+                if (res.success && Array.isArray(res.data) && res.data.length > 0) {
+                    // [MODIFICADO] Normalização de dados para suportar diferentes formatos de resposta do MikroTik
+                    let healthData = {};
+                    
+                    // Verifica se é o formato novo (lista de objetos com name/value)
+                    // Ex: [{name: 'cpu-temperature', value: 60, type: 'C'}]
+                    const isNewFormat = res.data.some(item => item.name && item.value !== undefined);
+                    
+                    if (isNewFormat) {
+                        res.data.forEach(item => {
+                            if (item.name) {
+                                healthData[item.name] = item.value;
+                            }
+                        });
+                    } else {
+                        // Assume formato antigo (objeto único com propriedades)
+                        // Ex: [{voltage: 24, temperature: 30}]
+                        healthData = res.data[0];
+                    }
+
+                    let healthHTML = '';
+                    let hasData = false;
+
+                    // Verifica se há dados de voltagem
+                    if (healthData.voltage) {
+                        let voltageDisplay = healthData.voltage;
+                        if (!String(voltageDisplay).toLowerCase().includes('v')) voltageDisplay += 'V';
+                        healthHTML += `
+                            <div class="stat-card" style="background:#1f2937; padding:20px; text-align:center; border-radius: 8px; border: 1px solid #374151;">
+                                <h3 style="color: #9CA3AF; font-size: 0.9rem; margin-bottom: 5px;">Voltagem</h3>
+                                <p style="font-size:1.8rem; color:#3b82f6; font-weight: bold; margin: 0;">${voltageDisplay}</p>
+                            </div>
+                        `;
+                        hasData = true;
+                    }
+
+                    // Verifica se há dados de temperatura (procura por 'temperature' ou 'cpu-temperature')
+                    const tempValue = healthData.temperature || healthData['cpu-temperature'];
+                    if (tempValue) {
+                        let tempDisplay = tempValue;
+                        if (!String(tempDisplay).includes('C')) tempDisplay += '°C';
+                        healthHTML += `
+                            <div class="stat-card" style="background:#1f2937; padding:20px; text-align:center; border-radius: 8px; border: 1px solid #374151;">
+                                <h3 style="color: #9CA3AF; font-size: 0.9rem; margin-bottom: 5px;">Temperatura</h3>
+                                <p style="font-size:1.8rem; color:#e48315; font-weight: bold; margin: 0;">${tempDisplay}</p>
+                            </div>
+                        `;
+                        hasData = true;
+                    }
+
+                    // Renderiza o HTML se algum dado foi encontrado
+                    div.innerHTML = hasData ? healthHTML : '<p>Sem dados de sensores de voltagem ou temperatura disponíveis para este modelo.</p>';
+
+                } else {
+                    div.innerHTML = '<p>Sem dados de sensores disponíveis para este modelo.</p>';
+                }
+            } catch (e) { div.innerHTML = '<p style="color:red">Erro ao ler sensores.</p>'; }
+        };
+
+        window.listBackups = async () => {
+            if (!await ensureAuth("Listar Backups")) return;
+            const div = document.getElementById('backupList');
+            div.innerHTML = 'Carregando...';
+            try {
+                const res = await apiRequest(`/api/routers/${routerId}/backups`, 'POST', { ...window.tempApiCredentials, action: 'list' });
+                if (res.success && res.data.length > 0) {
+                    div.innerHTML = '<table class="client-table"><thead><tr><th>Nome</th><th>Tamanho</th><th>Data</th><th>Ações</th></tr></thead><tbody>' + 
+                    res.data.map(f => `
+                        <tr>
+                            <td>${f.name}</td>
+                            <td>${(f.size / 1024).toFixed(1)} KB</td>
+                            <td>${f['creation-time']}</td>
+                            <td class="action-buttons">
+                                <!-- [CORREÇÃO] Removido btn-sm -->
+                                <button class="btn-primary" onclick="restoreBackup('${f.name}')" title="Restaurar"><i class="fas fa-undo"></i></button>
+                                <!-- [CORREÇÃO] Usa 'btn-delete' para o ícone de lixeira -->
+                                <button class="btn-delete" style="background-color: #ef4444; color: white; border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer;" onclick="deleteBackup('${f['.id']}')" title="Excluir"><i class="fas fa-trash"></i></button>
+                            </td>
+                        </tr>
+                    `).join('') + '</tbody></table>';
+                } else {
+                    div.innerHTML = '<p>Nenhum backup encontrado no roteador.</p>';
+                }
+            } catch (e) { div.innerHTML = 'Erro: ' + e.message; }
+        };
+
+        window.createBackup = async () => {
+            if (!await ensureAuth("Criar Backup")) return;
+            const name = document.getElementById('backupName').value;
+            try {
+                const res = await apiRequest(`/api/routers/${routerId}/backups`, 'POST', { ...window.tempApiCredentials, action: 'create', fileName: name });
+                alert(res.message);
+                listBackups();
+            } catch (e) { alert('Erro: ' + e.message); }
+        };
+
+        window.restoreBackup = async (name) => {
+            if(!confirm(`ATENÇÃO: Restaurar o backup "${name}" irá reiniciar o roteador e sobrescrever as configurações atuais. Continuar?`)) return;
+            if (!await ensureAuth("Restaurar Backup")) return;
+            try {
+                const res = await apiRequest(`/api/routers/${routerId}/backups`, 'POST', { ...window.tempApiCredentials, action: 'restore', fileName: name });
+                alert(res.message);
+            } catch (e) { alert('Erro: ' + e.message); }
+        };
+
+        window.deleteBackup = async (id) => {
+            if(!confirm('Excluir este backup?')) return;
+            if (!await ensureAuth("Excluir Backup")) return;
+            try {
+                await apiRequest(`/api/routers/${routerId}/backups`, 'POST', { ...window.tempApiCredentials, action: 'delete', fileName: id });
+                listBackups();
+            } catch (e) { alert('Erro: ' + e.message); }
+        };
+    };
 
     /**
      * NOVO: Cria um gráfico de barras para a análise de clientes Wi-Fi
@@ -1393,11 +1781,15 @@ document.addEventListener('DOMContentLoaded', () => {
      */
     function setupEventListeners() {
         // Fechar modal ao clicar fora
-        document.getElementById('expandedModal').addEventListener('click', (e) => {
-            if (e.target.id === 'expandedModal') {
-                closeExpandedChart();
-            }
-        });
+        // [CORREÇÃO] Verifica se o elemento existe antes de adicionar listener para evitar crash
+        const expandedModal = document.getElementById('expandedModal');
+        if (expandedModal) {
+            expandedModal.addEventListener('click', (e) => {
+                if (e.target.id === 'expandedModal') {
+                    closeExpandedChart();
+                }
+            });
+        }
 
         // [NOVO] Listener para o botão de toggle de live update
         if (liveUpdateToggle) {
@@ -1418,4 +1810,11 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('routerNameTitle').textContent = 'Erro ao carregar dados';
         console.error(message);
     }
-});
+};
+
+// [NOVO] Executa a inicialização imediatamente se o DOM já estiver pronto (SPA), caso contrário espera o evento.
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initRouterDashboard);
+} else {
+    initRouterDashboard();
+}

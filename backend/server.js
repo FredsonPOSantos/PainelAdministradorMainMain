@@ -3,9 +3,9 @@ console.log("--- [GEMINI] EXECUTANDO A VERSÃO MAIS RECENTE DO SERVIDOR ---");
 // Ficheiro: backend/server.js
 const path = require('path');
 require('dotenv').config();
-const express = require('express');
+const express = require('express'); // [CORREÇÃO] A importação do express já existe.
 const cors = require('cors');
-const { pool, testInitialConnection, pgConnectionStatus } = require('./connection'); // [MODIFICADO]
+const { pool, testInitialConnection, pgConnectionStatus, startPgReconnect } = require('./connection'); // [MODIFICADO]
 const methodOverride = require('method-override'); // [NOVO] Importa o method-override
 
 // [NOVO] Registra o momento em que o servidor inicia para calcular o uptime.
@@ -155,34 +155,45 @@ const startPeriodicRouterCheck = () => {
             return;
         }
         console.log('🔄 [ROUTER-CHECK] Iniciando ciclo de verificação de status...');
-        const client = await pool.connect();
+        let client;
         try {
+            client = await pool.connect();
+            // [CORREÇÃO] Protege contra quedas de conexão enquanto o cliente está em uso (ex: durante o ping)
+            client.on('error', (err) => {
+                console.error('❌ [ROUTER-CHECK] Erro silencioso no cliente DB ativo:', err.message);
+            });
+
             await client.query(
                 "UPDATE routers SET status = 'offline' WHERE ip_address IS NULL AND status != 'offline'"
             );
 
             const routersResult = await client.query('SELECT id, ip_address FROM routers WHERE ip_address IS NOT NULL');
             const routersToCheck = routersResult.rows;
-
+            
             if (routersToCheck.length === 0) {
                 console.log('⏹️ [ROUTER-CHECK] Nenhum roteador com IP configurado para verificar. Ciclo concluído.');
-                return;
+            } else {
+                for (const router of routersToCheck) {
+                    const pingResult = await ping.promise.probe(router.ip_address);
+                    const newStatus = pingResult.alive ? 'online' : 'offline';
+                    
+                    await client.query(
+                        'UPDATE routers SET status = $1, last_seen = NOW() WHERE id = $2',
+                        [newStatus, router.id]
+                    );
+                }
+                console.log(`⏹️ [ROUTER-CHECK] Ciclo de verificação concluído. ${routersToCheck.length} roteador(es) verificado(s).`);
             }
-
-            for (const router of routersToCheck) {
-                const pingResult = await ping.promise.probe(router.ip_address);
-                const newStatus = pingResult.alive ? 'online' : 'offline';
-                
-                await client.query(
-                    'UPDATE routers SET status = $1, last_seen = NOW() WHERE id = $2',
-                    [newStatus, router.id]
-                );
-            }
-            console.log(`⏹️ [ROUTER-CHECK] Ciclo de verificação concluído. ${routersToCheck.length} roteador(es) verificado(s).`);
         } catch (error) {
             console.error('❌ [ROUTER-CHECK] Erro durante a verificação periódica de roteadores:', error);
+            // [NOVO] Se o erro for de conexão, atualiza o status e tenta reconectar
+            if (error.code === 'ETIMEDOUT' || error.code === 'ECONNREFUSED' || error.code === 'ECONNABORTED') {
+                pgConnectionStatus.connected = false;
+                pgConnectionStatus.error = error.message;
+                startPgReconnect();
+            }
         } finally {
-            client.release();
+            if (client) client.release();
         }
     }
     setInterval(checkRouters, 60000); // Executa a cada 60 segundos

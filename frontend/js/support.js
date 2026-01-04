@@ -196,7 +196,7 @@ if (window.initSupportPage) {
                     ${ticket.status !== 'closed' ? `
                     <form id="newMessageForm" class="new-message-form">
                         <input id="newMessageText" type="hidden" name="content">
-                        <trix-editor input="newMessageText"></trix-editor>
+                        <trix-editor input="newMessageText" data-ticket-id="${ticket.id}"></trix-editor>
                         <button type="submit">Enviar Mensagem</button>
                     </form>
                     ` : ''}
@@ -222,7 +222,12 @@ if (window.initSupportPage) {
 
             document.getElementById('assignTicketBtn')?.addEventListener('click', async () => {
                 const assignee_id = document.getElementById('assignUserSelect').value;
-                await apiRequest(`/api/tickets/${ticketId}/assign`, 'PUT', { assignee_id: assignee_id || null });
+                
+                if (!assignee_id) {
+                    showNotification('Por favor, selecione um utilizador para atribuir o ticket.', 'warning');
+                    return;
+                }
+                await apiRequest(`/api/tickets/${ticketId}/assign`, 'PUT', { assignee_id: assignee_id });
                 loadTicketDetails(ticketId);
             });
 
@@ -233,7 +238,7 @@ if (window.initSupportPage) {
             });
 
             document.getElementById('progressTicketBtn')?.addEventListener('click', async () => {
-                await apiRequest(`/api/tickets/${ticketId}/status`, 'PUT', { status: 'in_progress' });
+                await apiRequest(`/api/tickets/${ticketId}/status`, 'PUT', { status: 'Em Atendimento' });
                 loadTicketDetails(ticketId);
             });
 
@@ -347,7 +352,9 @@ if (window.initSupportPage) {
             // Carrega a lista de utilizadores para o dropdown de atribuição
             if (['master', 'gestao'].includes(window.currentUserProfile.role)) {
                 try {
-                    const usersResponse = await apiRequest('/api/admin/users'); // [CORRIGIDO] A API retorna o array diretamente
+                    // [CORREÇÃO] Usa a rota de lista simplificada que retorna { success: true, data: [...] }
+                    // Isso resolve o problema de formato de resposta e garante que a lista seja carregada corretamente.
+                    const usersResponse = await apiRequest('/api/admin/users/mention-list'); 
                     if(usersResponse.success) allUsers = usersResponse.data;
                 } catch (e) {
                     console.error("Erro ao carregar lista de utilizadores para atribuição", e);

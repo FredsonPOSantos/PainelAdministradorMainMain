@@ -426,6 +426,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     };
     window.loadPageExternal = loadPage;
+    window.loadPage = loadPage; // [CORREÇÃO] Expõe a função globalmente para resolver o erro "loadPage is not defined"
 
     // --- USER PROFILE & AUTH ---
     const fetchUserProfile = async () => {

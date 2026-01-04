@@ -182,6 +182,7 @@ const getTicketById = async (req, res) => {
             SELECT 
                 t.id, t.ticket_number, t.title, t.status, t.created_at, t.updated_at,
                 t.created_by_user_id,
+                t.assigned_to_user_id,
                 u_creator.email AS created_by_email,
                 u_assignee.email AS assigned_to_email,
                 (SELECT r.rating FROM ticket_ratings r WHERE r.ticket_id = t.id) AS rating,
@@ -198,8 +199,17 @@ const getTicketById = async (req, res) => {
 
         const ticket = ticketResult.rows[0];
 
-        // Validação de permissão
-        if (!['master', 'gestao', 'DPO'].includes(role) && ticket.created_by_user_id !== userId && ticket.assigned_to_user_id !== userId) {
+        // Validação de permissão:
+        // 1. Admin (master, gestao, DPO)
+        // 2. Criador do ticket
+        // 3. Atribuído ao ticket
+        // 4. Mencionado no ticket (verifica se existe notificação de menção para este utilizador neste ticket)
+        const isMentioned = await pool.query(
+            "SELECT 1 FROM notifications WHERE user_id = $1 AND related_ticket_id = $2 AND type = 'mention'",
+            [userId, id]
+        );
+
+        if (!['master', 'gestao', 'DPO'].includes(role) && ticket.created_by_user_id !== userId && ticket.assigned_to_user_id !== userId && isMentioned.rowCount === 0) {
             return res.status(403).json({ success: false, message: 'Você não tem permissão para ver este ticket.' });
         }
 
@@ -253,15 +263,18 @@ const addMessageToTicket = async (req, res) => {
         const creatorRole = creatorInfo.rows[0].role;
 
         const recipients = new Set();
+        const emailRecipients = new Set(); // Para controlar quem recebe e-mail
 
         // 1. Notificar o criador do ticket, se não for ele mesmo a responder
         if (created_by_user_id !== userId) {
             recipients.add(created_by_user_id);
+            emailRecipients.add(created_by_user_id);
         }
         
         // 2. Notificar o utilizador atribuído, se houver e não for ele mesmo a responder
         if (assigned_to_user_id && assigned_to_user_id !== userId) {
             recipients.add(assigned_to_user_id);
+            emailRecipients.add(assigned_to_user_id);
         }
 
         // 3. Se quem criou for 'estetica', notificar todos os 'master', 'gestao', 'DPO'
@@ -274,6 +287,24 @@ const addMessageToTicket = async (req, res) => {
             });
         }
         
+        // 4. Notificar utilizadores mencionados anteriormente neste ticket
+        const mentionedUsers = await client.query(
+            "SELECT DISTINCT user_id FROM notifications WHERE related_ticket_id = $1 AND type = 'mention'",
+            [id]
+        );
+        mentionedUsers.rows.forEach(row => {
+            if (row.user_id !== userId) {
+                recipients.add(row.user_id);
+                emailRecipients.add(row.user_id);
+            }
+        });
+
+        // 5. Garantir que Master recebe notificação (se não for quem respondeu)
+        const masters = await client.query("SELECT id FROM admin_users WHERE role = 'master'");
+        masters.rows.forEach(m => {
+            if (m.id !== userId) recipients.add(m.id);
+        });
+
         const notificationMessage = `Nova resposta no ticket #${ticket_number} de ${email}`;
         for (const recipientId of recipients) {
             await client.query(
@@ -282,14 +313,15 @@ const addMessageToTicket = async (req, res) => {
             );
 
             // Enviar email
-            const senderName = email;
-
-            const recipient = await client.query('SELECT email FROM admin_users WHERE id = $1', [recipientId]);
-            if (recipient.rows.length > 0) {
-                const recipientEmail = recipient.rows[0].email;
-                const emailSubject = `Nova Mensagem no Ticket: #${ticket_number}`;
-                const emailText = `Olá,\n\nUma nova mensagem foi adicionada ao ticket #${ticket_number} por ${senderName}.\n\nMensagem: ${message}\n\nPara ver o ticket, acesse o painel de administração.\n\nAtenciosamente,\nEquipe de Suporte`;
-                await sendEmail(recipientEmail, emailSubject, emailText);
+            if (emailRecipients.has(recipientId)) {
+                const senderName = email;
+                const recipient = await client.query('SELECT email FROM admin_users WHERE id = $1', [recipientId]);
+                if (recipient.rows.length > 0) {
+                    const recipientEmail = recipient.rows[0].email;
+                    const emailSubject = `Nova Mensagem no Ticket: #${ticket_number}`;
+                    const emailText = `Olá,\n\nUma nova mensagem foi adicionada ao ticket #${ticket_number} por ${senderName}.\n\nMensagem: ${message}\n\nPara ver o ticket, acesse o painel de administração.\n\nAtenciosamente,\nEquipe de Suporte`;
+                    await sendEmail(recipientEmail, emailSubject, emailText);
+                }
             }
         }
 

@@ -129,3 +129,185 @@ Criar uma visualização gráfica que, para um grupo selecionado, mostre a distr
 *   **Interação:** Adicionar um ícone de "gráfico" (`<i class="fas fa-chart-bar"></i>`) na linha de cada grupo na tabela "Grupos de Roteadores".
 *   **Modal:** Ao clicar no ícone, abrir um modal que exibe um **gráfico de barras** com os dados retornados pela nova API.
 *   **Visualização:** O eixo X mostraria o nome de cada roteador do grupo, e o eixo Y a quantidade de utilizadores.
+
+# Guia de Implementação: Último Login (FreeRADIUS + PostgreSQL)
+
+## Visão Geral
+Para que o painel possa exibir a data e hora do "Último Login" de um utilizador do hotspot, é necessário que o servidor FreeRADIUS, responsável pela autenticação, grave os registos de sessão (accounting) numa base de dados PostgreSQL. O painel irá então consultar esta base de dados para obter a informação.
+
+## 1. Configuração do FreeRADIUS
+
+### Passo 1: Instalar o Módulo SQL
+No servidor onde o FreeRADIUS está instalado, instale o módulo para PostgreSQL.
+```bash
+# Em sistemas baseados em Debian/Ubuntu
+sudo apt-get update
+sudo apt-get install freeradius-postgresql
+```
+
+### Passo 2: Configurar o `radiusd.conf`
+Edite o ficheiro de configuração principal do FreeRADIUS (geralmente em `/etc/freeradius/3.0/radiusd.conf`) e na secção `accounting`, descomente a linha `sql` para ativar o módulo.
+
+```
+accounting {
+    ...
+    sql
+    ...
+}
+```
+
+### Passo 3: Configurar a Conexão SQL
+Edite o ficheiro de configuração do módulo SQL (`/etc/freeradius/3.0/mods-available/sql`) e ajuste as seguintes secções:
+
+```
+sql {
+    driver = "rlm_sql_postgresql"
+
+    # Configurações da sua base de dados
+    server = "IP_DO_SEU_DB"
+    port = 5432
+    login = "USUARIO_DO_DB"
+    password = "SENHA_DO_DB"
+    radius_db = "NOME_DO_DB"
+
+    # Garante que o FreeRADIUS leia o schema correto
+    read_clients = yes
+    client_table = "nas"
+}
+```
+
+### Passo 4: Importar o Schema do Banco de Dados
+O FreeRADIUS vem com um schema SQL. Importe-o para a sua base de dados para criar a tabela `radacct` e outras necessárias.
+```bash
+# Navegue até o diretório de schemas do FreeRADIUS
+cd /etc/freeradius/3.0/mods-config/sql/main/postgresql/
+# Execute o schema na sua base de dados
+psql -U USUARIO_DO_DB -d NOME_DO_DB < schema.sql
+```
+Isto criará a tabela `radacct`, que armazenará cada sessão de login, incluindo `acctstarttime` (início da sessão).
+
+## 2. Backend (Painel Administrativo)
+
+Para obter o último login de um utilizador, o backend do painel deve executar a seguinte consulta SQL:
+
+```sql
+SELECT acctstarttime 
+FROM radacct 
+WHERE username = 'EMAIL_DO_UTILIZADOR' 
+ORDER BY acctstarttime DESC 
+LIMIT 1;
+```
+
+---
+
+# Guia de Implementação: Auto-Reboot da VM (Proxmox)
+
+## Visão Geral
+Para aumentar a resiliência do sistema, pode-se criar um script que verifica a conectividade com a internet e, em caso de falha persistente, reinicia a máquina virtual. Isto pode ser útil para resolver problemas de rede que deixam a VM "congelada".
+
+## 1. Criar o Script de Verificação
+No terminal da sua VM, crie um ficheiro chamado `check_network.sh`.
+```bash
+nano /usr/local/bin/check_network.sh
+```
+Cole o seguinte conteúdo no ficheiro:
+
+```bash
+#!/bin/bash
+
+# Endereço IP confiável para pingar (DNS do Google é uma boa opção)
+TARGET=8.8.8.8
+
+# Número de tentativas de ping
+COUNT=4
+
+# Contador de falhas
+FAILS=0
+
+for ((i=1; i<=COUNT; i++)); do
+    if ! ping -c 1 -W 1 $TARGET &> /dev/null; then
+        ((FAILS++))
+    fi
+    sleep 1
+done
+
+# Se todas as tentativas falharem, reinicia o sistema
+if [ $FAILS -eq $COUNT ]; then
+    echo "$(date): Falha de rede detectada. Reiniciando o sistema." >> /var/log/network_check.log
+    /sbin/reboot
+fi
+```
+
+Torne o script executável:
+```bash
+chmod +x /usr/local/bin/check_network.sh
+```
+
+## 2. Agendar a Execução (Cron Job)
+Edite o `crontab` do utilizador root para executar o script periodicamente.
+```bash
+sudo crontab -e
+```
+Adicione a seguinte linha no final do ficheiro para executar o script a cada 5 minutos:
+```
+*/5 * * * * /usr/local/bin/check_network.sh
+```
+Salve e feche o ficheiro. O sistema agora verificará a conectividade a cada 5 minutos e reiniciará se todas as 4 tentativas de ping falharem.
+
+---
+
+# Guia de Implementação: Otimização de Carregamento do `router_dashboard.js`
+
+## Problema
+O `live-summary` (atualizações em tempo real) do dashboard do roteador iniciava ao mesmo tempo que o carregamento principal dos dados (`loadMetrics`), causando sobrecarga e lentidão na renderização inicial da página.
+
+## Solução
+A lógica foi ajustada para que as atualizações em tempo real só iniciem **após** o carregamento completo dos dados iniciais. Além disso, ao mudar o filtro de período (que chama `loadMetrics` novamente), as atualizações são pausadas durante o processamento e retomadas depois.
+
+### Alterações no Código (`frontend/js/router_dashboard.js`)
+1.  A chamada inicial para `startLiveUpdates()` foi movida para dentro do bloco `.finally()` da primeira chamada a `loadMetrics()`.
+2.  A função `loadMetrics()` agora chama `stopLiveUpdates()` no início e `startLiveUpdates()` no final (dentro de um bloco `finally`), garantindo que as atualizações sejam pausadas durante o processamento pesado.
+
+# Guia de Implementação: Gestão Avançada de Roteadores (Modal de Ferramentas)
+
+## Visão Geral
+Melhorar a interface do dashboard individual do roteador (`router_dashboard`), agrupando funcionalidades de gestão e diagnóstico num modal organizado, acessível através de um ícone de configurações. Isto limpa a interface principal e prepara o terreno para funcionalidades futuras (alterar SSID, scripts, etc.).
+
+## 1. Interface do Dashboard (`router_dashboard.js`)
+
+### Alterações Visuais
+*   **Remover:** O botão "Reiniciar" atual que fica no cabeçalho.
+*   **Adicionar:** Um ícone de engrenagem (`<i class="fas fa-cog"></i>`) ao lado do nome do roteador.
+*   **Estilo:** O ícone deve ser discreto, mas destacar-se ao passar o rato (hover).
+
+### Lógica de Segurança (Status)
+*   **Estado Inicial:** O botão de engrenagem deve iniciar **desabilitado** (visual cinza/inativo).
+*   **Ativação:** O botão só deve ser habilitado após o carregamento bem-sucedido das métricas (`loadMetrics`). Se o roteador estiver offline ou inacessível, o botão permanece desabilitado.
+*   **Feedback:** Adicionar um `title` ou tooltip ao botão:
+    *   Habilitado: "Gerir Roteador"
+    *   Desabilitado: "Roteador offline ou inacessível. Configurações indisponíveis."
+
+## 2. Modal de Gestão (`RouterManagementModal`)
+
+Ao clicar no ícone de engrenagem, abrir um modal com a seguinte estrutura de abas:
+
+### Estrutura do Modal
+*   **Cabeçalho:** Nome do Roteador e Botão de Fechar.
+*   **Navegação:** Abas para alternar entre as secções.
+
+### Aba 1: Logs (Diagnóstico)
+*   **Objetivo:** Visualizar os logs internos do MikroTik para diagnóstico rápido.
+*   **Interface:**
+    *   Tabela com colunas: Hora, Tópicos, Mensagem.
+    *   Botão "Atualizar Logs".
+*   **Backend:** Endpoint `GET /api/routers/:id/logs` que executa `/log/print`.
+
+### Aba 2: Configurações (Futuro)
+*   *Reservado para funcionalidades como: Alterar SSID, Mudar Senha Wi-Fi, Alterar IP.*
+
+### Aba 3: Sistema (Manutenção)
+*   **Funcionalidades:**
+    *   **Reiniciar:** Mover a funcionalidade de reiniciar (que já existe) para aqui.
+        *   Botão "Reiniciar Roteador" (Vermelho).
+        *   Deve manter a confirmação de segurança (pedir credenciais ou confirmação dupla).
+    *   *Futuro: Executar Scripts, Verificar Atualizações.*
