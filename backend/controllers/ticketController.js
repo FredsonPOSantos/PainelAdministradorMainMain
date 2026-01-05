@@ -102,10 +102,10 @@ const createTicket = async (req, res) => {
             try {
                 const aiResponse = await aiService.generateInitialResponse(title, message);
                 if (aiResponse) {
-                    // Insere a resposta da IA como uma nova mensagem com user_id NULO
+                    // [ATUALIZADO] Insere a resposta da IA como uma nova mensagem com user_id NULO (Assistente Virtual)
                     await pool.query(
-                        'INSERT INTO ticket_messages (ticket_id, user_id, message) VALUES ($1, NULL, $2)',
-                        [ticketId, aiResponse]
+                        'INSERT INTO ticket_messages (ticket_id, user_id, message) VALUES ($1, $2, $3)',
+                        [ticketId, null, aiResponse]
                     );
                 }
             } catch (aiError) {
@@ -350,6 +350,32 @@ const addMessageToTicket = async (req, res) => {
         }
 
         await client.query('COMMIT');
+
+        // [NOVO] Lógica de IA Autônoma: Se quem respondeu foi o criador do ticket (usuário), aciona a IA
+        // Fazemos isso fora da transação principal para não bloquear a resposta ao usuário
+        (async () => {
+            try {
+                const ticketCheck = await pool.query('SELECT created_by_user_id, status, title FROM tickets WHERE id = $1', [id]);
+                const currentTicket = ticketCheck.rows[0];
+
+                // Se o autor da mensagem é o dono do ticket e o ticket não está fechado
+                if (currentTicket && currentTicket.created_by_user_id === userId && currentTicket.status !== 'closed') {
+                    // Busca histórico completo para contexto
+                    const historyResult = await pool.query(
+                        'SELECT user_id, message FROM ticket_messages WHERE ticket_id = $1 ORDER BY created_at ASC',
+                        [id]
+                    );
+                    
+                    const aiResponse = await aiService.generateChatResponse(currentTicket.title, historyResult.rows);
+                    
+                    if (aiResponse) {
+                        await pool.query('INSERT INTO ticket_messages (ticket_id, user_id, message) VALUES ($1, $2, $3)', [id, null, aiResponse]);
+                    }
+                }
+            } catch (aiError) {
+                console.error(`[AI-CHAT-ERROR] Falha na resposta da IA para ticket ${id}:`, aiError);
+            }
+        })();
 
         logAction({
             req,

@@ -362,6 +362,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                     window.cleanupSettingsPage();
                     window.cleanupSettingsPage = undefined; // Limpa a referência para a próxima navegação.
                 }
+                // [NOVO] Limpeza específica para a página de suporte
+                if (window.cleanupSupportPage) {
+                    window.cleanupSupportPage();
+                    window.cleanupSupportPage = undefined;
+                }
                 // [NOVO] Limpeza específica para a página de logs para permitir reinicialização
                 if (document.body.dataset.logsPageInitialized) {
                     delete document.body.dataset.logsPageInitialized;

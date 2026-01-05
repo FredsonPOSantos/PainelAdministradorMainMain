@@ -168,13 +168,6 @@
     text-align: right;
 }
 
-/* [NOVO] Estilo para mensagens do Assistente Virtual */
-.message-item.ai-message .message-content {
-    background-color: #314a6e; /* Um tom de azul para diferenciar */
-    border: 1px solid #4299e1;
-    color: var(--text-primary);
-}
-
 .new-message-form {
     display: flex;
     flex-direction: column; /* Empilha os elementos */
@@ -235,12 +228,11 @@
 
 /* Paginação */
 .pagination-container {
-    padding: 15px;
+    padding: 5px;
     border-top: 1px solid var(--background-dark);
     display: flex;
     justify-content: center;
     align-items: center;
-    gap: 5px;
 }
 
 .pagination-container button {
@@ -318,65 +310,4 @@ button {
     font-size: 16px;
     margin: 4px 2px;
     cursor: pointer
-}
-.trix-button-row {
-    padding: 10px 10px;
-    background-color: var(--background-dark);
-    border-bottom: 1px solid var(--border-color);
-    border-radius: 4px;
-    margin-top: 90px;
-}
-
-/* [NOVO] Estilos para o Dropdown de Menções (@) no Trix */
-.trix-mentions-dropdown {
-    position: absolute;
-    z-index: 10000;
-    background: var(--background-medium);
-    border: 1px solid var(--border-color);
-    border-radius: 6px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-    max-height: 200px;
-    overflow-y: auto;
-    min-width: 250px;
-    display: none; /* Escondido por padrão */
-}
-
-.trix-mentions-dropdown.visible {
-    display: block;
-}
-
-.trix-mention-item {
-    padding: 10px 12px;
-    cursor: pointer;
-    color: var(--text-primary);
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    transition: background-color 0.2s;
-    border-bottom: 1px solid var(--background-dark);
-}
-
-.trix-mention-item:last-child {
-    border-bottom: none;
-}
-
-.trix-mention-item:hover, .trix-mention-item.selected {
-    background-color: var(--primary-color);
-    color: white;
-}
-
-.trix-mention-item .mention-role {
-    font-size: 0.75rem;
-    opacity: 0.8;
-    margin-left: auto;
-}
-
-/* Estilo da menção inserida no texto */
-.mention-tag {
-    color: var(--primary-color);
-    font-weight: bold;
-    text-decoration: none;
-    background: rgba(66, 153, 225, 0.1);
-    padding: 0 4px;
-    border-radius: 4px;
 }

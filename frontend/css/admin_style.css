@@ -530,7 +530,8 @@ input[type="color"]::-webkit-color-swatch { border: none; border-radius: 6px; }
 /* Estilização do Editor Trix */
 /* [CORRIGIDO] Regras mais específicas para sobrescrever o Trix */
 trix-toolbar {
-    background-color: var(--background-dark);
+    background-color: transparent;
+    border: none
 }
 
 trix-toolbar .trix-button-row {

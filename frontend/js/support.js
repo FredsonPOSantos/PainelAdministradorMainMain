@@ -15,10 +15,21 @@ if (window.initSupportPage) {
         const ticketSearch = document.getElementById('ticketSearch');
         const statusFilter = document.getElementById('statusFilter');
         const paginationContainer = document.getElementById('pagination-container');
+        let pollingInterval = null; // [NOVO] Controle do intervalo de atualização automática
         let searchTimeout;
         let currentPage = 1;
+        let currentTicketId = null; // [NOVO] Para controlar se estamos a atualizar ou a mudar de ticket
 
         let allUsers = []; // Cache para a lista de utilizadores
+
+        // [NOVO] Função de limpeza para ser chamada ao sair da página
+        window.cleanupSupportPage = () => {
+            if (pollingInterval) {
+                clearInterval(pollingInterval);
+                pollingInterval = null;
+                console.log("Polling de suporte parado.");
+            }
+        };
 
         const applyFilters = () => {
             const searchTerm = ticketSearch.value;
@@ -120,8 +131,16 @@ if (window.initSupportPage) {
 
         // Carrega os detalhes de um ticket específico
         const loadTicketDetails = async (ticketId) => {
+            if (pollingInterval) clearInterval(pollingInterval); // [NOVO] Para verificações anteriores ao mudar de ticket
+
             if (!ticketDetailPanel) return;
-            ticketDetailPanel.innerHTML = '<div class="ticket-placeholder"><p>A carregar detalhes...</p></div>';
+            
+            // [MELHORIA UX] Só mostra "A carregar..." se mudarmos de ticket.
+            // Se for o mesmo ticket (ex: enviar mensagem), mantém o conteúdo atual para não piscar.
+            if (currentTicketId !== ticketId) {
+                ticketDetailPanel.innerHTML = '<div class="ticket-placeholder"><p>A carregar detalhes...</p></div>';
+            }
+            currentTicketId = ticketId;
 
             // Destaca o ticket selecionado na lista
             document.querySelectorAll('.ticket-item').forEach(el => el.classList.remove('active'));
@@ -133,6 +152,7 @@ if (window.initSupportPage) {
 
                 const ticket = response.data; // [CORRIGIDO] A API retorna o objeto em 'data'
                 renderTicketDetails(ticket);
+                return ticket; // [IMPORTANTE] Retorna o ticket para uso no submit
 
             } catch (error) {
                 ticketDetailPanel.innerHTML = '<div class="ticket-placeholder"><p style="color: red;">Erro ao carregar detalhes do ticket.</p></div>';
@@ -206,8 +226,67 @@ if (window.initSupportPage) {
                 ${actionsHtml}
             `;
 
+            // [NOVO] Rola automaticamente para a última mensagem
+            const messageList = document.getElementById('message-list');
+            if (messageList) messageList.scrollTop = messageList.scrollHeight;
+
             // Adiciona event listeners para os novos elementos
             addDetailEventListeners(ticket);
+        };
+
+        // [NOVO] Função para verificar novas mensagens automaticamente (Polling)
+        const startMessagePolling = (ticketId, initialCount) => {
+            if (pollingInterval) clearInterval(pollingInterval);
+            
+            let attempts = 0;
+            const maxAttempts = 60; // Aumentado para 120 segundos (60 * 2s)
+            
+            // Usa a contagem passada (mais fiável) ou conta do DOM se não fornecida
+            const currentCount = initialCount !== undefined ? initialCount : document.querySelectorAll('.message-item').length;
+            
+            console.log(`[Polling] A aguardar resposta no ticket ${ticketId}. Mensagens atuais: ${currentCount}`);
+
+            // [NOVO] Adiciona indicador visual de "A aguardar..."
+            const messageList = document.getElementById('message-list');
+            let typingIndicator = document.getElementById('typing-indicator');
+            if (messageList && !typingIndicator) {
+                typingIndicator = document.createElement('div');
+                typingIndicator.id = 'typing-indicator';
+                typingIndicator.className = 'message-item received';
+                typingIndicator.innerHTML = `
+                    <div class="message-content" style="color: #a0aec0; font-style: italic;">
+                        <i class="fas fa-circle-notch fa-spin"></i> O assistente está a analisar...
+                    </div>`;
+                messageList.appendChild(typingIndicator);
+                messageList.scrollTop = messageList.scrollHeight;
+            }
+
+            pollingInterval = setInterval(async () => {
+                attempts++;
+                if (attempts > maxAttempts) {
+                    clearInterval(pollingInterval); // Para de verificar após o tempo limite
+                    if (typingIndicator) typingIndicator.remove();
+                    return;
+                }
+
+                try {
+                    // Verifica os dados do ticket silenciosamente
+                    const response = await apiRequest(`/api/tickets/${ticketId}`);
+                    if (response.success && response.data) {
+                        const ticket = response.data;
+                        // Se o número de mensagens aumentou (IA respondeu)
+                        if (ticket.messages.length > currentCount) {
+                            console.log(`[Polling] Nova mensagem detectada! Atualizando...`);
+                            clearInterval(pollingInterval); // Para o polling
+                            renderTicketDetails(ticket); // Atualiza a tela
+                        }
+                    }
+                } catch (e) {
+                    console.error("Erro na verificação automática:", e);
+                    clearInterval(pollingInterval);
+                    if (typingIndicator) typingIndicator.remove();
+                }
+            }, 2000); // Verifica a cada 2 segundos
         };
 
         // Adiciona os listeners para os botões e formulários no painel de detalhes
@@ -219,7 +298,12 @@ if (window.initSupportPage) {
                 if (!messageText) return;
 
                 await apiRequest(`/api/tickets/${ticketId}/messages`, 'POST', { message: messageText });
-                loadTicketDetails(ticketId); // Recarrega os detalhes
+                const updatedTicket = await loadTicketDetails(ticketId); // Recarrega e obtém os dados atualizados
+                
+                // [CORREÇÃO] Inicia o polling passando a contagem ATUAL de mensagens
+                if (updatedTicket) {
+                    startMessagePolling(ticketId, updatedTicket.messages.length);
+                }
             });
 
             document.getElementById('assignTicketBtn')?.addEventListener('click', async () => {

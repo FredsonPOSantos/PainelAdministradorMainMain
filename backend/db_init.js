@@ -20,7 +20,7 @@ const queries = [
     `CREATE TABLE IF NOT EXISTS ticket_messages (
         id SERIAL PRIMARY KEY,
         ticket_id INTEGER NOT NULL REFERENCES tickets(id) ON DELETE CASCADE,
-        user_id INTEGER NOT NULL REFERENCES admin_users(id),
+        user_id INTEGER REFERENCES admin_users(id), -- [ATUALIZADO] Permite NULL para mensagens de sistema/IA
         message TEXT NOT NULL,
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );`,
