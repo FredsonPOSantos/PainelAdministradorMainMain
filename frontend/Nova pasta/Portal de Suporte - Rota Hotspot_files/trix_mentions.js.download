@@ -96,60 +96,19 @@ document.addEventListener('trix-initialize', function(event) {
         });
 
         // Posicionamento do Dropdown
-        const range = editor.getSelectedRange();
-        let cursorRect = null;
+        const rect = editorElement.getBoundingClientRect();
+        // Nota: Posicionamento exato do cursor no Trix é complexo, 
+        // posicionamos abaixo do editor por simplicidade ou usamos getClientRects se necessário.
+        // Aqui posicionamos fixo perto do editor para simplificar.
         
-        // Tenta obter a posição exata do cursor
-        if (editor.getClientRectAtPosition) {
-            cursorRect = editor.getClientRectAtPosition(range[0]);
-        }
-        
-        const editorRect = editorElement.getBoundingClientRect();
-        let top, left;
-
-        if (cursorRect) {
-            top = window.scrollY + cursorRect.bottom + 5;
-            left = window.scrollX + cursorRect.left;
-        } else {
-            // Fallback: posiciona perto do topo do editor se não conseguir o cursor
-            top = window.scrollY + editorRect.top + 40; 
-            left = window.scrollX + editorRect.left + 20;
+        // Tenta posicionar perto do cursor (aproximação)
+        const selectionRect = editorElement.getClientRects()[0]; 
+        if (selectionRect) {
+            mentionDropdown.style.top = (window.scrollY + rect.bottom + 5) + 'px';
+            mentionDropdown.style.left = (window.scrollX + rect.left + 20) + 'px';
         }
 
-        // Torna visível mas transparente para calcular dimensões e ajustar se sair da tela
-        mentionDropdown.style.opacity = '0';
         mentionDropdown.classList.add('visible');
-        
-        const dropdownHeight = mentionDropdown.offsetHeight;
-        const dropdownWidth = mentionDropdown.offsetWidth;
-        const viewportHeight = window.innerHeight;
-        const viewportWidth = window.innerWidth;
-
-        // Ajuste Horizontal (evita sair pela direita)
-        if ((left - window.scrollX) + dropdownWidth > viewportWidth) {
-            left = (window.scrollX + viewportWidth) - dropdownWidth - 10;
-        }
-
-        // Ajuste Vertical (evita sair por baixo)
-        if ((top - window.scrollY) + dropdownHeight > viewportHeight) {
-            // Tenta colocar acima do cursor
-            let topAbove;
-            if (cursorRect) {
-                topAbove = window.scrollY + cursorRect.top - dropdownHeight - 5;
-            } else {
-                topAbove = top - dropdownHeight - 10;
-            }
-            
-            // Se couber em cima (não sair pelo topo da tela visível)
-            if (topAbove - window.scrollY > 0) {
-                top = topAbove;
-            }
-        }
-
-        mentionDropdown.style.top = top + 'px';
-        mentionDropdown.style.left = left + 'px';
-        mentionDropdown.style.opacity = '1';
-
     }
 
     function hideDropdown() {
@@ -158,9 +117,6 @@ document.addEventListener('trix-initialize', function(event) {
     }
 
     function insertMention(user) {
-        // [CORREÇÃO] Verifica se existe uma query ativa antes de tentar calcular o comprimento
-        if (!activeQuery) return;
-
         const range = editor.getSelectedRange();
         const currentPos = range[0];
         const startPos = currentPos - activeQuery.length - 1; // -1 para o @
@@ -200,15 +156,5 @@ document.addEventListener('trix-initialize', function(event) {
             e.preventDefault();
         }
         // Implementar setas cima/baixo se desejar
-    });
-
-    // [NOVO] Fechar ao clicar fora do dropdown
-    document.addEventListener('click', function(e) {
-        if (mentionDropdown && mentionDropdown.classList.contains('visible')) {
-            // Se o clique não foi dentro do dropdown, fecha-o
-            if (!mentionDropdown.contains(e.target) && e.target !== element) {
-                hideDropdown();
-            }
-        }
     });
 });

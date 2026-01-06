@@ -79,35 +79,17 @@ if (window.initSupportPage) {
                     ticketElement.className = 'ticket-item';
                     if (currentTicketId == ticket.id) ticketElement.classList.add('active'); // Mantém o item ativo
                     ticketElement.dataset.ticketId = ticket.id;
-
-                    // [MODIFICADO] Renderização condicional baseada no layout (Portal vs Admin)
-                    if (window.isSupportPortal) {
-                        // Layout Novo (Estilo Chat)
-                        ticketElement.innerHTML = `
-                            <div class="ticket-header">
-                                <span class="ticket-id">#${ticket.ticket_number}</span>
-                                <span class="ticket-status status-${ticket.status}">${statusMap[ticket.status] || ticket.status}</span>
-                            </div>
-                            <div class="ticket-title">${ticket.title}</div>
-                            <div class="ticket-meta">
-                                <span>${new Date(ticket.updated_at).toLocaleString('pt-BR')}</span>
-                            </div>
-                        `;
-                    } else {
-                        // Layout Antigo (Admin)
-                        ticketElement.innerHTML = `
-                            <div class="ticket-item-header">
-                                <span class="ticket-number">#${ticket.ticket_number}</span>
-                                <span class="ticket-status status-${ticket.status}">${statusMap[ticket.status] || ticket.status}</span>
-                            </div>
-                            <div class="ticket-item-title">${ticket.title}</div>
-                            <div class="ticket-item-meta">
-                                <span>Criado por: ${ticket.created_by_email}</span>
-                                <span>Atualizado: ${new Date(ticket.updated_at).toLocaleString('pt-BR')}</span>
-                            </div>
-                        `;
-                    }
-
+                    ticketElement.innerHTML = `
+                        <div class="ticket-item-header">
+                            <span class="ticket-number">#${ticket.ticket_number}</span>
+                            <span class="ticket-status status-${ticket.status}">${statusMap[ticket.status] || ticket.status}</span>
+                        </div>
+                        <div class="ticket-item-title">${ticket.title}</div>
+                        <div class="ticket-item-meta">
+                            <span>Criado por: ${ticket.created_by_email}</span>
+                            <span>Atualizado: ${new Date(ticket.updated_at).toLocaleString('pt-BR')}</span>
+                        </div>
+                    `;
                     ticketElement.addEventListener('click', () => loadTicketDetails(ticket.id));
                     ticketListDiv.appendChild(ticketElement);
                 });
@@ -128,14 +110,13 @@ if (window.initSupportPage) {
 
             if (totalPages <= 1) return;
 
-            const createButton = (iconClass, page, isDisabled = false) => {
+            const createButton = (text, page, isDisabled = false, isActive = false) => {
                 const button = document.createElement('button');
-                button.className = 'pagination-arrow-btn'; // Nova classe para estilo
+                button.textContent = text;
                 button.disabled = isDisabled;
-                button.innerHTML = `<i class="fas ${iconClass}"></i>`;
-                
-                if (isDisabled) button.classList.add('disabled');
-
+                if (isActive) {
+                    button.classList.add('active');
+                }
                 button.addEventListener('click', () => {
                     const searchTerm = ticketSearch.value;
                     const status = statusFilter.value;
@@ -145,10 +126,15 @@ if (window.initSupportPage) {
             };
 
             // Botão "Anterior"
-            paginationContainer.appendChild(createButton('fa-chevron-left', currentPage - 1, currentPage === 1));
+            paginationContainer.appendChild(createButton('Anterior', currentPage - 1, currentPage === 1));
+
+            // Botões de página
+            for (let i = 1; i <= totalPages; i++) {
+                paginationContainer.appendChild(createButton(i, i, false, i === currentPage));
+            }
 
             // Botão "Próximo"
-            paginationContainer.appendChild(createButton('fa-chevron-right', currentPage + 1, currentPage === totalPages));
+            paginationContainer.appendChild(createButton('Próximo', currentPage + 1, currentPage === totalPages));
         };
 
         // Carrega os detalhes de um ticket específico
@@ -187,154 +173,76 @@ if (window.initSupportPage) {
             let messagesHtml = '';
             ticket.messages.forEach(msg => {
                 const isCurrentUser = msg.user_email === window.currentUserProfile.email;
-                const aiClass = !msg.user_email ? 'ai-message' : '';
-                
-                // [MODIFICADO] Estrutura de mensagem adaptada para o novo layout
-                if (window.isSupportPortal) {
-                    messagesHtml += `
-                    <div class="message ${isCurrentUser ? 'sent' : 'received'}">
-                        <div class="message-content">${msg.message}</div>
-                        <div class="message-time">
-                            ${msg.user_email || 'Assistente Virtual'} • ${new Date(msg.created_at).toLocaleString('pt-BR')}
-                        </div>
-                    </div>
-                    `;
-                } else {
-                    messagesHtml += `
-                    <div class="message-item ${isCurrentUser ? 'sent' : `received ${aiClass}`}">
+            // [NOVO] Adiciona uma classe específica para mensagens da IA (onde user_email é nulo)
+            const aiClass = !msg.user_email ? 'ai-message' : '';
+                messagesHtml += `
+                <div class="message-item ${isCurrentUser ? 'sent' : `received ${aiClass}`}">
                         <div class="message-content">${msg.message}</div>
                         <div class="message-meta">
-                            <span>${msg.user_email || 'Assistente Virtual'}</span> em 
+                        <span>${msg.user_email || 'Assistente Virtual'}</span> em 
                             <span>${new Date(msg.created_at).toLocaleString('pt-BR')}</span>
                         </div>
                     </div>
-                    `;
-                }
+                `;
             });
 
             // Lógica de ações (atribuir, fechar, etc.)
-            // [MODIFICADO] Se for portal, usamos uma estrutura diferente para ações
-            if (window.isSupportPortal) {
-                // Layout Novo (Portal)
-                let headerActions = '';
-                
-                // Select de atribuição (simplificado para o header)
-                if (['master', 'gestao'].includes(window.currentUserProfile.role)) {
-                    headerActions += `
-                        <select id="assignUserSelect" class="assign-select" style="margin-right: 10px;">
-                            <option value="">Atribuir a...</option>
+            let actionsHtml = `<div class="ticket-actions">`;
+            
+            // Grupo de atribuição à esquerda
+            let assignmentHtml = '';
+            if (['master', 'gestao'].includes(window.currentUserProfile.role)) {
+                assignmentHtml = `
+                    <div class="input-group">
+                        <label for="assignUserSelect">Atribuir a:</label>
+                        <select id="assignUserSelect">
+                            <option value="">Ninguém</option>
                             ${allUsers.map(u => `<option value="${u.id}" ${ticket.assigned_to_email === u.email ? 'selected' : ''}>${u.email}</option>`).join('')}
                         </select>
-                        <button id="assignTicketBtn" title="Confirmar Atribuição" style="margin-right: 10px;"><i class="fas fa-user-check"></i></button>
-                    `;
-                }
-
-                if (ticket.status === 'open') {
-                    headerActions += `<button id="progressTicketBtn" title="Marcar como Em Andamento"><i class="fas fa-play-circle"></i></button>`;
-                }
-                if (ticket.status !== 'closed') {
-                    headerActions += `<button id="closeTicketBtn" title="Fechar Ticket"><i class="fas fa-check-circle"></i></button>`;
-                } else {
-                    headerActions += `<button id="reopenTicketBtn" title="Reabrir Ticket"><i class="fas fa-undo"></i></button>`;
-                }
-                headerActions += `<button id="exportTicketBtn" title="Exportar"><i class="fas fa-file-export"></i></button>`;
-
-                ticketDetailPanel.innerHTML = `
-                    <div class="chat-header">
-                        <button class="mobile-menu-btn" id="menuToggleDynamic"><i class="fas fa-bars"></i></button>
-                        <div class="chat-info">
-                            <h4>${ticket.title}</h4>
-                            <div class="chat-meta">
-                                <span>Ticket: #${ticket.ticket_number}</span>
-                                <span>Status: <span class="ticket-status status-${ticket.status}">${statusMap[ticket.status] || ticket.status}</span></span>
-                            </div>
-                        </div>
-                        <div class="chat-actions">
-                            ${headerActions}
-                        </div>
+                        <button id="assignTicketBtn" class="btn-primary" title="Atribuir Ticket"><i class="fas fa-user-plus"></i></button>
                     </div>
-
-                    <div id="message-list" class="messages-container">
-                        ${messagesHtml}
-                    </div>
-
-                    ${ticket.status !== 'closed' ? `
-                    <div class="message-input-container">
-                        <form id="newMessageForm" class="message-input-wrapper" style="width:100%">
-                            <input id="newMessageText" type="hidden" name="content">
-                            <div style="flex: 1; background: var(--background-dark); border-radius: 12px; overflow: hidden;">
-                                <trix-editor input="newMessageText" class="message-input" placeholder="Digite sua mensagem..." style="border:none; min-height: 48px;"></trix-editor>
-                            </div>
-                            <button type="submit" class="send-btn"><i class="fas fa-paper-plane"></i></button>
-                        </form>
-                    </div>
-                    ` : ''}
-                `;
-
-                // Re-bind do menu toggle para mobile
-                document.getElementById('menuToggleDynamic')?.addEventListener('click', () => {
-                    document.querySelector('.sidebar').classList.toggle('active');
-                });
-
-            } else {
-                // Layout Antigo (Admin) - Mantido igual
-                let actionsHtml = `<div class="ticket-actions">`;
-            
-                // Grupo de atribuição à esquerda
-                let assignmentHtml = '';
-                if (['master', 'gestao'].includes(window.currentUserProfile.role)) {
-                    assignmentHtml = `
-                        <div class="input-group">
-                            <label for="assignUserSelect">Atribuir a:</label>
-                            <select id="assignUserSelect">
-                                <option value="">Ninguém</option>
-                                ${allUsers.map(u => `<option value="${u.id}" ${ticket.assigned_to_email === u.email ? 'selected' : ''}>${u.email}</option>`).join('')}
-                            </select>
-                            <button id="assignTicketBtn" class="btn-primary" title="Atribuir Ticket"><i class="fas fa-user-plus"></i></button>
-                        </div>
-                    `;
-                }
-                actionsHtml += assignmentHtml;
-
-                // Grupo de botões de ação à direita
-                let actionButtonsHtml = '<div class="ticket-action-buttons">';
-                if (ticket.status === 'open') {
-                    actionButtonsHtml += `<button id="progressTicketBtn" class="btn-secondary" title="Marcar como Em Andamento"><i class="fas fa-play-circle"></i></button>`;
-                }
-                if (ticket.status !== 'closed') {
-                    actionButtonsHtml += `<button id="closeTicketBtn" class="btn-delete" title="Fechar Ticket"><i class="fas fa-check-circle"></i></button>`;
-                } else {
-                    actionButtonsHtml += `<button id="reopenTicketBtn" class="btn-secondary" title="Reabrir Ticket"><i class="fas fa-undo"></i></button>`;
-                }
-                actionButtonsHtml += `<button id="exportTicketBtn" class="btn-secondary" title="Exportar Conversa"><i class="fas fa-file-export"></i></button>`;
-                actionButtonsHtml += '</div>';
-
-                actionsHtml += actionButtonsHtml;
-                actionsHtml += '</div>';
-
-                ticketDetailPanel.innerHTML = `
-                    <div class="panel-header">
-                        <h3 title="${ticket.title}">${ticket.title}</h3>
-                        <span class="ticket-status status-${ticket.status}">${statusMap[ticket.status] || ticket.status}</span>
-                    </div>
-                    <div class="ticket-details-meta">
-                        <span>Ticket: #${ticket.ticket_number}</span>
-                        <span>Criado por: ${ticket.created_by_email}</span>
-                        <span>Atribuído a: ${ticket.assigned_to_email || 'Ninguém'}</span>
-                    </div>
-                    <div class="ticket-conversation-panel">
-                        <div id="message-list" class="message-list">${messagesHtml}</div>
-                        ${ticket.status !== 'closed' ? `
-                        <form id="newMessageForm" class="new-message-form">
-                            <input id="newMessageText" type="hidden" name="content">
-                            <trix-editor input="newMessageText" data-ticket-id="${ticket.id}"></trix-editor>
-                            <button type="submit">Enviar Mensagem</button>
-                        </form>
-                        ` : ''}
-                    </div>
-                    ${actionsHtml}
                 `;
             }
+            actionsHtml += assignmentHtml;
+
+            // Grupo de botões de ação à direita
+            let actionButtonsHtml = '<div class="ticket-action-buttons">';
+            if (ticket.status === 'open') {
+                actionButtonsHtml += `<button id="progressTicketBtn" class="btn-secondary" title="Marcar como Em Andamento"><i class="fas fa-play-circle"></i></button>`;
+            }
+            if (ticket.status !== 'closed') {
+                actionButtonsHtml += `<button id="closeTicketBtn" class="btn-delete" title="Fechar Ticket"><i class="fas fa-check-circle"></i></button>`;
+            } else {
+                 actionButtonsHtml += `<button id="reopenTicketBtn" class="btn-secondary" title="Reabrir Ticket"><i class="fas fa-undo"></i></button>`;
+            }
+            actionButtonsHtml += `<button id="exportTicketBtn" class="btn-secondary" title="Exportar Conversa"><i class="fas fa-file-export"></i></button>`;
+            actionButtonsHtml += '</div>';
+
+            actionsHtml += actionButtonsHtml;
+            actionsHtml += '</div>';
+
+            ticketDetailPanel.innerHTML = `
+                <div class="panel-header">
+                    <h3 title="${ticket.title}">${ticket.title}</h3>
+                    <span class="ticket-status status-${ticket.status}">${statusMap[ticket.status] || ticket.status}</span>
+                </div>
+                <div class="ticket-details-meta">
+                    <span>Ticket: #${ticket.ticket_number}</span>
+                    <span>Criado por: ${ticket.created_by_email}</span>
+                    <span>Atribuído a: ${ticket.assigned_to_email || 'Ninguém'}</span>
+                </div>
+                <div class="ticket-conversation-panel">
+                    <div id="message-list" class="message-list">${messagesHtml}</div>
+                    ${ticket.status !== 'closed' ? `
+                    <form id="newMessageForm" class="new-message-form">
+                        <input id="newMessageText" type="hidden" name="content">
+                        <trix-editor input="newMessageText" data-ticket-id="${ticket.id}"></trix-editor>
+                        <button type="submit">Enviar Mensagem</button>
+                    </form>
+                    ` : ''}
+                </div>
+                ${actionsHtml}
+            `;
 
             // [NOVO] Rola automaticamente para a última mensagem
             const messageList = document.getElementById('message-list');

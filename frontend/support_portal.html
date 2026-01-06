@@ -6,10 +6,9 @@
     <title>Portal de Suporte - Rota Hotspot</title>
     
     <!-- Reutiliza os estilos existentes para manter a identidade visual -->
-    <link rel="stylesheet" href="css/admin_style.css">
+    <link rel="stylesheet" href="css/admin_style.css"> <!-- Base styles -->
     <link rel="stylesheet" href="css/notifications.css">
     <link rel="stylesheet" href="css/confirmation_modal.css">
-    <link rel="stylesheet" href="css/support.css">
     
     <!-- Trix Editor -->
     <link rel="stylesheet" type="text/css" href="https://unpkg.com/trix@2.0.0/dist/trix.css">
@@ -20,38 +19,525 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
     <style>
-        /* Ajustes específicos para o modo Portal Dedicado */
-        body { display: flex; flex-direction: column; height: 100vh; background-color: var(--background-dark); }
-        .portal-header { 
-            background-color: var(--background-medium); 
-            padding: 15px 30px; 
-            border-bottom: 1px solid var(--border-color);
-            display: flex; justify-content: space-between; align-items: center;
+        :root {
+            --sidebar-width: 320px;
+            --header-height: 60px;
+            --primary-color: #2563eb;
+            --primary-hover: #1d4ed8;
+            --bg-dark: #0f172a;
+            --bg-medium: #1e293b;
+            --bg-light: #334155;
+            --border-color: #475569;
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --msg-sent-bg: #1e40af; /* Azul escuro para enviadas */
+            --msg-received-bg: #334155; /* Cinza para recebidas */
         }
-        .portal-content { flex: 1; padding: 20px; overflow: hidden; }
-        .support-container { height: 100%; }
-        .user-profile-summary { display: flex; align-items: center; gap: 10px; color: var(--text-primary); }
-        .back-link { color: var(--text-secondary); text-decoration: none; font-size: 0.9rem; display: flex; align-items: center; gap: 5px; }
-        .back-link:hover { color: var(--primary-color); }
+
+        body { 
+            display: flex; 
+            flex-direction: column; 
+            height: 100vh; 
+            background-color: var(--bg-dark); 
+            margin: 0; 
+            overflow: hidden; 
+            font-family: 'Inter', sans-serif;
+        }
+
+        /* --- Header Principal --- */
+        .portal-header {
+            height: var(--header-height);
+            background-color: var(--bg-medium);
+            padding: 0 20px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center;
+            flex-shrink: 0;
+            z-index: 10;
+        }
+
+        .back-link { 
+            color: var(--text-secondary); 
+            text-decoration: none; 
+            font-size: 0.9rem; 
+            display: flex; 
+            align-items: center; 
+            gap: 8px; 
+            transition: color 0.2s;
+        }
+        .back-link:hover { color: var(--text-primary); }
+
+        .user-profile-summary { 
+            display: flex; 
+            align-items: center; 
+            gap: 15px; 
+            color: var(--text-primary); 
+            font-size: 0.9rem;
+        }
+
+        /* --- Layout Principal (Chat Style) --- */
+        .portal-content { 
+            flex: 1; 
+            display: flex; 
+            overflow: hidden; 
+            position: relative;
+        }
+
+        /* --- Sidebar (Lista de Tickets) --- */
+        .ticket-list-panel {
+            width: var(--sidebar-width);
+            background-color: var(--bg-medium);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+            transition: transform 0.3s ease;
+        }
+
+        .sidebar-header {
+            padding: 15px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .new-ticket-btn {
+            width: 100%;
+            padding: 10px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: background 0.2s;
+        }
+        .new-ticket-btn:hover { background-color: var(--primary-hover); }
+
+        .search-box {
+            position: relative;
+        }
+        .search-box input {
+            width: 100%;
+            padding: 8px 12px 8px 35px;
+            background-color: var(--bg-dark);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            color: var(--text-primary);
+            font-size: 0.9rem;
+        }
+        .search-box i {
+            position: absolute;
+            left: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-secondary);
+        }
+
+        .ticket-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px;
+        }
+
+        .ticket-item {
+            padding: 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.2s;
+            margin-bottom: 5px;
+            border: 1px solid transparent;
+        }
+        .ticket-item:hover { background-color: rgba(255,255,255,0.05); }
+        .ticket-item.active { 
+            background-color: rgba(37, 99, 235, 0.15); 
+            border-color: var(--primary-color);
+        }
+
+        .ticket-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+
+        .ticket-title {
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 5px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .ticket-meta {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            display: flex;
+            justify-content: space-between;
+        }
+
+        /* --- Área de Conversa (Main Chat) --- */
+        .ticket-detail-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background-color: var(--bg-dark);
+            min-width: 0; /* Previne overflow flex */
+        }
+
+        .chat-header {
+            padding: 10px 20px;
+            background-color: var(--bg-medium);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            height: 60px;
+        }
+
+        .chat-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            overflow: hidden;
+        }
+
+        .chat-info h4 {
+            margin: 0;
+            font-size: 1.1rem;
+            color: var(--text-primary);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .chat-meta {
+            display: flex;
+            gap: 10px;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .chat-actions {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        
+        .chat-actions button {
+            background: transparent;
+            border: 1px solid var(--border-color);
+            color: var(--text-secondary);
+            width: 36px;
+            height: 36px;
+            border-radius: 6px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+        
+        .chat-actions button:hover {
+            background-color: var(--bg-light);
+            color: var(--text-primary);
+        }
+
+        /* Lista de Mensagens */
+        .messages-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            background-image: radial-gradient(var(--bg-light) 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+
+        .message {
+            max-width: 75%;
+            display: flex;
+            flex-direction: column;
+        }
+        .message.sent { align-self: flex-end; }
+        .message.received { align-self: flex-start; }
+
+        .message-content {
+            padding: 12px 16px;
+            border-radius: 12px;
+            font-size: 0.95rem;
+            line-height: 1.5;
+            position: relative;
+            word-wrap: break-word;
+        }
+        .message.sent .message-content {
+            background-color: var(--msg-sent-bg);
+            color: white;
+            border-bottom-right-radius: 2px;
+        }
+        .message.received .message-content {
+            background-color: var(--msg-received-bg);
+            color: var(--text-primary);
+            border-bottom-left-radius: 2px;
+        }
+
+        .message-time {
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+            margin-top: 4px;
+            padding: 0 4px;
+        }
+        .message.sent .message-time { text-align: right; }
+
+        /* Área de Input (Trix) */
+        .message-input-container {
+            background-color: var(--bg-medium);
+            border-top: 1px solid var(--border-color);
+            padding: 15px 20px;
+        }
+        
+        .message-input-wrapper {
+            display: flex;
+            gap: 10px;
+            align-items: flex-end;
+        }
+
+        /* Customização do Trix para parecer um chat input */
+        trix-toolbar {
+            border-bottom: 1px solid var(--border-color);
+            padding: 5px 10px;
+        }
+        
+        trix-toolbar .trix-button-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+        }
+        
+        trix-toolbar .trix-button-group {
+            margin-bottom: 0;
+            border: none;
+        }
+        
+        trix-toolbar .trix-button {
+            width: 24px;
+            height: 24px;
+            border-radius: 4px;
+            background: transparent;
+            border: none;
+            filter: invert(0.7); /* Ícones cinza claro */
+            opacity: 0.7;
+            transition: all 0.2s;
+        }
+        
+        trix-toolbar .trix-button:hover, 
+        trix-toolbar .trix-button.trix-active {
+            background: rgba(255,255,255,0.1);
+            opacity: 1;
+            filter: invert(1); /* Ícones brancos */
+        }
+        
+        /* Oculta botões menos úteis para chat rápido */
+        .trix-button--icon-heading-1,
+        .trix-button--icon-quote,
+        .trix-button--icon-code,
+        .trix-button--icon-decrease-nesting-level,
+        .trix-button--icon-increase-nesting-level {
+            display: none !important;
+        }
+        
+        trix-editor {
+            background-color: var(--bg-dark);
+            border: none;
+            padding: 12px 15px;
+            min-height: 45px;
+            max-height: 150px;
+            overflow-y: auto;
+            color: var(--text-primary);
+            flex-grow: 1;
+        }
+        trix-editor:focus {
+            outline: none;
+        }
+
+        .send-btn {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 45px;
+            height: 45px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: background 0.2s;
+            flex-shrink: 0;
+        }
+        .send-btn:hover { background-color: var(--primary-hover); }
+
+        /* Placeholder quando nenhum ticket selecionado */
+        .ticket-placeholder {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: var(--text-secondary);
+            text-align: center;
+        }
+        .ticket-placeholder i { font-size: 3rem; margin-bottom: 15px; opacity: 0.5; }
+
+        /* Responsividade */
+        @media (max-width: 768px) {
+            .ticket-list-panel {
+                position: absolute;
+                left: 0;
+                top: 0;
+                height: 100%;
+                z-index: 20;
+                transform: translateX(-100%);
+            }
+            .ticket-list-panel.active { transform: translateX(0); }
+            .mobile-menu-btn { display: block; margin-right: 10px; }
+        }
+        .mobile-menu-btn { display: none; background: none; border: none; color: white; font-size: 1.2rem; cursor: pointer; }
+        
+        .logout-btn-icon {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+        }
+        .logout-btn-icon:hover { color: #ef4444; }
+
+        /* [NOVO] Estilo para o select de atribuição */
+        .assign-select {
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+            background-repeat: no-repeat;
+            background-position: right 0.5rem center;
+            background-size: 1em;
+            background-color: var(--bg-light);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            border-radius: 6px;
+            padding: 6px 25px 6px 10px;
+            font-size: 13px;
+            min-width: 160px;
+            transition: all 0.2s;
+        }
+        .assign-select:hover {
+            border-color: var(--primary-color);
+        }
+
+        /* [NOVO] Estilos para a nova paginação */
+        .pagination-container {
+            padding: 10px;
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .pagination-arrow-btn {
+            background: none;
+            border: none;
+            color: var(--text-primary);
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .pagination-arrow-btn:hover {
+            color: var(--primary-color);
+        }
+
+        .pagination-arrow-btn.disabled {
+            color: var(--border-color); /* Cinza */
+            cursor: not-allowed;
+            font-weight: normal;
+        }
     </style>
 </head>
 <body>
 
     <header class="portal-header">
         <div style="display: flex; align-items: center; gap: 20px;">
+            <button id="mobileMenuBtn" class="mobile-menu-btn"><i class="fas fa-bars"></i></button>
             <a href="admin_dashboard.html" class="back-link"><i class="fas fa-arrow-left"></i> Voltar ao Admin</a>
-            <h2 style="margin: 0; color: var(--text-primary);">Central de Atendimento</h2>
+            <h2 style="margin: 0; color: var(--text-primary); font-size: 1.2rem;">Central de Atendimento</h2>
         </div>
         <div class="user-profile-summary">
             <span id="portalUserName">Carregando...</span>
-            <button id="logoutBtn" class="btn-secondary btn-sm"><i class="fas fa-sign-out-alt"></i></button>
+            <button id="logoutBtn" class="logout-btn-icon" title="Sair">
+                <i class="fas fa-sign-out-alt"></i>
+            </button>
         </div>
     </header>
 
     <main class="portal-content">
-        <!-- O container de suporte será injetado aqui pelo JS -->
-        <div id="support-page-container" style="height: 100%;"></div>
+        <!-- Sidebar: Lista de Tickets -->
+        <div id="ticket-list-panel" class="ticket-list-panel">
+            <div class="sidebar-header">
+                <button id="newTicketBtn" class="new-ticket-btn">
+                    <i class="fas fa-plus"></i> Novo Ticket
+                </button>
+                <div class="search-box">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="ticketSearch" placeholder="Pesquisar tickets...">
+                </div>
+                <div style="display: flex; gap: 5px;">
+                    <select id="statusFilter" style="width: 100%; padding: 8px; border-radius: 6px; background: var(--bg-dark); color: white; border: 1px solid var(--border-color);">
+                        <option value="">Todos os Status</option>
+                        <option value="open">Abertos</option>
+                        <option value="closed">Fechados</option>
+                    </select>
+                </div>
+            </div>
+            <div id="ticket-list" class="ticket-list">
+                <!-- Lista injetada via JS -->
+                <div style="text-align: center; padding: 20px; color: #94a3b8;">A carregar...</div>
+            </div>
+            <div id="pagination-container" class="pagination-container"></div>
+        </div>
+
+        <!-- Área Principal: Detalhes e Chat -->
+        <div id="ticket-detail-panel" class="ticket-detail-panel">
+            <!-- Placeholder inicial -->
+            <div class="ticket-placeholder">
+                <i class="fas fa-comments"></i>
+                <h3>Selecione um ticket para iniciar a conversa</h3>
+                <p>Ou crie um novo ticket para solicitar suporte.</p>
+            </div>
+            <!-- O conteúdo do chat será injetado aqui pelo support.js -->
+        </div>
     </main>
+
+    <!-- Modal para Novo Ticket (Mantido oculto) -->
+    <div id="newTicketModal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <h3>Criar Novo Ticket</h3>
+            <form id="newTicketForm">
+                <div class="input-group"><label>Título</label><input type="text" id="ticketTitle" required></div>
+                <div class="input-group"><label>Mensagem</label><input id="ticketMessage" type="hidden" name="content"><trix-editor input="ticketMessage"></trix-editor></div>
+                <div class="modal-actions"><button type="button" id="cancelNewTicketBtn" class="btn-secondary">Cancelar</button><button type="submit" class="btn-primary">Criar</button></div>
+            </form>
+        </div>
+    </div>
 
     <div id="notification-container"></div>
 
@@ -60,5 +546,12 @@
     <script src="js/notifications.js"></script>
     <script src="js/trix_mentions.js"></script>
     <script src="js/support_portal.js"></script> <!-- Script dedicado -->
+    
+    <script>
+        // Script simples para toggle mobile
+        document.getElementById('mobileMenuBtn')?.addEventListener('click', () => {
+            document.getElementById('ticket-list-panel').classList.toggle('active');
+        });
+    </script>
 </body>
 </html>

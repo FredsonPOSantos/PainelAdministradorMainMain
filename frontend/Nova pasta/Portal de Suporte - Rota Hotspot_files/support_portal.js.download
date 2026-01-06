@@ -26,8 +26,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         return;
     }
 
-    // [NOVO] Flag para indicar que estamos no portal dedicado (muda o layout no support.js)
-    window.isSupportPortal = true;
+    // 3. Carregar o HTML da página de suporte original para dentro do container
+    // Isso permite reutilizar o layout definido em pages/support.html
+    const container = document.getElementById('support-page-container');
+    const htmlResponse = await fetch('/pages/support.html'); // [CORREÇÃO] Caminho absoluto
+    container.innerHTML = await htmlResponse.text();
 
     // 4. Carregar e executar a lógica do suporte
     // Carregamos dinamicamente o script original support.js para reutilizar toda a lógica

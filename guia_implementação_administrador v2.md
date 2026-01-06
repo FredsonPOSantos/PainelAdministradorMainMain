@@ -270,6 +270,65 @@ A lógica foi ajustada para que as atualizações em tempo real só iniciem **ap
 
 # Guia de Implementação: Gestão Avançada de Roteadores (Modal de Ferramentas)
 
+---
+
+# Guia de Implementação: Portal de Suporte Público (Não Autenticado)
+
+## Visão Geral
+Criar um portal de suporte acessível diretamente da página de login, permitindo que utilizadores sem conta (ou que não conseguem aceder) possam abrir um ticket de suporte. O objetivo é capturar informações de contato e o problema do utilizador para que a equipa de suporte possa dar seguimento.
+
+## Regras de Negócio
+1.  **Acesso Público:** A página de criação de ticket deve ser acessível sem autenticação.
+2.  **Coleta de Dados:** O formulário deve coletar informações essenciais para identificar e contatar o utilizador: Nome Completo, E-mail, Telefone, Setor e Localidade.
+3.  **Criação do Ticket:** Ao submeter o formulário, um novo ticket é criado no sistema.
+    *   Este ticket não terá um `created_by_user_id` associado (será `NULL`).
+    *   As informações do "convidado" (nome, e-mail, etc.) serão armazenadas diretamente na tabela de tickets ou na primeira mensagem.
+4.  **Feedback ao Utilizador:** Após a submissão, o utilizador deve ver uma mensagem de sucesso com o número do ticket (protocolo) para referência futura.
+5.  **Notificação:** A equipa de suporte (`master`, `gestao`) e o e-mail fornecido pelo utilizador devem receber uma notificação por e-mail sobre a abertura do novo ticket.
+
+## Interface Gráfica (GUI)
+
+### 1. Página de Login (`admin_login.html`)
+*   Adicionar um link ou botão discreto abaixo do formulário de login: "Precisa de Suporte? Abra um ticket aqui".
+
+### 2. Nova Página (`public_support.html`)
+*   **Layout:** Uma página simples, sem menus, com o logótipo da empresa e um formulário central.
+*   **Formulário "Abrir Chamado de Suporte":**
+    *   Nome Completo (obrigatório)
+    *   E-mail de Contato (obrigatório, para receber atualizações)
+    *   Telefone (opcional)
+    *   Setor (opcional)
+    *   Localidade (opcional)
+    *   Assunto (obrigatório, título do ticket)
+    *   Descrição do Problema (obrigatório, corpo da mensagem)
+*   **Ação:** Botão "Enviar Ticket".
+*   **Tela de Confirmação:** Após o envio, mostrar uma mensagem como: "Obrigado! O seu ticket foi aberto com o número **#XXXXXX**. Guarde este número para referência. Você receberá atualizações no e-mail fornecido."
+
+## Requisitos Técnicos para Implementação Futura
+
+1.  **Banco de Dados (Tabela `tickets`):**
+    *   Alterar a coluna `created_by_user_id` para permitir valores `NULL`.
+    *   Adicionar novas colunas para armazenar os dados do convidado:
+        *   `guest_name VARCHAR(255)`
+        *   `guest_email VARCHAR(255)`
+        *   `guest_phone VARCHAR(50)`
+        *   `guest_department VARCHAR(100)`
+        *   `guest_location VARCHAR(100)`
+
+2.  **Backend (API):**
+    *   Criar uma nova rota pública (sem `verifyToken`): `POST /api/public/tickets`.
+    *   **Lógica da Rota:**
+        1.  Validar os dados recebidos do formulário.
+        2.  Criar um novo registo na tabela `tickets`, preenchendo os campos `guest_*` e deixando `created_by_user_id` como `NULL`.
+        3.  Criar a primeira mensagem na tabela `ticket_messages`, também com `user_id` como `NULL`.
+        4.  Enviar e-mails de notificação para a equipa de suporte e para o `guest_email`.
+        5.  Retornar uma resposta de sucesso com o `ticket_number`.
+
+3.  **Frontend:**
+    *   Criar a página `public_support.html` e o seu script `js/public_support.js`.
+    *   O script `js/public_support.js` fará a chamada `fetch` para a nova rota pública da API.
+    *   Atualizar o `admin_login.html` com o link para a nova página.
+
 ## Visão Geral
 Melhorar a interface do dashboard individual do roteador (`router_dashboard`), agrupando funcionalidades de gestão e diagnóstico num modal organizado, acessível através de um ícone de configurações. Isto limpa a interface principal e prepara o terreno para funcionalidades futuras (alterar SSID, scripts, etc.).
 
