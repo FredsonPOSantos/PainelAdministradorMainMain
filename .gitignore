@@ -7,4 +7,4 @@ node_modules/
 # Logs e ficheiros de depuração
 npm-debug.log
 *.log
-backend\.env
+backend/.env
