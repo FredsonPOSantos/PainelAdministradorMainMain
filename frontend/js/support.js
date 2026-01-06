@@ -189,13 +189,26 @@ if (window.initSupportPage) {
                 const isCurrentUser = msg.user_email === window.currentUserProfile.email;
                 const aiClass = !msg.user_email ? 'ai-message' : '';
                 
+                // [NOVO] Lógica de Avatar
+                let avatarHtml = '';
+                if (msg.avatar_url) {
+                    avatarHtml = `<img src="http://${window.location.hostname}:3000${msg.avatar_url}" class="message-avatar" alt="Avatar">`;
+                } else if (!msg.user_email) {
+                    avatarHtml = `<div class="message-avatar ai-avatar"><i class="fas fa-robot"></i></div>`; // Avatar IA
+                } else {
+                    avatarHtml = `<div class="message-avatar default-avatar"><i class="fas fa-user"></i></div>`; // Avatar Padrão
+                }
+                
                 // [MODIFICADO] Estrutura de mensagem adaptada para o novo layout
                 if (window.isSupportPortal) {
                     messagesHtml += `
                     <div class="message ${isCurrentUser ? 'sent' : 'received'}">
-                        <div class="message-content">${msg.message}</div>
-                        <div class="message-time">
-                            ${msg.user_email || 'Assistente Virtual'} • ${new Date(msg.created_at).toLocaleString('pt-BR')}
+                        ${!isCurrentUser ? avatarHtml : ''}
+                        <div class="message-bubble-container">
+                            <div class="message-content">${msg.message}</div>
+                            <div class="message-time">
+                                ${msg.user_email || 'Assistente Virtual'} • ${new Date(msg.created_at).toLocaleString('pt-BR')}
+                            </div>
                         </div>
                     </div>
                     `;
@@ -274,7 +287,8 @@ if (window.initSupportPage) {
 
                 // Re-bind do menu toggle para mobile
                 document.getElementById('menuToggleDynamic')?.addEventListener('click', () => {
-                    document.querySelector('.sidebar').classList.toggle('active');
+                    // [CORREÇÃO] Usa o seletor correto para o painel de lista no portal dedicado
+                    document.querySelector('.ticket-list-panel').classList.toggle('active');
                 });
 
             } else {

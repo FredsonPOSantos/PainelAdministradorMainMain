@@ -238,7 +238,7 @@ const getTicketById = async (req, res) => {
         }
 
         const messagesResult = await pool.query(`
-            SELECT m.id, m.message, m.created_at, m.user_id, u.email AS user_email
+            SELECT m.id, m.message, m.created_at, m.user_id, u.email AS user_email, u.avatar_url
             FROM ticket_messages m
             LEFT JOIN admin_users u ON m.user_id = u.id
             WHERE m.ticket_id = $1

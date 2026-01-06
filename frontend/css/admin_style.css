@@ -55,9 +55,22 @@ body {
 
 
 /* Grupos de input */
-.input-group { margin-bottom: 20px; text-align: center; }
-.input-group label { display: block; font-size: 14px; font-weight: 600; margin-bottom: 8px; color: var(--label-color); }
-.input-group input, .input-group select, .input-group textarea { width: 100%; max-width: 300px; margin: 0 auto; padding: 8px 12px; background-color: var(--background-medium); border: 1px solid var(--border-color); color: var(--text-primary); border-radius: 8px; font-size: 16px; transition: border-color 0.2s, box-shadow 0.2s; font-family: 'Inter', sans-serif; }
+/* [MODIFICADO] Diminui o espaçamento entre os grupos de input */
+.input-group { margin-bottom: 15px; text-align: center; }
+.input-group label { 
+    display: block; 
+    font-size: 13px; /* [MODIFICADO] Fonte do label um pouco menor */
+    font-weight: 600; 
+    margin-bottom: 6px; /* [MODIFICADO] Espaço menor entre label e input */
+    color: var(--label-color); 
+}
+.input-group input, .input-group select, .input-group textarea { 
+    width: 100%; max-width: 320px; margin: 0 auto; /* [MODIFICADO] Aumenta um pouco a largura máxima para um visual mais moderno */
+    padding: 10px 14px; /* [MODIFICADO] Padding ajustado para um visual mais limpo */
+    background-color: var(--background-medium); border: 1px solid var(--border-color); color: var(--text-primary); border-radius: 6px; /* [MODIFICADO] Bordas menos arredondadas */
+    font-size: 14px; /* [MODIFICADO] Fonte menor para um look mais profissional */
+    transition: border-color 0.2s, box-shadow 0.2s; font-family: 'Inter', sans-serif; 
+}
 
 /* [CORREÇÃO] Garante contraste dos inputs dentro de modais em temas claros */
 .modal-content .input-group input,
@@ -78,8 +91,18 @@ body {
 }
 
 /* Botões */
-.btn { width: 100%; padding: 14px; background-color: var(--primary-color, #4299e1); color: #ffffff; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s, opacity 0.2s; }
-.btn:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2); }
+/* [MODIFICADO] Estilo de botão mais compacto e corporativo */
+.btn { 
+    width: 100%; 
+    max-width: 320px; /* [NOVO] Garante que o botão não fique maior que os inputs */
+    margin: 0 auto; /* [NOVO] Centraliza o botão se o container for maior */
+    padding: 12px; /* [MODIFICADO] Padding menor */
+    background-color: var(--primary-color, #4299e1); 
+    color: #ffffff; border: none; border-radius: 6px; /* [MODIFICADO] Bordas menos arredondadas */
+    font-size: 15px; /* [MODIFICADO] Fonte ligeiramente menor */
+    font-weight: 600; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s, opacity 0.2s; 
+}
+.btn:hover { transform: translateY(-1px); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2); } /* [MODIFICADO] Efeito de hover mais subtil */
 .btn:disabled { opacity: 0.7; cursor: not-allowed; transform: none; box-shadow: none; }
 
 /* Mensagens de feedback */
