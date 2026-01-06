@@ -247,6 +247,7 @@ if (window.initSupportPage) {
                             <div class="chat-meta">
                                 <span>Ticket: #${ticket.ticket_number}</span>
                                 <span>Status: <span class="ticket-status status-${ticket.status}">${statusMap[ticket.status] || ticket.status}</span></span>
+                                ${ticket.assigned_to_email ? `<span>Atribuído a: <strong>${ticket.assigned_to_email}</strong></span>` : ''}
                             </div>
                         </div>
                         <div class="chat-actions">
