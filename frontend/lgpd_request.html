@@ -3,49 +3,73 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Solicitação de Exclusão de Dados - Rota Hotspot</title>
-    <link rel="stylesheet" href="css/notifications.css">
+    <title>Solicitação LGPD - Rota Hotspot</title>
     <link rel="stylesheet" href="css/admin_login_style.css">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="css/notifications.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
-    <div class="form-container">
-        <div id="lgpdView">
-            <div id="requestView">
-                <div class="form-header">
-                    <h1>Solicitar Exclusão de Dados</h1>
-                    <p>Insira os seus dados para solicitar a remoção da sua conta do Rota Hotspot.</p>
-                </div>
-                <form id="lgpdRequestForm">
-                    <div class="input-group">
-                        <label for="fullName">Nome Completo</label>
-                        <input type="text" id="fullName" autocomplete="name" required placeholder="O seu nome completo">
-                    </div>
-                    <div class="input-group">
-                        <label for="userEmail">E-mail de Cadastro</label>
-                        <input type="email" id="userEmail" autocomplete="email" required placeholder="O e-mail que usou no hotspot">
-                    </div>
-                    <div class="input-group checkbox-group" style="margin-top: 15px; display: flex; align-items: flex-start; gap: 10px;">
-                        <input type="checkbox" id="termsCheckbox" required style="margin-top: 5px;">
-                        <label for="termsCheckbox" style="font-weight: normal; font-size: 0.9em;">Declaro que estou ciente de que a exclusão dos meus dados é permanente e resultará na perda de acesso ao serviço.</label>
-                    </div>
-                    <button type="submit" class="btn">Enviar Pedido</button>
-                </form>
-                <div class="form-footer" style="margin-top: 20px;">
-                    <a href="admin_login.html" class="footer-btn" style="background: none; text-align: center;">Voltar para o Login</a>
-                </div>
+    <div class="login-wrapper">
+        <!-- Lado Esquerdo: Showcase -->
+        <div class="login-showcase" id="loginShowcase">
+            <div class="showcase-content">
+                <h2>Privacidade e Transparência</h2>
+                <p>Exerça os seus direitos sobre os seus dados pessoais de forma simples e segura.</p>
             </div>
-            <div id="resultView" style="display: none; text-align: center;">
-                <h2>Pedido Enviado com Sucesso!</h2>
-                <p id="resultMessage"></p>
-                <a href="admin_login.html" class="btn" style="margin-top: 20px; text-decoration: none;">Voltar para o Login</a>
+        </div>
+
+        <!-- Lado Direito: Formulário -->
+        <div class="login-form-area">
+            <div class="form-container">
+                <div class="form-header">
+                    <div class="logo-container">
+                        <img id="loginLogo" src="" alt="Logótipo" style="display: none; max-height: 70px; width: auto;">
+                    </div>
+                    <h1>Solicitação LGPD</h1>
+                    <p>Preencha o formulário para solicitar a exclusão dos seus dados.</p>
+                </div>
+
+                <div id="requestView">
+                    <form id="lgpdRequestForm">
+                        <div class="input-group">
+                            <label for="fullName">Nome Completo</label>
+                            <input type="text" id="fullName" name="fullName" required>
+                        </div>
+                        <div class="input-group">
+                            <label for="userEmail">E-mail Cadastrado</label>
+                            <input type="email" id="userEmail" name="userEmail" required>
+                        </div>
+                        
+                        <div style="text-align: left; margin-bottom: 20px; font-size: 0.85rem; color: var(--text-secondary);">
+                            <label style="display: flex; align-items: flex-start; gap: 10px; cursor: pointer; font-weight: normal;">
+                                <input type="checkbox" id="termsCheckbox" style="margin-top: 3px; width: auto;">
+                                <span>Declaro que sou o titular dos dados e compreendo que a exclusão é irreversível.</span>
+                            </label>
+                        </div>
+
+                        <button type="submit" class="btn">Enviar Pedido</button>
+                    </form>
+                </div>
+
+                <div id="resultView" style="display: none; text-align: center;">
+                    <div style="font-size: 3rem; color: #10b981; margin-bottom: 15px;">
+                        <i class="fas fa-check-circle"></i>
+                    </div>
+                    <h3 style="margin-bottom: 10px; color: var(--text-primary);">Pedido Recebido!</h3>
+                    <p id="resultMessage" style="color: var(--text-secondary); margin-bottom: 20px; font-size: 0.95rem;"></p>
+                    <a href="admin_login.html" class="btn">Voltar ao Início</a>
+                </div>
+
+                <div class="form-footer" style="justify-content: center;">
+                    <a href="admin_login.html" class="footer-btn">Voltar ao Login</a>
+                </div>
             </div>
         </div>
     </div>
+
     <div id="notification-container"></div>
-    <script src="js/notifications.js" defer></script>
-    <script src="js/lgpd_request.js" defer></script>
+    <script src="js/notifications.js"></script>
+    <script src="js/lgpd_request.js"></script>
 </body>
 </html>

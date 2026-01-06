@@ -3,76 +3,53 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Login - Rota Hotspot</title>
+    <title>Login - Rota Hotspot Admin</title>
     <link rel="stylesheet" href="css/admin_login_style.css">
     <link rel="stylesheet" href="css/notifications.css">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <style id="dynamic-styles">
-        body {
-            background-image: none;
-            background-size: cover;
-            background-position: center;
-            background-repeat: no-repeat;
-        }
-        /* [NOVO] Estilos para os botões do rodapé */
-        .form-footer {
-            display: flex;
-            flex-direction: column;
-            gap: 10px; /* Espaço entre os botões */
-            margin-top: 25px;
-        }
-        .footer-btn {
-            display: block;
-            width: 100%;
-            padding: 10px;
-            text-align: center;
-            text-decoration: none;
-            border-radius: 6px;
-            background-color: var(--background-light, #f0f2f5); /* Cor de fundo sutil */
-            color: var(--text-secondary, #555);
-            font-weight: 500;
-            transition: background-color 0.2s;
-        }
-    </style>
 </head>
 <body>
-    <div class="form-container">
-        
-        <div id="loginView">
-            <div class="form-header">
-                <div class="logo-container">
-                    <img id="loginLogo" src="#" alt="Logo" style="display: none; max-height: 70px;">
-                </div>
-                <h1 id="companyNameLogin">Painel de Administração</h1>
-                <p>Faça login para gerir o Rota Hotspot.</p>
+    <div class="login-wrapper">
+        <!-- Lado Esquerdo: Showcase para imagem de campanha -->
+        <div class="login-showcase" id="loginShowcase">
+            <div class="showcase-content">
+                <h2>Conectando Pessoas, Movendo o Futuro.</h2>
+                <p>Gestão completa e inteligente para sua frota e hotspots Wi-Fi.</p>
             </div>
-
-            <form id="adminLoginForm">
-                <div class="input-group">
-                    <label for="email">Seu E-mail</label>
-                    <input type="email" id="email" name="email" placeholder="seuemail@exemplo.com" autocomplete="username" required>
-                </div>
-                <div class="input-group">
-                    <label for="senha">Sua Senha</label>
-                    <input type="password" id="senha" name="senha" placeholder="A sua senha" autocomplete="current-password" required>
-                </div>
-                <button type="submit" class="btn">Entrar</button>
-            </form>
-            
-            <div class="form-footer">
-                <a href="admin_forgot_password.html" class="footer-btn">Esqueceu a sua senha?</a>
-                <a href="lgpd_request.html" class="footer-btn">Solicitar Exclusão de Dados</a>
-                <a href="support_request.html" class="footer-btn">Precisa de Suporte?</a>
-            </div>
-            
-
         </div>
 
+        <!-- Lado Direito: Formulário de Login -->
+        <div class="login-form-area">
+            <div class="form-container">
+                <div class="form-header">
+                    <div class="logo-container">
+                        <img id="loginLogo" src="" alt="Logótipo" style="display: none; max-height: 70px; width: auto;">
+                    </div>
+                    <h1 id="companyNameLogin">Acesso ao Painel</h1>
+                    <p>Bem-vindo! Por favor, insira suas credenciais.</p>
+                </div>
+                <form id="adminLoginForm">
+                    <div class="input-group">
+                        <label for="email">Email</label>
+                        <input type="email" id="email" name="email" required autocomplete="username">
+                    </div>
+                    <div class="input-group">
+                        <label for="senha">Senha</label>
+                        <input type="password" id="senha" name="senha" required autocomplete="current-password">
+                    </div>
+                    <button type="submit" class="btn">Entrar</button>
+                </form>
+                <div class="form-footer">
+                    <a href="admin_forgot_password.html" class="footer-btn">Esqueceu a senha?</a>
+                    <div class="form-footer-links">
+                        <a href="lgpd_request.html" class="footer-btn">Dados LGPD</a>
+                        <a href="support_request.html" class="footer-btn">Suporte</a>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
-    <!-- [NOVO] Contêiner e script para as notificações -->
     <div id="notification-container"></div>
     <script src="js/notifications.js" defer></script>
     <script src="js/admin_login.js" defer></script>

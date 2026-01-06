@@ -1,4 +1,4 @@
-/* Estilos para a página de login */
+/* [NOVO] Estilos para a página de login com layout dividido */
 
 *,
 *::before,
@@ -7,49 +7,88 @@
 }
 
 :root {
-    --primary-color: #4299e1; /* Azul padrão */
-    --primary-color-dark: #3182ce; /* Azul escuro padrão */
-    --background-dark: #1a202c;
-    --background-medium: #2d3748;
-    --background-light: #4a5568;
-    --text-primary: #edf2f7;
-    --text-secondary: #a0aec0;
-    --text-tertiary: #cbd5e0;
-    --border-color: #4a5568;
-    --success-bg: rgba(47, 133, 90, 0.3);
-    --success-text: #c6f6d5;
-    --success-border: #2f855a;
-    --error-bg: rgba(155, 44, 44, 0.3);
-    --error-text: #fed7d7;
-    --error-border: #9b2c2c;
-    --warning-bg: rgba(221, 107, 32, 0.3);
-    --warning-text: #febb97;
-    --warning-border: #dd6b20;
+    /* As variáveis de cor são herdadas do admin_style.css, mas podemos definir fallbacks */
+    --primary-color: #2563eb;
+    --background-dark: #111827;
+    --background-medium: #1f2937;
+    --text-primary: #f9fafb;
+    --text-secondary: #9ca3af;
+    --border-color: #374151;
     --font-family: 'Inter', sans-serif;
-    --font-size: 16px;
 }
 
 body {
     font-family: var(--font-family, 'Inter', sans-serif);
     background-color: var(--background-dark);
     color: var(--text-primary);
-    line-height: 1.5;
-    font-size: var(--font-size, 16px);
-    display: flex; 
-    justify-content: center; 
-    align-items: center; 
-    min-height: 100vh;
+    margin: 0;
+    overflow: hidden; /* Evita barras de rolagem na página principal */
+}
+
+.login-wrapper {
+    display: flex;
+    width: 100vw;
+    height: 100vh;
+}
+
+/* Lado Esquerdo - Showcase */
+.login-showcase {
+    flex: 1;
+    background-color: #111827; /* Cor de fundo padrão */
+    background-size: cover;
+    background-position: center;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end; /* Alinha o conteúdo na base */
+    padding: 40px;
+    position: relative;
+    color: white;
+}
+
+.login-showcase::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(to top, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0) 50%); /* Gradiente para legibilidade */
+    z-index: 1;
+}
+
+.showcase-content {
+    position: relative;
+    z-index: 2;
+}
+
+.showcase-content h2 {
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin-bottom: 10px;
+    text-shadow: 2px 2px 8px rgba(0,0,0,0.5);
+}
+
+.showcase-content p {
+    font-size: 1.1rem;
+    color: rgba(255, 255, 255, 0.8);
+    max-width: 500px;
+}
+
+/* Lado Direito - Área do Formulário */
+.login-form-area {
+    width: 480px; /* Largura fixa para a área do formulário */
+    flex-shrink: 0;
+    background-color: var(--background-medium);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 40px;
 }
 
 .form-container { 
-    background-color: var(--background-medium); 
-    padding: 40px; 
-    border-radius: 12px; 
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25); 
     width: 100%; 
-    max-width: 400px; 
+    max-width: 380px; 
     text-align: center; 
-    border: 1px solid var(--border-color); 
 }
 
 .form-header { 
@@ -60,41 +99,94 @@ body {
 }
 
 .logo-container {
-    margin-bottom: 15px;
+    margin-bottom: 20px;
+    max-height: 70px;
 }
 
 .form-header h1 { 
-    font-size: 24px; 
+    font-size: 1.75rem; 
     margin-bottom: 8px; 
     color: var(--text-primary); 
 }
 
 .form-header p { 
-    font-size: 16px; 
+    font-size: 1rem; 
     color: var(--text-secondary); 
 }
 
 /* Grupos de input */
 .input-group { margin-bottom: 20px; text-align: left; }
-.input-group label { display: block; font-size: 14px; font-weight: 500; margin-bottom: 8px; color: var(--text-tertiary); }
+.input-group label { display: block; font-size: 0.875rem; font-weight: 500; margin-bottom: 8px; color: var(--text-secondary); }
 .input-group input, .input-group select, .input-group textarea { 
-    width: 100%; padding: 12px 16px; background-color: var(--background-dark); border: 1px solid var(--border-color); color: var(--text-primary); border-radius: 8px; font-size: 16px; transition: border-color 0.2s, box-shadow 0.2s; font-family: 'Inter', sans-serif; 
+    width: 100%; 
+    padding: 12px 16px; 
+    background-color: var(--background-dark); 
+    border: 1px solid var(--border-color); 
+    color: var(--text-primary); 
+    border-radius: 8px; 
+    font-size: 1rem; 
+    transition: border-color 0.2s, box-shadow 0.2s; 
+    font-family: 'Inter', sans-serif; 
 }
-/* [CORRIGIDO] Aplica o cursor 'not-allowed' apenas ao input, não ao grupo todo */
-.input-group input:read-only, .input-group textarea:read-only { 
-    background-color: var(--background-light); color: var(--text-secondary); cursor: not-allowed; 
+
+.input-group input:focus, .input-group select:focus, .input-group textarea:focus { 
+    outline: none; 
+    border-color: var(--primary-color); 
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.3); 
 }
-.input-group input:read-only:focus, .input-group textarea:read-only:focus { box-shadow: none; border-color: var(--border-color); }
-.input-group input:focus, .input-group select:focus, .input-group textarea:focus { outline: none; border-color: var(--primary-color, #4299e1); box-shadow: 0 0 0 2px rgba(66, 153, 225, 0.4); }
 
 /* Botões */
-.btn { width: 100%; padding: 14px; background-color: var(--primary-color, #4299e1); color: #ffffff; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s, opacity 0.2s; }
-.btn:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2); }
+.btn { 
+    width: 100%; 
+    padding: 12px; 
+    background-color: var(--primary-color); 
+    color: #ffffff; 
+    border: none; 
+    border-radius: 8px; 
+    font-size: 1rem; 
+    font-weight: 600; 
+    cursor: pointer; 
+    transition: all 0.2s; 
+}
+.btn:hover { 
+    transform: translateY(-2px); 
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3); 
+}
 .btn:disabled { opacity: 0.7; cursor: not-allowed; transform: none; box-shadow: none; }
 
-/* Mensagens de feedback */
-.message-container { margin-top: 20px; }
-.form-message { display: none !important; }
-.form-message.error { display: none !important; }
-.form-message.success { display: none !important; }
-.form-message.warning { display: none !important; }
+/* Rodapé do formulário */
+.form-footer {
+    margin-top: 25px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.875rem;
+    flex-wrap: wrap;
+    gap: 15px;
+}
+
+.form-footer-links {
+    display: flex;
+    gap: 20px;
+}
+
+.footer-btn {
+    color: var(--text-secondary);
+    text-decoration: none;
+    transition: color 0.2s;
+    padding: 10px ;
+}
+
+.footer-btn:hover {
+    color: var(--primary-color);
+}
+
+/* Responsividade */
+@media (max-width: 900px) {
+    .login-showcase {
+        display: none; /* Esconde a imagem em telas pequenas */
+    }
+    .login-form-area {
+        width: 100%; /* Ocupa a tela toda */
+    }
+}
