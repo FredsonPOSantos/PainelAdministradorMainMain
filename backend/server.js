@@ -36,6 +36,7 @@ const dashboardAnalyticsRoutes = require('./routes/AnalyticsRoutes');
 const monitoringRoutes = require('./routes/monitoring'); // <-- 1. IMPORTE A NOVA ROTA
 const profileRoutes = require('./routes/profileRoutes'); // [NOVO]
 const roleRoutes = require('./routes/roleRoutes');       // [NOVO]
+const publicTicketRoutes = require('./routes/publicTicketRoutes'); // [NOVO]
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -71,6 +72,10 @@ app.use('/uploads', express.static(path.join(__dirname, 'public/uploads')));
 app.use(express.static(path.join(__dirname, '../public')));
 app.use('/uploads', express.static(path.join(__dirname, '../public/uploads')));
 
+// [CORREÇÃO] Serve a pasta 'frontend' como raiz para ficheiros HTML como support_request.html
+// Isso permite acessar http://localhost:3000/support_request.html diretamente
+app.use(express.static(path.join(__dirname, '../frontend')));
+
 // [NOVO] Serve ficheiros estáticos da pasta 'Rede'
 // Torna a pasta 'Rede' acessível via URL
 // Ex: http://localhost:3000/Rede/pages/router_analytics.html
@@ -94,6 +99,7 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/raffles', raffleRoutes);
 app.use('/api/dashboard', dashboardRoutes); // [NOVO] Regista a rota do dashboard
 app.use('/api/public', publicRoutes);     // [NOVO] Regista as rotas públicas
+app.use('/api/public/tickets', publicTicketRoutes); // [NOVO] Rota para tickets públicos
 // [NOVO] Monta as novas rotas sob o prefixo /api/dashboard/analytics
 app.use('/api/dashboard/analytics', dashboardAnalyticsRoutes);
 app.use('/api/monitoring', monitoringRoutes); // <-- 2. USE A NOVA ROTA
@@ -174,13 +180,30 @@ const startPeriodicRouterCheck = () => {
                 console.log('⏹️ [ROUTER-CHECK] Nenhum roteador com IP configurado para verificar. Ciclo concluído.');
             } else {
                 for (const router of routersToCheck) {
-                    const pingResult = await ping.promise.probe(router.ip_address);
-                    const newStatus = pingResult.alive ? 'online' : 'offline';
+                    // [MODIFICADO] Realiza 3 pings para calcular a média
+                    let totalLatency = 0;
+                    let successCount = 0;
+                    
+                    for (let i = 0; i < 3; i++) {
+                        try {
+                            const res = await ping.promise.probe(router.ip_address, { timeout: 2 });
+                            if (res.alive) {
+                                totalLatency += (typeof res.time === 'number' ? res.time : parseFloat(res.avg));
+                                successCount++;
+                            }
+                        } catch (e) {}
+                    }
+
+                    const newStatus = successCount > 0 ? 'online' : 'offline';
+                    const latency = successCount > 0 ? Math.round(totalLatency / successCount) : null;
                     
                     await client.query(
-                        'UPDATE routers SET status = $1, last_seen = NOW() WHERE id = $2',
-                        [newStatus, router.id]
+                        'UPDATE routers SET status = $1, latency = $2, last_seen = NOW() WHERE id = $3',
+                        [newStatus, latency, router.id]
                     );
+                    if (latency !== null) {
+                        // console.log(`[ROUTER-CHECK] Atualizado ${router.ip_address}: Status=${newStatus}, Latency=${latency}ms`);
+                    }
                 }
                 console.log(`⏹️ [ROUTER-CHECK] Ciclo de verificação concluído. ${routersToCheck.length} roteador(es) verificado(s).`);
             }

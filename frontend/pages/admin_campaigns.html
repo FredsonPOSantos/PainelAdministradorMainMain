@@ -23,9 +23,11 @@
 
 <!-- Modal para Adicionar/Editar Campanha -->
 <div id="campaignModal" class="modal-overlay hidden">
-    <div class="modal-content">
-        <button class="modal-close-btn">&times;</button>
-        <h3 id="modalTitle">Adicionar Nova Campanha</h3>
+    <div class="modal-content large">
+        <div class="modal-header">
+            <h3 id="modalTitle" style="margin: 0;">Adicionar Nova Campanha</h3>
+            <button class="modal-close-btn">&times;</button>
+        </div>
         <form id="campaignForm">
             <input type="hidden" id="campaignId">
             <div class="input-group">
@@ -65,8 +67,8 @@
                 <input type="checkbox" id="campaignIsActive" checked>
                 <label for="campaignIsActive">Campanha Ativa</label>
             </div>
-            <div class="modal-actions">
-                <button type="button" id="cancelBtn" class="btn-secondary">Cancelar</button>
+            <div class="modal-actions" style="margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--border-color);">
+                <button type="button" id="cancelBtn" class="btn-secondary modal-close-btn-action">Cancelar</button>
                 <button type="submit" class="btn-primary">Guardar</button>
             </div>
         </form>

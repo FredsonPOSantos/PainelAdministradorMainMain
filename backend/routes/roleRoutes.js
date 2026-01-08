@@ -5,18 +5,10 @@ const roleController = require('../controllers/roleController');
 const verifyToken = require('../middlewares/authMiddleware');
 const checkPermission = require('../middlewares/roleMiddleware');
 
-router.use(verifyToken);
-
-// Listar roles (Acessível a quem pode ver utilizadores ou permissões)
-router.get('/', roleController.getRoles);
-
-// Criar role (Apenas Master ou quem tem permissão específica - por enquanto Master)
-router.post('/', [checkPermission('permissions.update')], roleController.createRole);
-
-// [NOVO] Atualizar role
-router.put('/:slug', [checkPermission('permissions.update')], roleController.updateRole);
-
-// [NOVO] Eliminar role
-router.delete('/:slug', [checkPermission('permissions.update')], roleController.deleteRole);
+// Rotas protegidas
+router.get('/', verifyToken, checkPermission('permissions.read'), roleController.getRoles);
+router.post('/', verifyToken, checkPermission('permissions.update'), roleController.createRole);
+router.put('/:slug', verifyToken, checkPermission('permissions.update'), roleController.updateRole);
+router.delete('/:slug', verifyToken, checkPermission('permissions.update'), roleController.deleteRole);
 
 module.exports = router;

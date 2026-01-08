@@ -165,6 +165,7 @@ body {
 .router-card.online { border-left: 5px solid #10b981; }
 .router-card.offline { border-left: 5px solid #ef4444; }
 .router-card.warning { border-left: 5px solid #f59e0b; }
+.router-card.critical { border-left: 5px solid #ea580c; }
 
 .router-header {
     display: flex;
@@ -208,6 +209,7 @@ body {
 .status-badge.online { background-color: #10B981; color: white; }
 .status-badge.offline { background-color: #EF4444; color: white; }
 .status-badge.warning { background-color: #F59E0B; color: #111827; }
+.status-badge.critical { background-color: #ea580c; color: white; }
 
 .traffic-chart-container {
     margin-top: 15px;
@@ -226,6 +228,7 @@ body {
 .ping-indicator.online { background: #10b981; box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
 .ping-indicator.offline { background: #ef4444; animation: none; }
 .ping-indicator.warning { background: #f59e0b; animation: none; }
+.ping-indicator.critical { background: #ea580c; animation: none; }
 
 @keyframes pulse {
     0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }

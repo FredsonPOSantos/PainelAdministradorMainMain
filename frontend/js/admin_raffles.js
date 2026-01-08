@@ -56,18 +56,22 @@ window.initRafflesPage = () => {
             consent: document.getElementById('filterConsent').checked
         };
 
+        window.showPagePreloader('A criar sorteio...'); // [NOVO] Inicia o loader
+
         try {
             const response = await apiRequest('/api/raffles', 'POST', { title, observation, filters });
             if (response.success) {
-                alert('Sorteio criado com sucesso!');
+                showNotification('Sorteio criado com sucesso!', 'success');
                 loadRaffles();
                 createRaffleForm.reset();
             } else {
-                alert('Erro ao criar sorteio: ' + response.message);
+                showNotification('Erro ao criar sorteio: ' + response.message, 'error');
             }
         } catch (error) {
             console.error('Erro ao criar sorteio:', error);
-            alert('Erro ao conectar com o servidor.');
+            showNotification('Erro ao conectar com o servidor.', 'error');
+        } finally {
+            window.hidePagePreloader(); // [NOVO] Remove o loader
         }
     });
 
@@ -78,11 +82,11 @@ window.initRafflesPage = () => {
             if (response.success && response.data) { // [CORRIGIDO] Verifica se 'data' existe
                 renderRaffles(response.data); // [CORRIGIDO] A API retorna o array em 'data'
             } else {
-                alert('Erro ao carregar sorteios: ' + response.message);
+                showNotification('Erro ao carregar sorteios: ' + response.message, 'error');
             }
         } catch (error) {
             console.error('Erro ao carregar sorteios:', error);
-            alert('Erro ao conectar com o servidor.');
+            showNotification('Erro ao conectar com o servidor.', 'error');
         } finally {
             window.hidePagePreloader();
         }
@@ -136,30 +140,53 @@ window.initRafflesPage = () => {
                 closeModalBtn.onclick = () => modal.classList.add('hidden');
 
             } else {
-                alert('Erro ao carregar detalhes do sorteio: ' + response.message);
+                showNotification('Erro ao carregar detalhes do sorteio: ' + response.message, 'error');
             }
         } catch (error) {
             console.error('Erro ao carregar detalhes do sorteio:', error);
-            alert('Erro ao conectar com o servidor.');
+            showNotification('Erro ao conectar com o servidor.', 'error');
         }
     }
 
     async function drawRaffle(id) {
-        if (!confirm('Tem certeza que deseja realizar este sorteio? Esta ação não pode ser desfeita.')) {
+        const confirmed = await showConfirmationModal(
+            'Tem certeza que deseja realizar este sorteio? Esta ação não pode ser desfeita e um vencedor será escolhido aleatoriamente.',
+            'Realizar Sorteio'
+        );
+
+        if (!confirmed) {
             return;
         }
 
         try {
             const response = await apiRequest(`/api/raffles/${id}/draw`, 'POST');
             if (response.success && response.data && response.data.winner) { // [CORRIGIDO] Verifica se 'data' e 'winner' existem
-                alert(`O vencedor é: ${response.data.winner.email}`); // [CORRIGIDO] A API retorna o objeto em 'data'
+                // [NOVO] Modal festivo para o vencedor
+                const winnerEmail = response.data.winner.email;
+                const modalHtml = `
+                    <div id="winnerModal" class="modal-overlay visible" style="z-index: 10000;">
+                        <div class="modal-content" style="text-align: center; max-width: 400px;">
+                            <div style="font-size: 4rem; margin-bottom: 10px;">🎉</div>
+                            <h2 style="color: var(--primary-color); margin-bottom: 10px;">Temos um Vencedor!</h2>
+                            <p style="font-size: 1.2rem; margin-bottom: 20px; color: var(--text-primary); font-weight: bold;">
+                                ${winnerEmail}
+                            </p>
+                            <p style="color: var(--text-secondary); font-size: 0.9rem;">O sorteio foi realizado com sucesso.</p>
+                            <div class="modal-actions" style="justify-content: center; margin-top: 20px;">
+                                <button class="btn-primary" onclick="document.getElementById('winnerModal').remove()">Fechar</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                document.body.insertAdjacentHTML('beforeend', modalHtml);
+                
                 loadRaffles(); // Recarregar a lista de sorteios
             } else {
-                alert('Erro ao realizar o sorteio: ' + response.message);
+                showNotification('Erro ao realizar o sorteio: ' + response.message, 'error');
             }
         } catch (error) {
             console.error('Erro ao realizar o sorteio:', error);
-            alert('Erro ao conectar com o servidor.');
+            showNotification('Erro ao conectar com o servidor.', 'error');
         }
     }
 
@@ -192,11 +219,11 @@ window.initRafflesPage = () => {
                 XLSX.writeFile(wb, `sorteio_${raffle.raffle_number}.xlsx`);
 
             } else {
-                alert('Erro ao exportar resultados: ' + response.message);
+                showNotification('Erro ao exportar resultados: ' + response.message, 'error');
             }
         } catch (error) {
             console.error('Erro ao exportar resultados:', error);
-            alert('Erro ao conectar com o servidor.');
+            showNotification('Erro ao conectar com o servidor.', 'error');
         }
     }
 
@@ -217,6 +244,8 @@ window.initRafflesPage = () => {
 };
 
 async function viewRaffle(id) {
+    window.showPagePreloader('A carregar detalhes...'); // [NOVO] Inicia o loader
+
     try {
         const response = await apiRequest(`/api/raffles/${id}`);
         if (response.success && response.data) { // [CORRIGIDO] Verifica se 'data' existe
@@ -251,6 +280,8 @@ async function viewRaffle(id) {
     } catch (error) {
         console.error('Erro ao carregar detalhes do sorteio:', error);
         alert('Erro ao conectar com o servidor.');
+    } finally {
+        window.hidePagePreloader(); // [NOVO] Remove o loader
     }
 }
 
@@ -258,6 +289,8 @@ async function drawRaffle(id) {
     if (!confirm('Tem certeza que deseja realizar este sorteio? Esta ação não pode ser desfeita.')) {
         return;
     }
+
+    window.showPagePreloader('A realizar sorteio...'); // [NOVO] Inicia o loader
 
     try {
         const response = await apiRequest(`/api/raffles/${id}/draw`, 'POST');
@@ -270,10 +303,15 @@ async function drawRaffle(id) {
     } catch (error) {
         console.error('Erro ao realizar o sorteio:', error);
         alert('Erro ao conectar com o servidor.');
+    } finally {
+        if (btn) btn.disabled = false; // Reativa o botão (embora a lista seja recarregada)
+        window.hidePagePreloader(); // [NOVO] Remove o loader
     }
 }
 
 async function exportRaffleResults(id) {
+    window.showPagePreloader('A exportar resultados...'); // [NOVO] Inicia o loader
+
     try {
         const response = await apiRequest(`/api/raffles/${id}`);
         if (response.success && response.data) { // [CORRIGIDO] Verifica se 'data' existe
@@ -307,5 +345,7 @@ async function exportRaffleResults(id) {
     } catch (error) {
         console.error('Erro ao exportar resultados:', error);
         alert('Erro ao conectar com o servidor.');
+    } finally {
+        window.hidePagePreloader(); // [NOVO] Remove o loader
     }
 }

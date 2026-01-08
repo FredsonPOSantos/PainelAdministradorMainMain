@@ -11,6 +11,18 @@
     <!-- [UNIFICADO] Adiciona a nova folha de estilos partilhada para as páginas de monitoramento. -->
     <link rel="stylesheet" href="/css/monitoring_styles.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* Estilo para status de aviso (latência alta) */
+        .status-badge.warning {
+            background-color: #f59e0b; /* Amarelo/Laranja */
+            color: #fff;
+        }
+        /* Estilo para status crítico (latência muito alta) */
+        .status-badge.critical {
+            background-color: #ea580c; /* Laranja Escuro/Vermelho */
+            color: #fff;
+        }
+    </style>
 </head>
 <body>
     <a href="/admin_dashboard.html" class="back-button">
@@ -57,6 +69,10 @@
 
         // [MODIFICADO] Carregar status dos roteadores com URL absoluta e autenticação
         async function loadRouterStatus() {
+             // [NOVO] Adiciona animação ao ícone de atualizar
+             const refreshIcon = document.querySelector('.refresh-button i');
+             if(refreshIcon) refreshIcon.classList.add('fa-spin');
+
              try {
                  // A URL da API deve ser absoluta para o servidor backend na porta 3000.
                  const API_URL = `http://${window.location.hostname}:3000`;
@@ -126,6 +142,10 @@
                      </div>
                  `;
              }
+             finally {
+                 // [NOVO] Remove animação
+                 if(refreshIcon) refreshIcon.classList.remove('fa-spin');
+             }
         }
 
         // [NOVO] Funções para controlar o modal de interfaces
@@ -186,10 +206,15 @@
             let statusText = 'Offline';
             let pingClass = 'offline';
             
-            if (router.status === 'online') {
-                if (router.latency !== null && router.latency > 150) { // Limite de latência para aviso
+            // [MODIFICADO] Usa a latência retornada para determinar o status visual, se disponível
+            if (router.status === 'online' || (router.latency !== null)) {
+                if (router.latency !== null && router.latency > 200) { // Limite crítico (> 200ms)
+                    statusClass = 'critical';
+                    statusText = 'Online (Lento)';
+                    pingClass = 'critical';
+                } else if (router.latency !== null && router.latency >= 125) { // Limite de aviso (>= 125ms)
                     statusClass = 'warning';
-                    statusText = 'Alta Latência';
+                    statusText = 'Online';
                     pingClass = 'warning';
                 } else {
                     statusClass = 'online';
@@ -214,6 +239,7 @@
                 <div class="router-sub-info">
                     <span><i class="fas fa-network-wired"></i> ${router.ip || 'N/A'}</span>
                     <span><i class="fas fa-users"></i> ${router.connected_clients} Clientes</span>
+                    <span><i class="fas fa-tachometer-alt"></i> ${router.latency !== null ? router.latency + ' ms' : 'N/A'}</span>
                 </div>
             `;
 
@@ -343,7 +369,7 @@
         loadRouterStatus();
 
         // Atualizar a cada 5 segundos
-        updateInterval = setInterval(loadRouterStatus, 15000); // Aumentado para 15s para não sobrecarregar com queries de gráfico
+        updateInterval = setInterval(loadRouterStatus, 60000); // Aumentado para 60s para dar tempo de obter o ping
 
         // Limpar interval ao sair da página
         window.addEventListener('beforeunload', () => {

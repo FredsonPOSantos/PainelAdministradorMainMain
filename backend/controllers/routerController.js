@@ -43,6 +43,7 @@ const getRoutersStatus = async (req, res) => {
                 r.name,
                 r.ip_address AS ip,
                 r.status,
+                -- r.latency, -- [REMOVIDO] Ignora banco, vamos calcular em tempo real
                 rg.name AS group_name
             FROM routers r
             LEFT JOIN router_groups rg ON r.group_id = rg.id
@@ -50,9 +51,12 @@ const getRoutersStatus = async (req, res) => {
         `;
         const { rows: routers } = await pool.query(pgQuery);
 
+        // [DEBUG] Log temporário para verificar latência vinda do banco
+        console.log('[DEBUG-ROUTER-STATUS] Latências do DB:', routers.map(r => `${r.name}: ${r.latency}`));
+
         // 2. Enriquecer cada roteador com dados de ping e InfluxDB em paralelo
         const enrichedRouters = await Promise.all(routers.map(async (router) => {
-            let latency = null;
+            let latency = null; // Inicializa como null
             let connected_clients = 0;
             let interface_traffic = {};
             let interfaces = [];
@@ -63,12 +67,28 @@ const getRoutersStatus = async (req, res) => {
             // [MODIFICADO] Adicionado .trim() para remover espaços em branco do IP vindo do banco de dados.
             const cleanIp = router.ip ? router.ip.trim() : null;
 
+            // [NOVO] Cálculo de Latência em Tempo Real (Média de 3 pings)
             if (cleanIp) {
-                try {
-                    const pingResult = await ping.promise.probe(cleanIp, { timeout: 2 });
-                    latency = pingResult.alive ? Math.round(pingResult.time) : null;
-                } catch (e) {
-                    latency = null;
+                let totalLatency = 0;
+                let successCount = 0;
+                
+                // Executa 3 pings sequenciais para este roteador
+                for (let i = 0; i < 3; i++) {
+                    try {
+                        // Timeout curto (1s) para não travar muito se estiver offline
+                        const res = await ping.promise.probe(cleanIp, { timeout: 1, min_reply: 1 });
+                        if (res.alive) {
+                            const val = typeof res.time === 'number' ? res.time : parseFloat(res.avg);
+                            if (!isNaN(val)) {
+                                totalLatency += val;
+                                successCount++;
+                            }
+                        }
+                    } catch (e) {}
+                }
+
+                if (successCount > 0) {
+                    latency = Math.round(totalLatency / successCount);
                 }
             }
 
@@ -197,7 +217,7 @@ const getRoutersStatus = async (req, res) => {
 
             return {
                 ...router,
-                latency,
+                latency: latency !== undefined ? latency : null, // Garante que latency seja enviado
                 connected_clients,
                 interface_traffic, // Objeto com tráfego por interface
                 interfaces: interfaces.length > 0 ? interfaces : [], // Lista real de interfaces
@@ -213,10 +233,12 @@ const getRoutersStatus = async (req, res) => {
         enrichedRouters.sort((a, b) => {
             const getSortOrder = (r) => {
                 if (r.status === 'online') {
-                    // O frontend usa 150ms como limite para 'warning'
-                    return (r.latency !== null && r.latency > 150) ? 2 : 1;
+                    // Ordem: Crítico (3) > Aviso (2) > Online (1)
+                    if (r.latency !== null && r.latency > 200) return 3;
+                    if (r.latency !== null && r.latency >= 125) return 2;
+                    return 1;
                 }
-                return 3; // 'offline'
+                return 4; // 'offline' (no fim ou no início dependendo da preferência, aqui deixo no fim dos onlines)
             };
 
             const orderA = getSortOrder(a);

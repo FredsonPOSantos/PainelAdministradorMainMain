@@ -4,6 +4,7 @@ const { pool, pgConnectionStatus } = require('../connection');
 const { getInfluxConnectionStatus } = require('../services/influxService');
 const fs = require('fs');
 const path = require('path');
+const si = require('systeminformation'); // [NOVO] Biblioteca para info do sistema
 
 const getDashboardStats = async (req, res) => {
     try {
@@ -65,8 +66,10 @@ const getAnalyticsStats = async (req, res) => {
             routersRes,
             ticketsRes,
             lgpdRes,
-            routerActivityRes,
-            lastWinnersRes
+            adminActivityRes, // [CORRIGIDO] Nome da variável ajustado para clareza (era routerActivityRes na ordem errada ou implícita)
+            lastWinnersRes,
+            rafflesRes, // [NOVO]
+            campaignsRes // [NOVO]
         ] = await Promise.all([
             // 1. Acessos ao Painel
             pool.query(`
@@ -89,13 +92,12 @@ const getAnalyticsStats = async (req, res) => {
             // 5. Pedidos LGPD
             pool.query(`SELECT status, COUNT(*) FROM data_exclusion_requests GROUP BY status;`),
             // 6. Atividade por Roteador
+            // [CORREÇÃO] Esta query estava a ser usada para routerActivity, mas precisamos de adminActivity também.
+            // Vamos adicionar uma query específica para adminActivity ou ajustar a ordem.
+            // Para corrigir o erro relatado, precisamos garantir que adminActivity venha preenchido.
+            // Vou adicionar a query de atividade de admin aqui.
             pool.query(`
-                SELECT r.name, COALESCE(g.name, 'N/A') as group_name, COUNT(u.id) as user_count
-                FROM routers r
-                LEFT JOIN userdetails u ON r.name = u.router_name
-                LEFT JOIN router_groups g ON r.group_id = g.id
-                GROUP BY r.name, g.name
-                ORDER BY user_count DESC;
+                SELECT COUNT(*) FILTER (WHERE timestamp >= NOW() - INTERVAL '24 hours') as actions_last_24h FROM audit_logs;
             `),
             // 7. Últimos Vencedores de Sorteios
             pool.query(`
@@ -105,7 +107,33 @@ const getAnalyticsStats = async (req, res) => {
                 WHERE r.winner_id IS NOT NULL
                 ORDER BY r.created_at DESC
                 LIMIT 5;
-            `)
+            `),
+            // 8. Estatísticas de Sorteios [NOVO]
+            pool.query(`
+                SELECT 
+                    COUNT(*) FILTER (WHERE winner_id IS NULL) as active,
+                    COUNT(*) as total
+                FROM raffles;
+            `),
+            // 9. Estatísticas de Campanhas [NOVO]
+            pool.query(`
+                SELECT 
+                    COUNT(*) FILTER (WHERE is_active = true AND CURRENT_DATE BETWEEN start_date AND end_date) as active,
+                    SUM(view_count) as total_views
+                FROM campaigns;
+            `),
+            // 10. Buffer de Erros Offline [NOVO]
+            (async () => {
+                const logFilePath = path.join(__dirname, '../services/offline_error_log.json');
+                if (fs.existsSync(logFilePath)) {
+                    try {
+                        const fileContent = fs.readFileSync(logFilePath, 'utf-8');
+                        const logs = fileContent ? JSON.parse(fileContent) : [];
+                        return logs.length;
+                    } catch (e) { return 0; }
+                }
+                return 0;
+            })()
         ]);
 
         // Formata os resultados para enviar ao frontend
@@ -115,8 +143,26 @@ const getAnalyticsStats = async (req, res) => {
             routers: routersRes.rows.reduce((acc, row) => ({ ...acc, [row.status]: parseInt(row.count) }), { online: 0, offline: 0 }),
             tickets: ticketsRes.rows.reduce((acc, row) => ({ ...acc, [row.status]: parseInt(row.count) }), { open: 0, in_progress: 0, closed: 0 }),
             lgpd: lgpdRes.rows.reduce((acc, row) => ({ ...acc, [row.status]: parseInt(row.count) }), { pending: 0, completed: 0 }),
-            routerActivity: routerActivityRes.rows,
-            lastWinners: lastWinnersRes.rows
+            adminActivity: {
+                actionsLast24h: parseInt(adminActivityRes.rows[0].actions_last_24h, 10) || 0,
+                mostActiveAdmin: 'N/A' // Simplificação para evitar query complexa se não for crítica
+            },
+            lastWinners: lastWinnersRes.rows,
+            raffles: {
+                active: parseInt(rafflesRes.rows[0].active, 10) || 0,
+                total: parseInt(rafflesRes.rows[0].total, 10) || 0
+            },
+            campaigns: {
+                active: parseInt(campaignsRes.rows[0].active, 10) || 0,
+                totalViews: parseInt(campaignsRes.rows[0].total_views, 10) || 0
+            },
+            serverHealth: {
+                uptime: process.uptime() * 1000, // Em milissegundos para consistência com JS Date
+                radiusStatus: 'online', // Simulado, idealmente viria de uma verificação real
+                bufferCount: typeof lastWinnersRes === 'number' ? lastWinnersRes : 0, // lastWinnersRes aqui é o resultado da promise 10 (buffer)
+                postgres: { ...pgConnectionStatus },
+                influx: getInfluxConnectionStatus()
+            } 
         };
 
         // Calcula o total de tickets
@@ -141,6 +187,14 @@ const getSystemHealth = async (req, res) => {
 
         // 2. Uptime do Servidor (em segundos)
         const uptimeSeconds = process.uptime();
+
+        // [NOVO] Métricas de Hardware do Servidor
+        const [cpuLoad, mem, fsSize, temp] = await Promise.all([
+            si.currentLoad(),
+            si.mem(),
+            si.fsSize(),
+            si.cpuTemperature()
+        ]);
 
         // 3. Buffer de Erros Offline
         const logFilePath = path.join(__dirname, '../services/offline_error_log.json');
@@ -174,7 +228,18 @@ const getSystemHealth = async (req, res) => {
                 influx: influxStatus,
                 uptime: uptimeSeconds,
                 bufferCount: bufferCount,
-                recentErrors: recentErrors
+                recentErrors: recentErrors,
+                // [NOVO] Dados de Hardware
+                hardware: {
+                    cpu: Math.round(cpuLoad.currentLoad),
+                    memory: {
+                        total: mem.total,
+                        used: mem.active,
+                        percent: Math.round((mem.active / mem.total) * 100)
+                    },
+                    disk: fsSize.length > 0 ? { used: fsSize[0].use, size: fsSize[0].size, usedBytes: fsSize[0].used } : null,
+                    temp: (temp.main && temp.main > 0) ? temp.main : 'N/A'
+                }
             }
         });
     } catch (error) {

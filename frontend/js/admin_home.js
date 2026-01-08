@@ -2,7 +2,7 @@
 if (window.initHomePage) {
     console.warn("Tentativa de carregar admin_home.js múltiplas vezes.");
 } else {
-    window.initHomePage = () => {
+    window.initHomePage = async () => {
         console.log("A inicializar a página principal do Dashboard (V1 - Estável)...");
         
         // Função para buscar e preencher os dados de um card específico
@@ -68,5 +68,47 @@ if (window.initHomePage) {
         fetchCardData('/api/banners', 'bannersTotal', 'bannersActive', 'bannersInactive');
         fetchCardData('/api/templates', 'templatesTotal');
         fetchHotspotUsers();
+
+        // [NOVO] Integração do Dashboard Analítico
+        // Verifica se o utilizador tem permissão para ver dados analíticos
+        if (window.currentUserProfile && (window.currentUserProfile.role === 'master' || window.currentUserProfile.permissions['analytics.read'])) {
+            try {
+                console.log("Carregando Dashboard Analítico integrado...");
+                
+                // Busca o HTML da página analítica
+                const response = await fetch('/pages/analytics_dashboard.html');
+                if (response.ok) {
+                    const html = await response.text();
+                    
+                    // Cria um container para o conteúdo analítico
+                    const container = document.createElement('div');
+                    container.innerHTML = html;
+                    
+                    // Adiciona um título separador
+                    const separator = document.createElement('div');
+                    separator.className = 'section-header';
+                    separator.style.marginTop = '40px';
+                    separator.innerHTML = '<h3>Análise Detalhada</h3>';
+                    
+                    const contentArea = document.querySelector('.content-area');
+                    if (contentArea) {
+                        contentArea.appendChild(separator);
+                        // Move o conteúdo do container para a área principal
+                        while (container.firstChild) {
+                            contentArea.appendChild(container.firstChild);
+                        }
+                        
+                        // Inicializa o script do analítico (que já está carregado no admin_dashboard.html)
+                        if (window.initAnalyticsDashboard) {
+                            window.initAnalyticsDashboard();
+                        } else {
+                            console.error("Função initAnalyticsDashboard não encontrada.");
+                        }
+                    }
+                }
+            } catch (e) {
+                console.error("Erro ao carregar analytics_dashboard.html:", e);
+            }
+        }
     };
 }

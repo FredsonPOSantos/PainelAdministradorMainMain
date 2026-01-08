@@ -124,6 +124,103 @@ const createTicket = async (req, res) => {
     }
 };
 
+// [NOVO] Criar um ticket público (sem autenticação)
+const createPublicTicket = async (req, res) => {
+    const { name, email, phone, sector, location, title, message } = req.body;
+
+    if (!name || !email || !title || !message) {
+        return res.status(400).json({ success: false, message: 'Nome, e-mail, assunto e mensagem são obrigatórios.' });
+    }
+
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+
+        const sequenceResult = await client.query("SELECT nextval('tickets_id_seq') as id");
+        const ticketId = sequenceResult.rows[0].id;
+        const ticketNumber = generateTicketNumber(ticketId);
+
+        // Insere o ticket com dados do convidado e created_by_user_id NULL
+        await client.query(
+            `INSERT INTO tickets (
+                id, ticket_number, title, created_by_user_id, 
+                guest_name, guest_email, guest_phone, guest_department, guest_location
+            ) VALUES ($1, $2, $3, NULL, $4, $5, $6, $7, $8)`,
+            [ticketId, ticketNumber, title, name, email, phone, sector, location]
+        );
+
+        // Insere a primeira mensagem (user_id NULL indica sistema/externo)
+        await client.query(
+            'INSERT INTO ticket_messages (ticket_id, user_id, message) VALUES ($1, NULL, $2)',
+            [ticketId, message]
+        );
+
+        // Notificações
+        const notificationMessage = `Novo ticket público #${ticketNumber} de ${name} (${email})`;
+        
+        // Notificar admins (Master e Gestão)
+        const adminUsers = await client.query("SELECT id, email FROM admin_users WHERE role IN ('master', 'gestao')");
+        
+        for (const admin of adminUsers.rows) {
+            await client.query(
+                'INSERT INTO notifications (user_id, type, related_ticket_id, message) VALUES ($1, $2, $3, $4)',
+                [admin.id, 'new_ticket', ticketId, notificationMessage]
+            );
+
+            // Enviar email para admin
+            const emailSubject = `Novo Ticket Público: #${ticketNumber}`;
+            const emailText = `Novo ticket aberto via portal público.\n\nSolicitante: ${name} (${email})\nAssunto: ${title}\n\nMensagem:\n${message}`;
+            await sendEmail(admin.email, emailSubject, emailText);
+        }
+
+        // Enviar email de confirmação para o utilizador (convidado)
+        const userSubject = `Ticket Recebido: #${ticketNumber}`;
+        const userText = `Olá ${name},\n\nRecebemos o seu pedido de suporte.\nNúmero do Ticket: #${ticketNumber}\nAssunto: ${title}\n\nA nossa equipa irá analisar e entrar em contacto em breve através deste e-mail.\n\nAtenciosamente,\nRota Hotspot`;
+        await sendEmail(email, userSubject, userText);
+
+        await client.query('COMMIT');
+
+        // Log de auditoria (sem user_id, mas com user_email do convidado)
+        logAction({
+            req,
+            action: 'TICKET_CREATE_PUBLIC',
+            status: 'SUCCESS',
+            description: `Ticket público #${ticketNumber} criado por ${email}`,
+            target_id: ticketId,
+            target_type: 'ticket',
+            user_email: email // Força o email no log
+        });
+
+        // IA Response (Opcional)
+        (async () => {
+            try {
+                const aiResponse = await aiService.generateInitialResponse(title, message);
+                if (aiResponse) {
+                    await pool.query(
+                        'INSERT INTO ticket_messages (ticket_id, user_id, message) VALUES ($1, NULL, $2)',
+                        [ticketId, null, aiResponse]
+                    );
+                }
+            } catch (aiError) {
+                if (aiError.message && aiError.message.includes('leaked')) {
+                    console.error(`[AI-RESPONSE-ERROR] 🚨 A chave de API do Gemini foi bloqueada.`);
+                } else {
+                    console.error(`[AI-RESPONSE-ERROR] Falha ao adicionar resposta da IA para o ticket ${ticketId}:`, aiError);
+                }
+            }
+        })();
+
+        res.status(201).json({ success: true, message: 'Ticket criado com sucesso!', data: { ticketNumber } });
+
+    } catch (error) {
+        await client.query('ROLLBACK');
+        console.error('Erro ao criar ticket público:', error);
+        res.status(500).json({ success: false, message: 'Erro interno do servidor.' });
+    } finally {
+        client.release();
+    }
+};
+
 // Obter todos os tickets
 const getAllTickets = async (req, res) => {
     const { userId, role } = req.user;
@@ -569,6 +666,7 @@ const uploadAttachment = async (req, res) => {
 
 module.exports = {
     createTicket,
+    createPublicTicket, // [NOVO]
     getAllTickets,
     getTicketById,
     addMessageToTicket,

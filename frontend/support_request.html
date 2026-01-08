@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Abrir Ticket de Suporte - Rota Hotspot</title>
+    <link rel="stylesheet" href="css/admin_login_style.css">
+    <link rel="stylesheet" href="css/notifications.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* Estilos compactos e corporativos */
+        body {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            background: linear-gradient(135deg, #f5f7fa 0%, #e4e8f0 100%);
+        }
+        
+        .compact-header {
+            text-align: center;
+            padding: 20px 0 10px;
+            margin-bottom: 10px;
+        }
+        
+        .compact-header h1 {
+            font-size: 1.6rem;
+            margin: 0;
+            color: var(--primary-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+        
+        .compact-header p {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            margin: 5px 0 0;
+        }
+        
+        .login-wrapper {
+            flex: 1;
+            display: flex;
+            max-width: 1000px;
+            margin: 0 auto;
+            width: 100%;
+        }
+        
+        .login-showcase {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            border-radius: 12px 0 0 12px;
+            padding: 30px;
+        }
+        
+        .showcase-content h2 {
+            font-size: 1.5rem;
+            margin-bottom: 10px;
+        }
+        
+        .showcase-content p {
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+        
+        .form-container {
+            border-radius: 0 12px 12px 0;
+            padding: 25px;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: -5px 0 15px rgba(0,0,0,0.05); /* Sombra suave para profundidade */
+        }
+        
+        .form-header {
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid var(--border-color);
+        }
+        
+        .form-header h1 {
+            font-size: 1.4rem;
+            margin: 0 0 5px 0;
+        }
+        
+        .form-header p {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin: 0;
+        }
+        
+        .compact-form {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        
+        .form-row {
+            display: flex;
+            gap: 12px;
+        }
+        
+        .form-row .input-group {
+            flex: 1;
+            margin-bottom: 0;
+        }
+        
+        .input-group label {
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-bottom: 5px;
+            display: block;
+            color: var(--text-primary);
+        }
+        
+        .input-group input,
+        .input-group textarea,
+        .input-group select {
+            padding: 10px 12px;
+            font-size: 0.9rem;
+            border: 1.5px solid var(--border-color);
+            border-radius: 8px; /* Bordas mais arredondadas nos inputs */
+            width: 100%;
+            transition: all 0.2s;
+        }
+        
+        .input-group input:focus,
+        .input-group textarea:focus,
+        .input-group select:focus {
+            border-color: var(--primary-color);
+            outline: none;
+            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1); /* Sombra de foco mais suave */
+        }
+        
+        .priority-badges {
+            display: flex;
+            gap: 8px;
+            margin-top: 5px;
+        }
+        
+        .priority-badge {
+            flex: 1;
+            padding: 8px;
+            text-align: center;
+            border: 1.5px solid var(--border-color);
+            border-radius: 8px; /* Bordas mais arredondadas */
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .priority-badge:hover {
+            border-color: var(--primary-color);
+            background: rgba(59, 130, 246, 0.05);
+        }
+        
+        .priority-badge.active {
+            border-color: var(--primary-color);
+            background: rgba(59, 130, 246, 0.1);
+            font-weight: 600;
+            color: var(--primary-color);
+        }
+        
+        .compact-footer {
+            margin-top: 15px;
+            padding-top: 10px;
+            border-top: 1px solid var(--border-color);
+            text-align: center;
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+        
+        .contact-mini {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 5px;
+            font-size: 0.7rem;
+        }
+        
+        .contact-mini span {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        /* Vista de sucesso compacta */
+        .compact-success {
+            text-align: center;
+            padding: 20px 10px;
+        }
+        
+        .compact-success-icon {
+            font-size: 3rem;
+            color: #10b981;
+            margin-bottom: 15px;
+        }
+        
+        .compact-success h2 {
+            font-size: 1.3rem;
+            margin-bottom: 10px;
+        }
+        
+        /* Responsivo */
+        @media (max-width: 768px) {
+            .login-wrapper {
+                flex-direction: column;
+                margin: 10px;
+            }
+            
+            .login-showcase {
+                border-radius: 12px 12px 0 0;
+                padding: 20px;
+            }
+            
+            .form-container {
+                border-radius: 0 0 16px 16px; /* Mais arredondado no mobile */
+                max-height: none;
+            }
+            
+            .form-row {
+                flex-direction: column;
+                gap: 12px;
+            }
+            
+            .contact-mini {
+                flex-direction: column;
+                gap: 5px;
+            }
+        }
+        
+        /* Scrollbar personalizada */
+        .form-container::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        .form-container::-webkit-scrollbar-track {
+            background: var(--background-dark);
+        }
+        
+        .form-container::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body>
+    <div class="compact-header">
+        <h1><i class="fas fa-headset"></i> Suporte Rota Hotspot</h1>
+    </div>
+
+    <div class="login-wrapper">
+        <!-- Lado Esquerdo: Showcase Compacto -->
+        <div class="login-showcase" id="loginShowcase">
+            <div class="showcase-content">
+                <h2><i class="fas fa-wifi"></i> SIGh</h2>
+                <p>Gestão de Conectividade completa e inteligente para frota e hotspot Wi-Fi</p>
+                
+                <div style="margin-top: 20px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.2);">
+                    <p style="font-size: 0.8rem; opacity: 0.9;">
+                        <i class="fas fa-info-circle"></i> 
+                        Para emergências, ligue: <strong>(11) 3456-7890</strong>
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Lado Direito: Formulário Compacto -->
+        <div class="login-form-area" style="flex: 1;">
+            <div class="form-container" style="max-width: 100%;">
+                <div class="form-header">
+                    <div class="logo-container" style="margin-bottom: 15px;">
+                        <img id="loginLogo" src="" alt="Logótipo" style="display: none; max-height: 60px; width: auto; margin: 0 auto;">
+                    </div>
+                    <h1>Abrir Novo Ticket</h1>
+                    <p>Preencha os campos obrigatórios (*) para iniciar o atendimento</p>
+                </div>
+
+                <div id="formView">
+                    <form id="supportRequestForm" class="compact-form">
+                        <!-- Informações Pessoais -->
+                        <div class="form-row">
+                            <div class="input-group">
+                                <label for="name">Nome Completo *</label>
+                                <input type="text" id="name" name="name" required placeholder="Seu nome completo">
+                            </div>
+                            <div class="input-group">
+                                <label for="email">E-mail Corporativo *</label>
+                                <input type="email" id="email" name="email" required placeholder="seu@empresa.com">
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="input-group">
+                                <label for="phone">Telefone</label>
+                                <input type="tel" id="phone" name="phone" placeholder="(00) 00000-0000">
+                            </div>
+                            <div class="input-group">
+                                <label for="sector">Setor/Departamento</label>
+                                <input type="text" id="sector" name="sector" placeholder="Ex: TI, Financeiro">
+                            </div>
+                        </div>
+
+                        <!-- Informações da Empresa -->
+                        <div class="form-row">
+                            <div class="input-group">
+                                <label for="company">Empresa</label>
+                                <input type="text" id="company" name="company" placeholder="Nome da empresa">
+                            </div>
+                            <div class="input-group">
+                                <label for="location">Localidade</label>
+                                <input type="text" id="location" name="location" placeholder="Ex: Matriz, Filial">
+                            </div>
+                        </div>
+
+                        <!-- Assunto e Prioridade -->
+                        <div class="input-group">
+                            <label for="title">Assunto do Ticket *</label>
+                            <input type="text" id="title" name="title" required placeholder="Resumo do problema">
+                        </div>
+
+                        <!-- Descrição -->
+                        <div class="input-group">
+                            <label for="message">Descrição Detalhada *</label>
+                            <textarea id="message" name="message" required rows="3" placeholder="Descreva o problema, quando começou, e o impacto no negócio..."></textarea>
+                        </div>
+
+                        <!-- Botões -->
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 15px; gap: 15px;">
+                            <a href="admin_login.html" style="color: var(--text-secondary); text-decoration: none; font-size: 0.9rem; display: flex; align-items: center; gap: 5px;">
+                                <i class="fas fa-arrow-left"></i> Voltar
+                            </a>
+                            <button type="submit" class="btn" style="flex: 0 0 auto; width: 50px; height: 50px; padding: 0; display: flex; align-items: center; justify-content: center; border-radius: 50%;" title="Enviar Ticket">
+                                <i class="fas fa-paper-plane"></i>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Vista de Sucesso Compacta -->
+                <div id="successView" style="display: none;" class="compact-success">
+                    <div class="compact-success-icon">
+                        <i class="fas fa-check-circle"></i>
+                    </div>
+                    <h2>Ticket Criado!</h2>
+                    <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 10px;">
+                        Seu protocolo de atendimento:
+                    </p>
+                    <div id="ticketNumberDisplay" style="font-size: 1.3rem; font-weight: 600; color: var(--primary-color); background: var(--background-dark); padding: 10px 20px; border-radius: 8px; display: inline-block; margin: 10px 0;">
+                        #RH-2024-001
+                    </div>
+                    
+                    <div style="background: rgba(16, 185, 129, 0.08); padding: 15px; border-radius: 8px; margin: 20px 0; text-align: left;">
+                        <p style="margin: 0 0 8px 0; font-size: 0.85rem; color: var(--text-primary); font-weight: 600;">
+                            <i class="fas fa-info-circle"></i> Próximos passos:
+                        </p>
+                        <ul style="margin: 0; padding-left: 20px; font-size: 0.8rem; color: var(--text-secondary);">
+                            <li>Confirmação por e-mail em instantes</li>
+                            <li>Contato da equipe em até 2 horas</li>
+                            <li>Acompanhe pelo painel administrativo</li>
+                        </ul>
+                    </div>
+                    
+                    <a href="admin_login.html" class="btn" style="display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px;">
+                        <i class="fas fa-home"></i> Voltar ao Início
+                    </a>
+                </div>
+
+                <div class="compact-footer">
+                    <p style="margin: 0 0 5px 0;">Rota Hotspot © 2024 - Suporte Corporativo</p>
+                    <div class="contact-mini">
+                        <span><i class="fas fa-phone-alt"></i> (11) 3456-7890</span>
+                        <span><i class="fas fa-envelope"></i> suporte@rotahotspot.com</span>
+                        <span><i class="fas fa-clock"></i> Seg-Sex 8h-18h</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="notification-container"></div>
+    <script src="js/notifications.js"></script>
+    <script src="js/support_request.js"></script>
+    <script>
+        // Scripts para interatividade
+        document.addEventListener('DOMContentLoaded', function() {
+            
+            // Validação do formulário
+            const form = document.getElementById('supportRequestForm');
+            if (form) {
+                form.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    
+                    // Validação básica
+                    const requiredFields = form.querySelectorAll('[required]');
+                    let valid = true;
+                    
+                    requiredFields.forEach(field => {
+                        if (!field.value.trim()) {
+                            valid = false;
+                            field.style.borderColor = '#ef4444';
+                        } else {
+                            field.style.borderColor = '';
+                        }
+                    });
+                    
+                    if (valid) {
+                        // Simular envio bem-sucedido
+                        document.getElementById('formView').style.display = 'none';
+                        document.getElementById('successView').style.display = 'block';
+                        
+                        // Gerar número de protocolo aleatório
+                        const ticketNum = 'RH-' + new Date().getFullYear() + '-' + 
+                            Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+                        document.getElementById('ticketNumberDisplay').textContent = '#' + ticketNum;
+                    }
+                });
+            }
+            
+            // Ajustar altura do textarea automaticamente
+            const textarea = document.getElementById('message');
+            if (textarea) {
+                textarea.addEventListener('input', function() {
+                    this.style.height = 'auto';
+                    this.style.height = (this.scrollHeight) + 'px';
+                });
+            }
+        });
+    </script>
+</body>
+</html>

@@ -63,6 +63,27 @@ if (window.initSystemHealthPage) {
                     bufferText.style.color = 'var(--text-primary)';
                 }
 
+                // [NOVO] Hardware do Servidor
+                if (data.hardware) {
+                    // CPU
+                    document.getElementById('serverCpuText').textContent = `${data.hardware.cpu}%`;
+                    document.getElementById('serverTempText').textContent = (data.hardware.temp && data.hardware.temp !== 'N/A') ? `Temp: ${data.hardware.temp}°C` : 'Temp: N/A';
+
+                    // Memória
+                    const memUsedGB = (data.hardware.memory.used / 1073741824).toFixed(1);
+                    const memTotalGB = (data.hardware.memory.total / 1073741824).toFixed(1);
+                    document.getElementById('serverMemText').textContent = `${data.hardware.memory.percent}%`;
+                    document.getElementById('serverMemDetails').textContent = `${memUsedGB}GB / ${memTotalGB}GB`;
+
+                    // Disco
+                    if (data.hardware.disk) {
+                        const diskUsedGB = (data.hardware.disk.usedBytes / 1073741824).toFixed(1);
+                        const diskTotalGB = (data.hardware.disk.size / 1073741824).toFixed(1);
+                        document.getElementById('serverDiskText').textContent = `${Math.round(data.hardware.disk.used)}%`;
+                        document.getElementById('serverDiskDetails').textContent = `${diskUsedGB}GB / ${diskTotalGB}GB`;
+                    }
+                }
+
                 // Recent Errors
                 const tbody = document.querySelector('#recentErrorsTable tbody');
                 tbody.innerHTML = '';

@@ -282,6 +282,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         'admin_raffles': 'initRafflesPage',
         'analytics_dashboard': 'initAnalyticsDashboard',
         'admin_system_health': 'initSystemHealthPage', // [NOVO]
+        'admin_reports': 'initReportsPage', // [NOVO]
         'admin_profile': 'initProfilePage', // [NOVO] Regista a página de perfil
     };
 
@@ -299,6 +300,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         'admin_raffles': '#createRaffleForm',
         'analytics_dashboard': '#analytics-dashboard-wrapper', // [CORRIGIDO]
         'admin_system_health': '#systemHealthContainer', // [NOVO]
+        'admin_reports': '#reportTypeSelect', // [NOVO]
         'admin_profile': '#profile-page-wrapper', // [NOVO] ID do container da página de perfil
     };
     // --- FIM V13.1.3 ---
@@ -544,7 +546,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             'admin_banners': 'banners.read',
             'admin_routers': 'routers.read',
             'admin_users': 'users.read',
-            'analytics_dashboard': 'analytics.read', // [CORREÇÃO] Adiciona a permissão para o dashboard analítico
+            'admin_reports': 'analytics.read', // [NOVO] Usa a permissão de analytics ou cria uma nova 'reports.read'
             'support': 'tickets.read', // [NOVO]
             'admin_system_health': 'system_health.read' // [NOVO] Saúde do Sistema
         };

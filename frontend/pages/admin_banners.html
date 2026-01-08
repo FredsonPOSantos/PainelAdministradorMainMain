@@ -22,9 +22,11 @@
 
 <!-- Modal para Adicionar/Editar Banner (versão melhorada) -->
 <div id="bannerModal" class="modal-overlay hidden">
-    <div class="modal-content">
-        <button class="modal-close-btn">&times;</button>
-        <h3 id="modalTitle">Adicionar Novo Banner</h3>
+    <div class="modal-content large">
+        <div class="modal-header">
+            <h3 id="modalTitle" style="margin: 0;">Adicionar Novo Banner</h3>
+            <button class="modal-close-btn">&times;</button>
+        </div>
         <form id="bannerForm">
             <input type="hidden" id="bannerId">
             
@@ -85,11 +87,10 @@
                 <label for="bannerIsActive">Banner Ativo</label>
             </div>
             
-            <div class="modal-actions">
-                <button type="button" id="cancelBtn" class="btn-secondary">Cancelar</button>
+            <div class="modal-actions" style="margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--border-color);">
+                <button type="button" id="cancelBtn" class="btn-secondary modal-close-btn-action">Cancelar</button>
                 <button type="submit" class="btn-primary">Guardar</button>
             </div>
         </form>
     </div>
 </div>
-

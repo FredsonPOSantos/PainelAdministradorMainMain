@@ -7,79 +7,89 @@
     <link rel="stylesheet" href="../css/admin_style.css">
 </head>
 <body>
-    <div class="container">
-        <h1>Sorteios</h1>
+<!-- Ficheiro: frontend/pages/admin_raffles.html -->
+<div class="page-header">
+    <h3>Gestão de Sorteios</h3>
+</div>
+
+<div class="content-section">
+    <form id="createRaffleForm">
+        <div class="input-group">
+            <label for="raffleTitle">Título do Sorteio *</label>
+            <input type="text" id="raffleTitle" name="title" required placeholder="Ex: Sorteio de Natal">
+        </div>
         
-        <div class="form-container">
-            <h2>Criar Novo Sorteio</h2>
-            <form id="createRaffleForm">
-                <div class="input-group">
-                    <label for="raffleTitle">Título</label>
-                    <input type="text" id="raffleTitle" required>
-                </div>
-                <div class="input-group">
-                    <label for="raffleObservation">Observação</label>
-                    <textarea id="raffleObservation"></textarea>
-                </div>
-                
-                <h3>Filtros para Participantes</h3>
-                <div class="input-group">
-                    <label for="filterCampaign">Campanha</label>
-                    <select id="filterCampaign">
-                        <option value="">Todas</option>
-                        <!-- Opções de campanha carregadas dinamicamente -->
-                    </select>
-                </div>
-                <div class="input-group">
-                    <label for="filterRouter">Roteador</label>
-                    <select id="filterRouter">
-                        <option value="">Todos</option>
-                        <!-- Opções de roteador carregadas dinamicamente -->
-                    </select>
-                </div>
-                <div class="input-group">
-                    <label for="filterStartDate">Período de Cadastro (Início)</label>
-                    <input type="date" id="filterStartDate">
-                </div>
-                <div class="input-group">
-                    <label for="filterEndDate">Período de Cadastro (Fim)</label>
-                    <input type="date" id="filterEndDate">
-                </div>
-                <div class="input-group">
-                    <input type="checkbox" id="filterConsent" checked>
-                    <label for="filterConsent">Incluir apenas participantes que aceitaram os termos de marketing</label>
-                </div>
-
-                <button type="submit" class="btn-primary">Criar Sorteio</button>
-            </form>
+        <div class="input-group">
+            <label for="raffleObservation">Observação</label>
+            <textarea id="raffleObservation" name="observation" rows="2" placeholder="Detalhes opcionais..."></textarea>
         </div>
 
-        <div class="table-container">
-            <h2>Sorteios Realizados</h2>
-            <table id="rafflesTable">
-                <thead>
-                    <tr>
-                        <th>Número do Sorteio</th>
-                        <th>Título</th>
-                        <th>Data de Criação</th>
-                        <th>Vencedor</th>
-                        <th>Ações</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <!-- Linhas da tabela carregadas dinamicamente -->
-                </tbody>
-            </table>
+        <h4 style="margin: 20px 0 15px 0; border-bottom: 1px solid var(--border-color); padding-bottom: 5px; color: var(--primary-color);">Filtros de Participação</h4>
+        
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+            <div class="input-group">
+                <label for="filterCampaign">Campanha</label>
+                <select id="filterCampaign">
+                    <option value="">Todas as Campanhas</option>
+                    <!-- Opções de campanha carregadas dinamicamente -->
+                </select>
+            </div>
+            <div class="input-group">
+                <label for="filterRouter">Roteador</label>
+                <select id="filterRouter">
+                    <option value="">Todos os Roteadores</option>
+                    <!-- Opções de roteador carregadas dinamicamente -->
+                </select>
+            </div>
+            <div class="input-group">
+                <label for="filterStartDate">Data Início (Cadastro)</label>
+                <input type="date" id="filterStartDate">
+            </div>
+            <div class="input-group">
+                <label for="filterEndDate">Data Fim (Cadastro)</label>
+                <input type="date" id="filterEndDate">
+            </div>
         </div>
+
+        <div class="checkbox-group" style="margin-top: 15px; justify-content: center;">
+            <input type="checkbox" id="filterConsent" checked>
+            <label for="filterConsent">Apenas utilizadores que aceitaram marketing</label>
+        </div>
+
+        <button type="submit" class="btn-primary">Criar Sorteio</button>
+    </form>
+</div>
+
+<div class="content-section">
+    <div class="section-header">
+        <h4>Sorteios Realizados</h4>
     </div>
-
-    <!-- Modal para Detalhes do Sorteio -->
-    <div id="raffleDetailsModal" class="modal-overlay hidden">
-        <div class="modal-content">
-            <button class="modal-close-btn">&times;</button>
-            <div id="raffleDetailsContent"></div>
-        </div>
+    <div class="table-container">
+        <table id="rafflesTable">
+            <thead>
+                <tr>
+                    <th>Número</th>
+                    <th>Título</th>
+                    <th>Data de Criação</th>
+                    <th>Vencedor</th>
+                    <th>Ações</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Linhas da tabela carregadas dinamicamente -->
+            </tbody>
+        </table>
     </div>
+</div>
+
+<!-- Modal para Detalhes do Sorteio -->
+<div id="raffleDetailsModal" class="modal-overlay hidden">
+    <div class="modal-content">
+        <button class="modal-close-btn">&times;</button>
+        <div id="raffleDetailsContent"></div>
+    </div>
+</div>
+
 
     <script src="../js/admin_raffles.js"></script>
 </body>

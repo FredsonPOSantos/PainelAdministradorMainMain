@@ -1,0 +1,101 @@
+<!-- Ficheiro: frontend/pages/admin_reports.html -->
+<div class="page-header">
+    <h3><i class="fas fa-file-alt" style="margin-right: 10px;"></i>Central de Relatórios</h3>
+</div>
+
+<div class="content-section">
+    <div class="input-group" style="max-width: 100%;">
+        <label for="reportTypeSelect" style="font-size: 1.1rem; margin-bottom: 10px;">Selecione o Tipo de Relatório:</label>
+        <select id="reportTypeSelect" style="padding: 12px; font-size: 1rem; max-width: 500px;">
+            <option value="">-- Escolha uma opção --</option>
+            <option value="hotspot_users">Utilizadores do Hotspot</option>
+            <option value="audit_logs">Logs de Auditoria (Atividade)</option>
+            <option value="system_logs">Logs de Sistema (Erros)</option>
+            <option value="routers">Inventário de Roteadores</option>
+            <option value="raffles">Resultados de Sorteios</option>
+            <option value="lgpd_requests">Pedidos LGPD</option>
+        </select>
+    </div>
+</div>
+
+<!-- Área Dinâmica de Filtros -->
+<div id="reportFiltersArea" class="content-section hidden">
+    <h4 style="margin-bottom: 20px; border-bottom: 1px solid var(--border-color); padding-bottom: 10px; width: 100%;">Filtros do Relatório</h4>
+    
+    <form id="reportFilterForm" style="width: 100%; max-width: 800px;">
+        <!-- Os filtros serão injetados aqui via JavaScript -->
+        <div id="dynamicFiltersGrid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px;">
+            <!-- Exemplo de filtro injetado:
+            <div class="input-group">
+                <label>Data Início</label>
+                <input type="date">
+            </div>
+            -->
+        </div>
+
+        <div class="form-actions" style="justify-content: center; margin-top: 30px; gap: 20px;">
+            <button type="button" id="generatePreviewBtn" class="btn-primary" style="max-width: 200px;">
+                <i class="fas fa-eye"></i> Pré-visualizar
+            </button>
+            <div class="export-group" style="display: flex; gap: 10px;">
+                <button type="button" id="exportExcelBtn" class="btn-secondary" style="max-width: 180px;" disabled>
+                    <i class="fas fa-file-excel"></i> Exportar Excel
+                </button>
+                <button type="button" id="exportCsvBtn" class="btn-secondary" style="max-width: 180px;" disabled>
+                    <i class="fas fa-file-csv"></i> Exportar CSV
+                </button>
+                <button type="button" id="exportPdfBtn" class="btn-secondary" style="max-width: 180px;" disabled>
+                    <i class="fas fa-file-pdf"></i> Exportar PDF
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+
+<!-- Área de Pré-visualização -->
+<div id="reportPreviewArea" class="content-section hidden">
+    <div class="section-header">
+        <h4>Pré-visualização dos Dados <small style="font-weight: normal; color: var(--text-secondary);">(Primeiros 20 registos)</small></h4>
+    </div>
+    <div class="table-container">
+        <table id="previewTable">
+            <thead>
+                <!-- Cabeçalhos dinâmicos -->
+            </thead>
+            <tbody>
+                <!-- Dados dinâmicos -->
+            </tbody>
+        </table>
+    </div>
+    <div id="previewSummary" style="margin-top: 15px; text-align: right; color: var(--text-secondary); font-size: 0.9rem;">
+        Total de registos encontrados: <strong id="totalRecordsCount" style="color: var(--text-primary);">0</strong>
+    </div>
+</div>
+
+<style>
+    /* Estilos específicos para esta página */
+    .hidden { display: none !important; }
+    
+    #reportTypeSelect {
+        background-color: var(--background-dark);
+        color: var(--text-primary);
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        cursor: pointer;
+        transition: border-color 0.2s;
+    }
+    #reportTypeSelect:focus {
+        border-color: var(--primary-color);
+        outline: none;
+    }
+
+    .export-group button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+    /* Ajuste para inputs de data ficarem bonitos no grid */
+    #dynamicFiltersGrid .input-group {
+        margin-bottom: 0;
+    }
+</style>

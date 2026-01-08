@@ -41,6 +41,43 @@
                 <span class="stat-card-title">Buffer de Erros Offline</span>
                 <div class="stat-card-value" id="bufferCountText">...</div>
                 <div class="stat-card-details">Erros aguardando conexão</div>
+                <button id="viewOfflineLogsBtn" class="btn-secondary btn-sm" style="margin-top: 10px; display: none;" onclick="viewOfflineLogs()">Ver Logs</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- [NOVO] Secção de Hardware do Servidor -->
+    <div class="section-header" style="margin-top: 30px;">
+        <h4>Recursos do Servidor</h4>
+    </div>
+    <div class="stats-grid" style="grid-template-columns: repeat(4, 1fr);">
+        <!-- CPU -->
+        <div class="stat-card health-card">
+            <div class="stat-card-icon color-orange"><i class="fas fa-microchip"></i></div>
+            <div class="stat-card-info">
+                <span class="stat-card-title">Uso de CPU</span>
+                <div class="stat-card-value" id="serverCpuText">...</div>
+                <div class="stat-card-details" id="serverTempText">Temp: ...</div>
+            </div>
+        </div>
+
+        <!-- Memória -->
+        <div class="stat-card health-card">
+            <div class="stat-card-icon color-blue"><i class="fas fa-memory"></i></div>
+            <div class="stat-card-info">
+                <span class="stat-card-title">Memória RAM</span>
+                <div class="stat-card-value" id="serverMemText">...</div>
+                <div class="stat-card-details" id="serverMemDetails">...</div>
+            </div>
+        </div>
+
+        <!-- Disco -->
+        <div class="stat-card health-card">
+            <div class="stat-card-icon color-purple"><i class="fas fa-hdd"></i></div>
+            <div class="stat-card-info">
+                <span class="stat-card-title">Disco Principal</span>
+                <div class="stat-card-value" id="serverDiskText">...</div>
+                <div class="stat-card-details" id="serverDiskDetails">...</div>
             </div>
         </div>
     </div>
