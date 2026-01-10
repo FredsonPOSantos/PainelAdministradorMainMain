@@ -714,6 +714,7 @@ input:checked + .slider:before { transform: translateX(26px); }
     flex-direction: column;
     overflow: hidden;
     border: 1px solid #4B5563;
+    position: relative; /* [CORREÇÃO] Necessário para centralizar o loader absoluto dentro do modal */
 }
 
 .expanded-modal .modal-header {
@@ -895,4 +896,152 @@ input:checked + .slider:before { transform: translateX(26px); }
 }
 .confirmation-modal-btn[data-action="cancel"]:hover {
     background-color: #DC2626;
+}
+
+/* --- [NOVO] Preloader (Tela de Carregamento) - Estilo Autocarro --- */
+#page-preloader {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: #111827; /* Fundo escuro compatível com o tema */
+    z-index: 99999;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    transition: opacity 0.8s ease-out, visibility 0.8s ease-out;
+}
+
+#page-preloader.loaded {
+    opacity: 0;
+    visibility: hidden;
+}
+
+.bus-animation-wrapper {
+    position: relative;
+    width: 300px;
+    height: 150px;
+    overflow: hidden;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.bus {
+    position: relative;
+    width: 140px;
+    height: 70px;
+    animation: bounce 0.5s infinite alternate ease-in-out;
+}
+
+.bus-body {
+    position: absolute;
+    bottom: 15px;
+    width: 100%;
+    height: 55px;
+    background-color: #C71585;
+    border-radius: 10px 10px 5px 5px;
+    box-shadow: inset 0 -5px 0 rgba(0,0,0,0.1);
+    z-index: 2;
+}
+
+.bus-roof {
+    position: absolute;
+    top: 0;
+    left: 5px;
+    width: 130px;
+    height: 25px;
+    background-color: #D8BFD8;
+    border-radius: 8px 8px 0 0;
+    z-index: 1;
+}
+
+.bus-windows {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    right: 10px;
+    display: flex;
+    justify-content: space-between;
+    z-index: 3;
+}
+
+.window {
+    width: 30px;
+    height: 20px;
+    background-color: #E0F7FA;
+    border-radius: 3px;
+}
+
+.bus-wheels {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    display: flex;
+    justify-content: space-around;
+    z-index: 4;
+}
+
+.wheel {
+    width: 22px;
+    height: 22px;
+    background-color: #333;
+    border-radius: 50%;
+    border: 3px solid #ccc;
+    animation: spin 1s linear infinite;
+}
+
+.loading-text {
+    margin-top: 20px;
+    color: #9CA3AF;
+    font-size: 1.1rem;
+    font-weight: 500;
+    animation: textPulse 1.5s infinite;
+}
+
+@keyframes bounce {
+    from { transform: translateY(0); }
+    to { transform: translateY(-3px); }
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+@keyframes textPulse {
+    0% { opacity: 0.6; }
+    50% { opacity: 1; }
+    100% { opacity: 0.6; }
+}
+
+/* [NOVO] Estilos para o Loader do Gráfico no Modal */
+.chart-loader {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: #9CA3AF;
+    z-index: 10;
+}
+
+.chart-loader.hidden {
+    display: none;
+}
+
+.chart-loader .spinner {
+    border: 4px solid rgba(255, 255, 255, 0.1);
+    border-left-color: #667eea;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    animation: spin 1s linear infinite;
+    margin-bottom: 10px;
 }

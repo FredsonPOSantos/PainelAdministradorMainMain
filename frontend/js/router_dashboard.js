@@ -1095,6 +1095,9 @@ const initRouterDashboard = () => {
      * Atualiza o gráfico expandido
      */
     window.updateExpandedChart = async function(range) {
+        // [NOVO] Mostra o loader antes de iniciar a requisição
+        if (window.showChartLoader) window.showChartLoader();
+
         try {
             // Atualizar botões de filtro de período
             document.querySelectorAll('.modal-filters .filter-btn[data-range]').forEach(btn => {
@@ -1147,7 +1150,7 @@ const initRouterDashboard = () => {
             } else if (currentExpandedMetric === 'wifi-clients' || currentExpandedMetric === 'dhcp-clients' || currentExpandedMetric === 'hotspot-clients') {
                 // [MODIFICADO] Busca dados em tempo real do MikroTik
                 const clientType = currentExpandedMetric.replace('-clients', '');
-                chartContainer.innerHTML = '<p style="color: #f0f0f0; padding: 20px;">A buscar dados em tempo real do roteador...</p>';
+                // chartContainer.innerHTML = '<p style="color: #f0f0f0; padding: 20px;">A buscar dados em tempo real do roteador...</p>'; // [REMOVIDO] Redundante com o loader
     
                 if (!window.tempApiCredentials) {
                     chartContainer.innerHTML = `<p style="color: #ff6b6b; padding: 20px;">Erro: Credenciais de API não fornecidas.</p>`;
@@ -1187,6 +1190,9 @@ const initRouterDashboard = () => {
         } catch (error) {
             console.error('Erro ao atualizar gráfico:', error);
             document.getElementById('expandedChart').innerHTML = `<p style="color: #ff6b6b; padding: 20px;">Erro: ${error.message}</p>`;
+        } finally {
+            // [NOVO] Esconde o loader quando terminar (sucesso ou erro)
+            if (window.hideChartLoader) window.hideChartLoader();
         }
     };
 

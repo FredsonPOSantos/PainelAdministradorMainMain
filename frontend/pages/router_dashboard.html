@@ -295,6 +295,12 @@
                 </div>
             </div>
 
+            <!-- [NOVO] Loader para o gráfico -->
+            <div id="chartLoader" class="chart-loader hidden">
+                <div class="spinner"></div>
+                <p>A carregar dados...</p>
+            </div>
+
             <div id="expandedChart" class="expanded-chart"></div>
         </div>
     </div>
@@ -303,5 +309,19 @@
     <!-- [CORRIGIDO] Carrega o ficheiro de utilitários em vez do script do dashboard principal -->
     <script src="/js/utils.js" defer></script>
     <script src="/js/router_dashboard.js" defer></script>
+    <script>
+        // [NOVO] Funções globais para controlar o loader do gráfico
+        // Chame window.showChartLoader() antes de iniciar o fetch dos dados
+        window.showChartLoader = function() {
+            const loader = document.getElementById('chartLoader');
+            if (loader) loader.classList.remove('hidden');
+        };
+        
+        // Chame window.hideChartLoader() no finally do seu fetch
+        window.hideChartLoader = function() {
+            const loader = document.getElementById('chartLoader');
+            if (loader) loader.classList.add('hidden');
+        };
+    </script>
 </body>
 </html>

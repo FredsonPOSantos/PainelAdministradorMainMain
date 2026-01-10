@@ -7,8 +7,6 @@
     <!-- [CORRIGIDO] O caminho para o CSS deve ser absoluto para o servidor backend (porta 3000) para funcionar com o servidor de desenvolvimento do frontend. -->
     <!-- [NOVO] Adiciona o ficheiro de utilitários para ter acesso às funções de formatação. Usando caminho absoluto para maior robustez. -->
     <script src="/js/utils.js"></script>
-    <!-- [NOVO] Cliente Socket.io -->
-    <script src="/socket.io/socket.io.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
     <!-- [UNIFICADO] Adiciona a nova folha de estilos partilhada para as páginas de monitoramento. -->
     <link rel="stylesheet" href="/css/monitoring_styles.css">
@@ -397,45 +395,6 @@
                 closeInterfaceModal();
             }
         });
-
-        // --- [NOVO] Integração com Socket.io para Tempo Real ---
-        const socket = io();
-
-        socket.on('connect', () => {
-            console.log('✅ Conectado ao servidor de atualizações em tempo real.');
-        });
-
-        socket.on('routerStatusUpdate', (data) => {
-            // data = { id, status, latency }
-            updateRouterCardRealtime(data);
-        });
-
-        function updateRouterCardRealtime(data) {
-            const card = document.getElementById(`router-card-${data.id}`);
-            const badge = document.getElementById(`status-badge-${data.id}`);
-            const latencySpan = document.getElementById(`latency-${data.id}`);
-
-            if (card && badge) {
-                // Remove classes antigas
-                card.classList.remove('online', 'offline', 'warning', 'critical', 'maintenance');
-                badge.classList.remove('online', 'offline', 'warning', 'critical', 'maintenance');
-
-                let newClass = data.status;
-                let newText = data.status === 'online' ? 'Online' : 'Offline';
-
-                // Lógica de cores baseada na latência (igual ao createRouterCard)
-                if (data.status === 'online' && data.latency !== null) {
-                    if (data.latency > 200) { newClass = 'critical'; newText = 'Online (Lento)'; }
-                    else if (data.latency >= 125) { newClass = 'warning'; }
-                }
-
-                card.classList.add(newClass);
-                badge.classList.add(newClass);
-                badge.textContent = newText;
-
-                if (latencySpan) latencySpan.textContent = data.latency !== null ? data.latency + ' ms' : 'N/A';
-            }
-        }
     </script>
 </body>
 </html>
