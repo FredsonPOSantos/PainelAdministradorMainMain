@@ -5,6 +5,7 @@ const { getInfluxConnectionStatus } = require('../services/influxService');
 const fs = require('fs');
 const path = require('path');
 const si = require('systeminformation'); // [NOVO] Biblioteca para info do sistema
+const cacheService = require('../services/cacheService'); // [NOVO]
 
 const getDashboardStats = async (req, res) => {
     try {
@@ -59,6 +60,13 @@ const getDashboardStats = async (req, res) => {
  */
 const getAnalyticsStats = async (req, res) => {
     try {
+        // [NOVO] Tenta buscar do cache primeiro
+        const cachedStats = await cacheService.get('analytics_stats');
+        if (cachedStats) {
+            console.log('[CACHE] Retornando estatísticas analíticas do cache.');
+            return res.json({ success: true, data: cachedStats });
+        }
+
         // Executa todas as consultas de agregação em paralelo para maior eficiência
         const [
             loginsRes,
@@ -167,6 +175,9 @@ const getAnalyticsStats = async (req, res) => {
 
         // Calcula o total de tickets
         stats.tickets.total = stats.tickets.open + stats.tickets.in_progress + stats.tickets.closed;
+
+        // [NOVO] Salva no cache por 5 minutos (300 segundos)
+        await cacheService.set('analytics_stats', stats, 300);
 
         res.json({ success: true, data: stats });
 

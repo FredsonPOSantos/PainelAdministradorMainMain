@@ -142,6 +142,15 @@ const updateTemplate = async (req, res) => {
     status_p_font_size,
   } = req.body;
 
+  // [NOVO] Verifica se é um template de sistema
+  const checkSystem = await pool.query('SELECT is_system FROM templates WHERE id = $1', [id]);
+  if (checkSystem.rows.length > 0 && checkSystem.rows[0].is_system) {
+      // Apenas master pode editar templates de sistema
+      if (req.user.role !== 'master') {
+          return res.status(403).json({ message: 'Este é um template padrão do sistema e não pode ser editado.' });
+      }
+  }
+
   // Os arquivos enviados vêm de 'req.files'
   const files = req.files || {};
 
@@ -219,6 +228,15 @@ const updateTemplate = async (req, res) => {
 const deleteTemplate = async (req, res) => {
   const { id } = req.params;
   try {
+    // [NOVO] Verifica se é um template de sistema
+    const checkSystem = await pool.query('SELECT is_system FROM templates WHERE id = $1', [id]);
+    if (checkSystem.rows.length > 0 && checkSystem.rows[0].is_system) {
+        // Apenas master pode excluir templates de sistema
+        if (req.user.role !== 'master') {
+            return res.status(403).json({ message: 'Este é um template padrão do sistema e não pode ser excluído.' });
+        }
+    }
+
     const checkUsageQuery = 'SELECT id FROM campaigns WHERE template_id = $1';
     const usageResult = await pool.query(checkUsageQuery, [id]);
     if (usageResult.rowCount > 0) {

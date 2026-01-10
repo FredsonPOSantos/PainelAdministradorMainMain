@@ -23,7 +23,7 @@ const getAllRouters = async (req, res) => {
   // A nova rota /status é usada para a página de monitoramento.
   try {
     // [MODIFICADO] Inclui campos de autenticação API
-    const allRouters = await pool.query('SELECT id, name, status, observacao, group_id, ip_address FROM routers ORDER BY name ASC');
+    const allRouters = await pool.query('SELECT id, name, status, observacao, group_id, ip_address, is_maintenance FROM routers ORDER BY name ASC');
     res.json(allRouters.rows);
   } catch (error) {
     console.error('Erro ao listar roteadores:', error);
@@ -44,6 +44,7 @@ const getRoutersStatus = async (req, res) => {
                 r.ip_address AS ip,
                 r.status,
                 -- r.latency, -- [REMOVIDO] Ignora banco, vamos calcular em tempo real
+                r.is_maintenance, -- [NOVO]
                 rg.name AS group_name
             FROM routers r
             LEFT JOIN router_groups rg ON r.group_id = rg.id
@@ -259,7 +260,7 @@ const getRoutersStatus = async (req, res) => {
 
 const updateRouter = async (req, res) => {
     const { id } = req.params;
-    const { observacao, ip_address } = req.body; 
+    const { observacao, ip_address, is_maintenance } = req.body; 
 
     const fields = [];
     const values = [];
@@ -277,6 +278,11 @@ const updateRouter = async (req, res) => {
         values.push(ip_address === '' ? null : ip_address);
     }
 
+    if (is_maintenance !== undefined) {
+        fields.push(`is_maintenance = $${queryIndex++}`);
+        values.push(is_maintenance);
+    }
+
     if (fields.length === 0) {
         return res.status(400).json({ message: "Nenhum campo para atualizar foi fornecido." });
     }
@@ -291,13 +297,24 @@ const updateRouter = async (req, res) => {
             return res.status(404).json({ message: 'Roteador não encontrado.' });
         }
 
+        // [MODIFICADO] Lógica para logs específicos de manutenção
+        let action = 'ROUTER_UPDATE';
+        let description = `Utilizador "${req.user.email}" atualizou o roteador "${updatedRouter.rows[0].name}".`;
+
+        if (is_maintenance !== undefined) {
+            const isMaint = is_maintenance === true || is_maintenance === 'true';
+            action = isMaint ? 'ROUTER_MAINTENANCE_ON' : 'ROUTER_MAINTENANCE_OFF';
+            description = `Utilizador "${req.user.email}" ${isMaint ? 'ativou' : 'desativou'} o modo de manutenção para o roteador "${updatedRouter.rows[0].name}".`;
+        }
+
         await logAction({
             req,
-            action: 'ROUTER_UPDATE',
+            action: action,
             status: 'SUCCESS',
-            description: `Utilizador "${req.user.email}" atualizou o roteador "${updatedRouter.rows[0].name}".`,
+            description: description,
             target_type: 'router',
-            target_id: id
+            target_id: id,
+            details: req.body
         });
 
         res.json({ message: 'Roteador atualizado com sucesso!', router: updatedRouter.rows[0] });

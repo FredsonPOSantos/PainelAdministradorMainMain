@@ -74,6 +74,15 @@ const updateBanner = async (req, res) => {
   const { id } = req.params;
   let { name, image_url, target_url, display_time_seconds, type, is_active } = req.body;
 
+  // [NOVO] Verifica se é um banner de sistema
+  const checkSystem = await pool.query('SELECT is_system FROM banners WHERE id = $1', [id]);
+  if (checkSystem.rows.length > 0 && checkSystem.rows[0].is_system) {
+      // Apenas master pode editar banners de sistema
+      if (req.user.role !== 'master') {
+          return res.status(403).json({ message: 'Este é um banner padrão do sistema e não pode ser editado.' });
+      }
+  }
+
   // Se um novo ficheiro foi enviado, usa o caminho dele. Senão, mantém o image_url existente.
   if (req.file) {
     image_url = `/uploads/banners/${req.file.filename}`;
@@ -127,6 +136,15 @@ const updateBanner = async (req, res) => {
 const deleteBanner = async (req, res) => {
   const { id } = req.params;
   try {
+    // [NOVO] Verifica se é um banner de sistema
+    const checkSystem = await pool.query('SELECT is_system FROM banners WHERE id = $1', [id]);
+    if (checkSystem.rows.length > 0 && checkSystem.rows[0].is_system) {
+        // Apenas master pode excluir banners de sistema
+        if (req.user.role !== 'master') {
+            return res.status(403).json({ message: 'Este é um banner padrão do sistema e não pode ser excluído.' });
+        }
+    }
+
     // Adicionar validação futura se banners forem associados a templates
     const result = await pool.query('DELETE FROM banners WHERE id = $1', [id]);
     if (result.rowCount === 0) {

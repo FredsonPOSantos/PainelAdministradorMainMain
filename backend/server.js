@@ -4,6 +4,9 @@ console.log("--- [GEMINI] EXECUTANDO A VERSÃO MAIS RECENTE DO SERVIDOR ---");
 const path = require('path');
 require('dotenv').config();
 const express = require('express'); // [CORREÇÃO] A importação do express já existe.
+const http = require('http'); // [NOVO] Necessário para Socket.io
+const { Server } = require("socket.io"); // [NOVO] Socket.io
+const rateLimit = require('express-rate-limit'); // [NOVO] Rate Limiting
 const cors = require('cors');
 const { pool, testInitialConnection, pgConnectionStatus, startPgReconnect } = require('./connection'); // [MODIFICADO]
 const methodOverride = require('method-override'); // [NOVO] Importa o method-override
@@ -16,6 +19,8 @@ const ping = require('ping'); // [NOVO] Importa a biblioteca de ping para a veri
 const influxService = require('./services/influxService'); // [NOVO] Importa o serviço Influx
 const { logAction } = require('./services/auditLogService');
 const { logError } = require('./services/errorLogService'); // [NOVO] Importa o serviço de log de erros
+const verifyToken = require('./middlewares/authMiddleware'); // [NOVO] Importa middleware de auth
+const checkPermission = require('./middlewares/roleMiddleware'); // [NOVO] Importa middleware de permissão
 const authRoutes = require('./routes/auth');
 const adminRoutes = require('./routes/admin');
 const routerRoutes = require('./routes/routers');
@@ -37,9 +42,19 @@ const monitoringRoutes = require('./routes/monitoring'); // <-- 1. IMPORTE A NOV
 const profileRoutes = require('./routes/profileRoutes'); // [NOVO]
 const roleRoutes = require('./routes/roleRoutes');       // [NOVO]
 const publicTicketRoutes = require('./routes/publicTicketRoutes'); // [NOVO]
+const searchRoutes = require('./routes/search'); // [NOVO]
 
 const app = express();
+const server = http.createServer(app); // [MODIFICADO] Cria servidor HTTP
+const io = new Server(server, {
+    cors: {
+        origin: "*", // Ajuste conforme necessário para produção
+        methods: ["GET", "POST"]
+    }
+});
 const PORT = process.env.PORT || 3000;
+
+app.set('io', io); // Torna o 'io' acessível nos controllers via req.app.get('io')
 
 // --- Middlewares Essenciais ---
 app.use(cors()); // Permite requisições de origens diferentes (ex: frontend em porta diferente)
@@ -56,6 +71,23 @@ app.use(methodOverride(function (req, res) {
     return method;
   }
 }));
+
+// --- [NOVO] Rate Limiting ---
+const loginLimiter = rateLimit({
+    windowMs: 1 * 60 * 1000, // 1 minuto
+    max: 5, // Limite de 5 tentativas
+    message: { message: "Muitas tentativas de login. Por favor, tente novamente em 1 minuto." },
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+
+const publicApiLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutos
+    max: 100, // Limite de 100 requisições por IP
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+
 
 // --- Servir Ficheiros Estáticos ---
 // Torna a pasta 'public' (e subpastas como 'uploads') acessível via URL
@@ -84,8 +116,9 @@ app.use(express.static(path.join(__dirname, '../Rede')));
 
 // --- Definição das Rotas da API ---
 // Mapeia os prefixos de URL para os ficheiros de rotas correspondentes
-app.use('/api/auth', authRoutes);         // Rotas de autenticação (login, forgot, reset)
+app.use('/api/auth', loginLimiter, authRoutes); // [MODIFICADO] Aplica Rate Limit no Login
 app.use('/api/admin', adminRoutes);       // Rotas de administração (utilizadores, perfil)
+
 app.use('/api/routers', routerRoutes);    // Rotas de roteadores e grupos
 app.use('/api/templates', templateRoutes); // Rotas de templates
 app.use('/api/campaigns', campaignRoutes); // Rotas de campanhas
@@ -98,8 +131,8 @@ app.use('/api/tickets', ticketRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/raffles', raffleRoutes);
 app.use('/api/dashboard', dashboardRoutes); // [NOVO] Regista a rota do dashboard
-app.use('/api/public', publicRoutes);     // [NOVO] Regista as rotas públicas
-app.use('/api/public/tickets', publicTicketRoutes); // [NOVO] Rota para tickets públicos
+app.use('/api/public', publicApiLimiter, publicRoutes);     // [MODIFICADO] Aplica Rate Limit
+app.use('/api/public/tickets', publicApiLimiter, publicTicketRoutes); // [MODIFICADO] Aplica Rate Limit
 // [NOVO] Monta as novas rotas sob o prefixo /api/dashboard/analytics
 app.use('/api/dashboard/analytics', dashboardAnalyticsRoutes);
 app.use('/api/monitoring', monitoringRoutes); // <-- 2. USE A NOVA ROTA
@@ -109,6 +142,7 @@ const logRoutes = require('./routes/logRoutes');
 app.use('/api/logs', logRoutes);
 app.use('/api/admin/profile', profileRoutes); // [NOVO] Rota para o perfil
 app.use('/api/roles', roleRoutes);            // [NOVO] Rota para gestão de perfis
+app.use('/api/search', searchRoutes);         // [NOVO] Rota de busca global
  
 
 // --- Rota de Teste Principal ---
@@ -173,7 +207,8 @@ const startPeriodicRouterCheck = () => {
                 "UPDATE routers SET status = 'offline' WHERE ip_address IS NULL AND status != 'offline'"
             );
 
-            const routersResult = await client.query('SELECT id, ip_address FROM routers WHERE ip_address IS NOT NULL');
+            // [MODIFICADO] Seleciona apenas roteadores que NÃO estão em manutenção
+            const routersResult = await client.query('SELECT id, ip_address FROM routers WHERE ip_address IS NOT NULL AND is_maintenance = false');
             const routersToCheck = routersResult.rows;
             
             if (routersToCheck.length === 0) {
@@ -204,6 +239,9 @@ const startPeriodicRouterCheck = () => {
                     if (latency !== null) {
                         // console.log(`[ROUTER-CHECK] Atualizado ${router.ip_address}: Status=${newStatus}, Latency=${latency}ms`);
                     }
+                    
+                    // [NOVO] Emite evento via Socket.io para atualização em tempo real
+                    io.emit('routerStatusUpdate', { id: router.id, status: newStatus, latency });
                 }
                 console.log(`⏹️ [ROUTER-CHECK] Ciclo de verificação concluído. ${routersToCheck.length} roteador(es) verificado(s).`);
             }
@@ -223,8 +261,13 @@ const startPeriodicRouterCheck = () => {
 };
 
 // --- Inicia o Servidor ---
-// Começa a escutar por conexões na porta definida
-app.listen(PORT, async () => {
+// [NOVO] Configuração do Socket.io
+io.on('connection', (socket) => {
+    // console.log('Cliente conectado via Socket.io');
+    socket.on('disconnect', () => { /* console.log('Cliente desconectado'); */ });
+});
+
+server.listen(PORT, async () => { // [MODIFICADO] Usa server.listen em vez de app.listen
   console.log(`✅ [SRV-ADM] Servidor iniciado na porta ${PORT}`);
   // [MODIFICADO] Tenta a conexão inicial com o PostgreSQL.
   // O servidor continuará a funcionar mesmo que falhe, e tentará reconectar.

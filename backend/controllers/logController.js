@@ -10,7 +10,7 @@ const path = require('path');
  * Por enquanto, busca os 200 registos mais recentes.
  */
 const getAuditLogs = async (req, res) => {
-    const { keyword, startDate, endDate } = req.query;
+    const { keyword, startDate, endDate, target_type, target_id, actionType } = req.query;
 
     try {
         let query = `
@@ -35,6 +35,33 @@ const getAuditLogs = async (req, res) => {
         if (endDate) {
             whereClauses.push(`timestamp <= $${paramIndex++}`);
             params.push(endDate);
+        }
+
+        if (target_type) {
+            whereClauses.push(`target_type = $${paramIndex++}`);
+            params.push(target_type);
+        }
+
+        if (target_id) {
+            whereClauses.push(`target_id::text = $${paramIndex++}`); // Cast para text para garantir compatibilidade
+            params.push(String(target_id));
+        }
+
+        // [NOVO] Filtro por Categoria de Ação
+        if (actionType) {
+            if (actionType === 'maintenance') {
+                whereClauses.push(`action LIKE 'ROUTER_MAINTENANCE%'`);
+            } else if (actionType === 'login') {
+                whereClauses.push(`action LIKE 'LOGIN_%'`);
+            } else if (actionType === 'user') {
+                whereClauses.push(`action LIKE 'USER_%'`);
+            } else if (actionType === 'router') {
+                whereClauses.push(`(action LIKE 'ROUTER_%' AND action NOT LIKE 'ROUTER_MAINTENANCE%')`);
+            } else if (actionType === 'settings') {
+                whereClauses.push(`action LIKE 'SETTINGS_%'`);
+            } else if (actionType === 'system') {
+                whereClauses.push(`(action LIKE 'SERVER_%' OR action LIKE 'MEDIA_%')`);
+            }
         }
 
         if (whereClauses.length > 0) {

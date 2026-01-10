@@ -415,26 +415,47 @@ const resetAppearanceSettings = async (req, res) => {
     console.log("resetAppearanceSettings: Iniciando a reposição das configurações de aparência...");
 
     try {
-        // Lista de todos os campos de aparência para repor para NULL
-        const appearanceFields = [
-            'logo_url', 'primary_color', 'background_color', 'sidebar_color', 'font_color',
-            'font_family', 'font_size', 'modal_background_color', 'modal_font_color',
-            'modal_border_color', 'login_background_color', 'login_form_background_color',
-            'login_font_color', 'login_button_color', 'login_logo_url', 'background_image_url'
-        ];
+        // [MODIFICADO] Define os valores padrão do tema "Rota Transportes Claro" solicitado
+        const defaults = {
+            primary_color: '#d64060',           // Rosa/Vermelho Vibrante
+            background_color: '#53346d',        // Roxo Escuro (Fundo Principal)
+            sidebar_color: '#53346d',           // Roxo Escuro (Sidebar)
+            font_color: '#ece4e2',              // Cinza Claro/Branco (Texto)
+            font_family: "'Inter', sans-serif",
+            font_size: 14,
+            modal_background_color: '#6e599a',  // Roxo Médio (Fundo Modal)
+            modal_font_color: '#ffffff',        // Branco
+            modal_border_color: '#b48cb5',      // Roxo Claro (Bordas)
+            login_background_color: '#53346d',  // Roxo Escuro
+            login_form_background_color: '#6e599a', // Roxo Médio
+            login_font_color: '#ece4e2',
+            login_button_color: '#d64060',      // Rosa/Vermelho Vibrante
+            nav_title_color: '#b48cb5',         // Roxo Claro (Títulos Menu)
+            label_color: '#ece4e2',             // Cinza Claro (Labels)
+            placeholder_color: '#b48cb5',       // Roxo Claro (Placeholders)
+            tab_link_color: '#b48cb5',          // Roxo Claro (Abas inativas)
+            tab_link_active_color: '#d64060',   // Rosa/Vermelho (Aba ativa)
+            // Resetar imagens para o padrão (null)
+            logo_url: null,
+            login_logo_url: null,
+            background_image_url: null
+        };
 
-        // Constrói a parte SET da query dinamicamente
-        const setClauses = appearanceFields.map(field => `${field} = NULL`).join(', ');
+        const fields = Object.keys(defaults);
+        const values = Object.values(defaults);
 
+        // Constrói a query UPDATE dinamicamente
+        const setClauses = fields.map((field, index) => `${field} = $${index + 1}`).join(', ');
+        
         const updateQuery = `UPDATE system_settings SET ${setClauses} WHERE id = 1 RETURNING *`;
 
-        const { rows } = await pool.query(updateQuery);
+        const { rows } = await pool.query(updateQuery, values);
 
         await logAction({
             req,
             action: 'SETTINGS_RESET_APPEARANCE',
             status: 'SUCCESS',
-            description: `Utilizador "${req.user.email}" repôs as configurações de aparência para os valores predefinidos.`,
+            description: `Utilizador "${req.user.email}" repôs as configurações de aparência para o padrão do sistema (Rota Transportes Claro).`,
         });
 
         res.status(200).json({

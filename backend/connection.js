@@ -195,6 +195,30 @@ async function checkAndUpgradeSchema(client) {
         }
     }
 
+    // [NOVO] Verifica e adiciona a coluna 'is_maintenance' na tabela 'routers'
+    const isMaintenanceExists = await checkColumn('routers', 'is_maintenance');
+    if (!isMaintenanceExists) {
+        console.log("   -> Adicionando coluna 'is_maintenance' à tabela 'routers'...");
+        await client.query('ALTER TABLE routers ADD COLUMN is_maintenance BOOLEAN DEFAULT FALSE');
+        console.log("   ✅ Coluna 'is_maintenance' adicionada.");
+    }
+
+    // [NOVO] Verifica e adiciona a coluna 'is_system' na tabela 'banners'
+    const isSystemBannersExists = await checkColumn('banners', 'is_system');
+    if (!isSystemBannersExists) {
+        console.log("   -> Adicionando coluna 'is_system' à tabela 'banners'...");
+        await client.query('ALTER TABLE banners ADD COLUMN is_system BOOLEAN DEFAULT FALSE');
+        console.log("   ✅ Coluna 'is_system' adicionada em banners.");
+    }
+
+    // [NOVO] Verifica e adiciona a coluna 'is_system' na tabela 'templates'
+    const isSystemTemplatesExists = await checkColumn('templates', 'is_system');
+    if (!isSystemTemplatesExists) {
+        console.log("   -> Adicionando coluna 'is_system' à tabela 'templates'...");
+        await client.query('ALTER TABLE templates ADD COLUMN is_system BOOLEAN DEFAULT FALSE');
+        console.log("   ✅ Coluna 'is_system' adicionada em templates.");
+    }
+
     // [NOVO] Garante que todas as permissões do sistema existem na tabela 'permissions'
     // Isto assegura que o Master tenha acesso a tudo (exceto LGPD) e que as permissões apareçam na matriz.
     const systemPermissions = [
@@ -214,6 +238,11 @@ async function checkAndUpgradeSchema(client) {
         { key: 'analytics.details.raffles', feature: 'Principal: Dashboard Analítico (Detalhes)', action: 'Ver Detalhes de Sorteios' },
         { key: 'analytics.details.campaigns', feature: 'Principal: Dashboard Analítico (Detalhes)', action: 'Ver Detalhes de Campanhas' },
         { key: 'analytics.details.server_health', feature: 'Principal: Dashboard Analítico (Detalhes)', action: 'Ver Detalhes de Saúde do Servidor' },
+
+        // Gestão de Arquivos
+        { key: 'files.read', feature: 'Gestão de Arquivos', action: 'Visualizar' },
+        { key: 'files.delete', feature: 'Gestão de Arquivos', action: 'Excluir' },
+        { key: 'files.archive', feature: 'Gestão de Arquivos', action: 'Arquivar' },
         
         // Gestão
         { key: 'users.read', feature: 'Gestão: Utilizadores', action: 'Visualizar' },
@@ -231,6 +260,12 @@ async function checkAndUpgradeSchema(client) {
         { key: 'routers.dashboard.read', feature: 'Gestão: Roteadores', action: 'Ver Dashboard Individual' },
         { key: 'routers.dashboard.clients', feature: 'Gestão: Roteadores', action: 'Ver Clientes no Dashboard' },
         { key: 'routers.dashboard.interfaces', feature: 'Gestão: Roteadores', action: 'Ver Interfaces no Dashboard' },
+
+        // Perfis (Roles)
+        { key: 'roles.read', feature: 'Gestão: Perfis', action: 'Visualizar' },
+        { key: 'roles.create', feature: 'Gestão: Perfis', action: 'Criar' },
+        { key: 'roles.update', feature: 'Gestão: Perfis', action: 'Editar' },
+        { key: 'roles.delete', feature: 'Gestão: Perfis', action: 'Eliminar' },
 
         { key: 'tickets.read', feature: 'Gestão: Suporte (Tickets)', action: 'Visualizar' },
         { key: 'tickets.create', feature: 'Gestão: Suporte (Tickets)', action: 'Criar' },
