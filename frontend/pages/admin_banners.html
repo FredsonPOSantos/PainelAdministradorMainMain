@@ -27,67 +27,63 @@
             <h3 id="modalTitle" style="margin: 0;">Adicionar Novo Banner</h3>
             <button class="modal-close-btn">&times;</button>
         </div>
-        <form id="bannerForm">
+        <form id="bannerForm" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; padding: 10px;">
             <input type="hidden" id="bannerId">
             
             <div class="input-group">
                 <label for="bannerName">Nome do Banner</label>
-                <input type="text" id="bannerName" required>
+                <input type="text" id="bannerName" required style="max-width: 100%;">
             </div>
             
             <div class="input-group">
                 <label for="bannerType">Tipo de Banner</label>
-                <select id="bannerType" required>
+                <select id="bannerType" required style="max-width: 100%;">
                     <option value="pre-login">Pré-Login</option>
                     <option value="post-login">Pós-Login</option>
                 </select>
             </div>
 
-            <!-- Seleção de Fonte da Imagem -->
             <div class="input-group">
-                <label>Fonte da Imagem</label>
-                <div class="radio-group">
+                <label for="bannerTargetUrl">URL de Destino</label>
+                <input type="text" id="bannerTargetUrl" placeholder="https://sua-empresa.com" style="max-width: 100%;">
+            </div>
+
+            <div class="input-group">
+                <label for="bannerDisplayTime">Tempo (segundos)</label>
+                <input type="number" id="bannerDisplayTime" value="5" min="1" style="max-width: 100%;">
+            </div>
+
+            <!-- Secção de Imagem -->
+            <div style="grid-column: 1 / -1; border: 1px solid var(--border-color); padding: 15px; border-radius: 8px;">
+                <label style="display:block; margin-bottom: 10px; font-weight:bold; text-align: center;">Imagem do Banner</label>
+                
+                <div class="radio-group" style="justify-content: center; margin-bottom: 15px;">
                     <input type="radio" id="sourceUpload" name="imageSource" value="upload" checked>
-                    <label for="sourceUpload">Fazer Upload</label>
+                    <label for="sourceUpload">Upload</label>
                     <input type="radio" id="sourceUrl" name="imageSource" value="url">
-                    <label for="sourceUrl">Usar URL Externa</label>
+                    <label for="sourceUrl">URL</label>
                 </div>
-            </div>
 
-            <!-- Campo de Upload (visível por defeito) -->
-            <div class="input-group" id="uploadGroup">
-                 <label for="bannerImageFile">Ficheiro da Imagem (JPG, PNG, GIF)</label>
-                 <input type="file" id="bannerImageFile" accept="image/jpeg,image/png,image/gif">
-            </div>
+                <div class="input-group" id="uploadGroup" style="margin-bottom: 10px;">
+                     <input type="file" id="bannerImageFile" accept="image/jpeg,image/png,image/gif" style="max-width: 100%;">
+                </div>
 
-            <!-- Campo de URL (oculto por defeito) -->
-            <div class="input-group hidden" id="urlGroup">
-                <label for="bannerImageUrl">URL da Imagem</label>
-                <input type="text" id="bannerImageUrl" placeholder="https://exemplo.com/imagem.png">
-            </div>
-            
-            <!-- Pré-visualização da Imagem -->
-            <div class="image-preview-container">
-                <img id="bannerImagePreview" src="" alt="Pré-visualização do Banner" class="hidden">
+                <div class="input-group hidden" id="urlGroup" style="margin-bottom: 10px;">
+                    <input type="text" id="bannerImageUrl" placeholder="https://exemplo.com/imagem.png" style="max-width: 100%;">
+                </div>
+                
+                <div class="image-preview-container" style="margin: 0 auto; max-width: 100%;">
+                    <img id="bannerImagePreview" src="" alt="Pré-visualização" class="hidden">
                 <span id="previewPlaceholder">Pré-visualização</span>
             </div>
-            
-            <div class="input-group">
-                <label for="bannerTargetUrl">URL de Destino (para onde o clique leva)</label>
-                <input type="text" id="bannerTargetUrl" placeholder="https://sua-empresa.com">
             </div>
 
-            <div class="input-group">
-                <label for="bannerDisplayTime">Tempo de Exibição (segundos)</label>
-                <input type="number" id="bannerDisplayTime" value="5" min="1">
-            </div>
-
-            <div class="input-group checkbox-group">
+            <div class="input-group checkbox-group" style="grid-column: 1 / -1; justify-content: center;">
                 <input type="checkbox" id="bannerIsActive" checked>
                 <label for="bannerIsActive">Banner Ativo</label>
             </div>
             
-            <div class="modal-actions" style="margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--border-color);">
+            <div class="modal-actions" style="grid-column: 1 / -1; margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--border-color);">
                 <button type="button" id="cancelBtn" class="btn-secondary modal-close-btn-action">Cancelar</button>
                 <button type="submit" class="btn-primary">Guardar</button>
             </div>

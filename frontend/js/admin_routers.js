@@ -191,10 +191,20 @@ if (window.initRoutersPage) {
                 const row = document.createElement('tr');
                 row.dataset.routerId = router.id; // [NOVO] Adiciona ID para facilitar a busca na exportação
                 const groupName = router.group_id ? groupMap.get(router.group_id) || `ID: ${router.group_id}` : 'Nenhum';
+                
+                // [MODIFICADO] Lógica de exibição do status na tabela
+                let statusDotClass = `status-${router.status || 'offline'}`;
+                let statusLabel = router.status || 'offline';
+                
+                if (router.is_maintenance) {
+                    statusDotClass = 'status-maintenance'; // Nova classe CSS
+                    statusLabel = 'Manutenção';
+                }
+
                 row.innerHTML = `
                     <td>${router.id}</td>
                     <td>${router.name}</td>
-                    <td><span class="status-dot status-${router.status || 'offline'}"></span> ${router.status || 'offline'}</td>
+                    <td><span class="status-dot ${statusDotClass}"></span> ${statusLabel}</td>
                     <td class="latency-cell">-</td>
                     <td class="uptime-cell">-</td>
                     <td class="availability-cell">-</td> <!-- [NOVO] Célula de Disponibilidade -->
@@ -203,6 +213,8 @@ if (window.initRoutersPage) {
                     <td class="action-buttons">
                         <button class="btn-edit" onclick="openModalForEditRouter(${router.id})" title="Editar Roteador"><i class="fas fa-pencil-alt"></i></button>
                         <button class="btn-delete" onclick="handleDeleteRouter(${router.id})" title="Eliminar Roteador"><i class="fas fa-trash-alt"></i></button>
+                        <button class="btn-secondary" onclick="toggleMaintenance(${router.id}, ${router.is_maintenance})" title="Modo Manutenção"><i class="fas fa-tools"></i></button>
+                        <button class="btn-secondary" onclick="viewRouterHistory(${router.id})" title="Histórico"><i class="fas fa-history"></i></button>
                     </td>
                 `;
                 routersTableBody.appendChild(row);
@@ -275,6 +287,94 @@ if (window.initRoutersPage) {
             }
         };
         
+        // [NOVO] Alternar Modo de Manutenção
+        window.toggleMaintenance = async (id, currentStatus) => {
+            const newStatus = !currentStatus;
+            const action = newStatus ? 'ativar' : 'desativar';
+            if (!confirm(`Deseja ${action} o modo de manutenção para este roteador?`)) return;
+
+            try {
+                // [CORREÇÃO] Usa a rota padrão de update, pois o controller já suporta is_maintenance
+                await apiRequest(`/api/routers/${id}`, 'PUT', { is_maintenance: newStatus });
+                showNotification(`Modo de manutenção ${action} com sucesso.`, 'success');
+                loadPageData();
+            } catch (e) {
+                showNotification(`Erro ao alterar modo de manutenção: ${e.message}`, 'error');
+            }
+        };
+
+        // [NOVO] Ver Histórico
+        window.viewRouterHistory = async (id) => {
+            // Abre um modal simples com logs filtrados
+            const modalHtml = `
+                <div id="historyModal" class="modal-overlay visible">
+                    <div class="modal-content large">
+                        <h3>Histórico do Roteador #${id}</h3>
+                        <div id="historyContent" style="min-height: 200px;">
+                            <div style="display: flex; justify-content: center; align-items: center; height: 100%;">
+                                <i class="fas fa-spinner fa-spin" style="font-size: 2rem; color: var(--primary-color);"></i>
+                            </div>
+                        </div>
+                        <div class="modal-actions"><button class="btn-primary" onclick="document.getElementById('historyModal').remove()">Fechar</button></div>
+                    </div>
+                </div>`;
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+            
+            try {
+                const response = await apiRequest(`/api/logs/activity?target_type=router&target_id=${id}`); // [CORRIGIDO] Filtro exato por tipo e ID
+                const logs = response.data || response;
+
+                if (!Array.isArray(logs) || logs.length === 0) {
+                    document.getElementById('historyContent').innerHTML = `<p style="text-align: center; padding: 20px;">Nenhum registo de histórico encontrado para este roteador.</p>`;
+                    return;
+                }
+
+                let tableHtml = `
+                    <p style="margin-bottom: 15px;">Encontrados <strong>${logs.length}</strong> registos de atividade.</p>
+                    <div class="table-container" style="max-height: 500px; overflow-y: auto;">
+                        <table style="width: 100%; border-collapse: collapse;">
+                            <thead>
+                                <tr>
+                                    <th>Data/Hora</th>
+                                    <th>Utilizador</th>
+                                    <th>Ação</th>
+                                    <th>Status</th>
+                                    <th>Descrição</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                `;
+
+                logs.forEach(log => {
+                    const timestamp = new Date(log.timestamp).toLocaleString('pt-BR');
+                    const statusBadge = log.status === 'SUCCESS' 
+                        ? '<span class="badge status-active">Sucesso</span>' 
+                        : '<span class="badge status-inactive">Falha</span>';
+
+                    tableHtml += `
+                        <tr>
+                            <td>${timestamp}</td>
+                            <td>${log.user_email || 'Sistema'}</td>
+                            <td>${log.action}</td>
+                            <td>${statusBadge}</td>
+                            <td>${log.description || ''}</td>
+                        </tr>
+                    `;
+                });
+
+                tableHtml += `
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+
+                document.getElementById('historyContent').innerHTML = tableHtml;
+            } catch (error) {
+                console.error("Erro ao carregar histórico:", error);
+                document.getElementById('historyContent').innerHTML = `<p style="color: #e53e3e; text-align: center;">Erro ao carregar histórico: ${error.message}</p>`;
+            }
+        };
+
         window.handleDeleteRouter = async (routerId) => {
             const hasPermanentDeletePermission = window.currentUserProfile?.permissions['routers.individual.delete_permanent'];
 

@@ -50,14 +50,39 @@ if (window.initBannersPage) {
                 }
                 banners.forEach(banner => {
                     const row = document.createElement('tr');
+                    
+                    // Lógica de Travamento (Sistema)
+                    const isSystem = banner.is_system === true; // Garante que é booleano
+                    const isMaster = window.currentUserProfile && window.currentUserProfile.role === 'master';
+                    const canEdit = isMaster || !isSystem;
+
+                    // [NOVO] Adiciona ícone de cadeado se for sistema
+                    const systemBadge = isSystem ? '<i class="fas fa-lock" title="Padrão do Sistema" style="color: #cbd5e0; margin-left: 5px;"></i>' : '';
+                    
+                    // [NOVO] Botão de Visualizar (sempre visível)
+                    const viewBtn = `<button class="btn-preview" data-banner-id="${banner.id}" title="Visualizar"><i class="fas fa-eye"></i></button>`;
+
+                    let actionButtons = '';
+                    if (canEdit) {
+                        actionButtons = `
+                            ${viewBtn}
+                            <button class="btn-edit" data-banner-id="${banner.id}" title="Editar Banner"><i class="fas fa-pencil-alt"></i></button>
+                            <button class="btn-delete" data-banner-id="${banner.id}" title="Eliminar Banner"><i class="fas fa-trash-alt"></i></button>
+                        `;
+                    } else {
+                        actionButtons = `
+                            ${viewBtn}
+                            <span style="color: #718096; cursor: not-allowed; margin-left: 8px;" title="Protegido pelo Sistema"><i class="fas fa-lock"></i></span>
+                        `;
+                    }
+
                     row.innerHTML = `
                         <td>${banner.id}</td>
-                        <td>${banner.name}</td>
+                        <td>${banner.name} ${systemBadge}</td>
                         <td>${banner.type}</td>
                         <td><span class="badge status-${banner.is_active ? 'active' : 'inactive'}">${banner.is_active ? 'Ativo' : 'Inativo'}</span></td>
                         <td class="action-buttons">
-                            <button class="btn-edit" data-banner-id="${banner.id}" title="Editar Banner"><i class="fas fa-pencil-alt"></i></button>
-                            <button class="btn-delete" data-banner-id="${banner.id}" title="Eliminar Banner"><i class="fas fa-trash-alt"></i></button>
+                            ${actionButtons}
                         </td>
                     `;
                     tableBody.appendChild(row);
@@ -94,12 +119,6 @@ if (window.initBannersPage) {
             let method = bannerId ? 'PUT' : 'POST';
             let endpoint = bannerId ? `/api/banners/${bannerId}` : '/api/banners';
 
-            // Simula o PUT para funcionar com FormData
-            if (method === 'PUT') {
-                formData.append('_method', 'PUT');
-                method = 'POST';
-            }
-
             try {
                 const result = await apiRequest(endpoint, method, formData);
                 showNotification(result.message, 'success');
@@ -121,6 +140,35 @@ if (window.initBannersPage) {
                     showNotification(`Erro: ${error.message}`, 'error');
                 }
             }
+        };
+
+        // [NOVO] Função para visualizar banner (Lightbox)
+        const openPreview = (bannerId) => {
+            const banner = allBannersData.find(b => b.id === bannerId);
+            if (!banner) return;
+            
+            // [CORREÇÃO] Constrói a URL absoluta para o backend (porta 3000) se for relativa
+            const imageUrl = banner.image_url.startsWith('/') 
+                ? `http://${window.location.hostname}:3000${banner.image_url}` 
+                : banner.image_url;
+
+            const lightbox = document.createElement('div');
+            lightbox.className = 'modal-overlay visible';
+            lightbox.style.zIndex = '10000';
+            lightbox.style.display = 'flex';
+            lightbox.style.alignItems = 'center';
+            lightbox.style.justifyContent = 'center';
+            lightbox.innerHTML = `
+                <div style="position: relative; max-width: 90%; max-height: 90%;">
+                    <img src="${imageUrl}" style="max-width: 100%; max-height: 80vh; border-radius: 8px; box-shadow: 0 5px 15px rgba(0,0,0,0.5); display: block; background: #fff;">
+                    <button class="btn-secondary" style="position: absolute; top: -40px; right: 0; color: white; background: rgba(0,0,0,0.5); border: none; cursor: pointer; padding: 5px 10px; border-radius: 4px;" onclick="this.closest('.modal-overlay').remove()"><i class="fas fa-times"></i> Fechar</button>
+                </div>
+            `;
+            document.body.appendChild(lightbox);
+            
+            lightbox.addEventListener('click', (e) => {
+                if (e.target === lightbox) lightbox.remove();
+            });
         };
 
         // --- FUNÇÕES DO MODAL ---
@@ -187,7 +235,8 @@ if (window.initBannersPage) {
         
         const updateImagePreview = (url) => {
             if (url) {
-                imagePreview.src = url.startsWith('/') ? `http://localhost:3000${url}` : url;
+                // [CORREÇÃO] Usa window.location.hostname em vez de localhost hardcoded
+                imagePreview.src = url.startsWith('/') ? `http://${window.location.hostname}:3000${url}` : url;
                 imagePreview.classList.remove('hidden');
                 previewPlaceholder.classList.add('hidden');
             } else {
@@ -220,12 +269,17 @@ if (window.initBannersPage) {
         });
 
         tableBody.addEventListener('click', (event) => {
-            const target = event.target;
+            // [CORREÇÃO] Usa .closest('button') para capturar o clique mesmo se for no ícone <i>
+            const target = event.target.closest('button');
+            if (!target) return;
+
             const bannerId = parseInt(target.getAttribute('data-banner-id'));
             if (target.classList.contains('btn-edit')) {
                 openModalForEdit(bannerId);
             } else if (target.classList.contains('btn-delete')) {
                 handleDelete(bannerId);
+            } else if (target.classList.contains('btn-preview')) { // [NOVO] Listener para visualizar
+                openPreview(bannerId);
             }
         });
 

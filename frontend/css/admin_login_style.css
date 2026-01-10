@@ -121,6 +121,8 @@ body {
     width: 100%; 
     padding: 12px 16px; 
     background-color: var(--background-dark); 
+    /* [MODIFICADO] Usa a cor de fundo do formulário para os inputs */
+    background-color: var(--background-medium); 
     border: 1px solid var(--border-color); 
     color: var(--text-primary); 
     border-radius: 8px; 

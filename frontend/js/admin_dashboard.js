@@ -161,6 +161,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const cancelReauthBtn = document.getElementById('cancelReauthBtn');
     const reauthError = document.getElementById('reauthError');
     const sidebarToggleBtn = document.getElementById('sidebarToggleBtn'); // [NOVO]
+    const globalSearchInput = document.getElementById('globalSearchInput'); // [NOVO]
 
     // [NOVO] Lógica de Notificações
     const notificationIcon = document.getElementById('notification-icon-wrapper');
@@ -263,6 +264,38 @@ document.addEventListener('DOMContentLoaded', async () => {
             console.error('Erro ao buscar notificações:', error);
         }
     };
+
+    // [NOVO] Lógica de Busca Global
+    if (globalSearchInput) {
+        globalSearchInput.addEventListener('keydown', async (e) => {
+            if (e.key === 'Enter') {
+                const term = globalSearchInput.value.trim();
+                if (term.length < 2) return;
+
+                try {
+                    const response = await apiRequest(`/api/search/global?q=${encodeURIComponent(term)}`);
+                    if (response.success && response.data.length > 0) {
+                        // Lógica simples: se encontrar 1 resultado, vai direto. Se mais, poderia abrir modal.
+                        // Aqui vamos implementar um redirecionamento inteligente para o primeiro resultado.
+                        const first = response.data[0];
+                        if (first.type === 'router') {
+                            loadPage('admin_routers', null); // Idealmente passaria filtro
+                            showNotification(`Roteador encontrado: ${first.name}`, 'success');
+                        } else if (first.type === 'user') {
+                            loadPage('admin_hotspot', null);
+                            showNotification(`Utilizador encontrado: ${first.name}`, 'success');
+                        } else if (first.type === 'ticket') {
+                            window.location.href = `support_portal.html#${first.id}`;
+                        }
+                    } else {
+                        showNotification('Nenhum resultado encontrado.', 'info');
+                    }
+                } catch (error) {
+                    console.error('Erro na busca:', error);
+                }
+            }
+        });
+    }
 
     notificationIcon?.addEventListener('click', toggleNotificationDropdown);
 

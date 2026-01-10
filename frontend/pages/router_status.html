@@ -7,6 +7,8 @@
     <!-- [CORRIGIDO] O caminho para o CSS deve ser absoluto para o servidor backend (porta 3000) para funcionar com o servidor de desenvolvimento do frontend. -->
     <!-- [NOVO] Adiciona o ficheiro de utilitários para ter acesso às funções de formatação. Usando caminho absoluto para maior robustez. -->
     <script src="/js/utils.js"></script>
+    <!-- [NOVO] Cliente Socket.io -->
+    <script src="/socket.io/socket.io.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
     <!-- [UNIFICADO] Adiciona a nova folha de estilos partilhada para as páginas de monitoramento. -->
     <link rel="stylesheet" href="/css/monitoring_styles.css">
@@ -20,6 +22,11 @@
         /* Estilo para status crítico (latência muito alta) */
         .status-badge.critical {
             background-color: #ea580c; /* Laranja Escuro/Vermelho */
+            color: #fff;
+        }
+        /* [NOVO] Estilo para modo manutenção (duplicado do CSS para garantir) */
+        .status-badge.maintenance {
+            background-color: #d97706; /* Laranja mais escuro */
             color: #fff;
         }
     </style>
@@ -201,26 +208,34 @@
         // [MODIFICADO] Criar card do roteador para usar dados reais do InfluxDB
         function createRouterCard(router) { // [MODIFICADO] Cria o card e o container do gráfico de forma mais robusta
             const card = document.createElement('div');
+            card.id = `router-card-${router.id}`; // [NOVO] ID único para atualização via Socket.io
             
             let statusClass = 'offline';
             let statusText = 'Offline';
             let pingClass = 'offline';
             
-            // [MODIFICADO] Usa a latência retornada para determinar o status visual, se disponível
-            if (router.status === 'online' || (router.latency !== null)) {
-                if (router.latency !== null && router.latency > 200) { // Limite crítico (> 200ms)
-                    statusClass = 'critical';
-                    statusText = 'Online (Lento)';
-                    pingClass = 'critical';
-                } else if (router.latency !== null && router.latency >= 125) { // Limite de aviso (>= 125ms)
-                    statusClass = 'warning';
-                    statusText = 'Online';
-                    pingClass = 'warning';
-                } else {
-                    statusClass = 'online';
-                    statusText = 'Online';
-                    pingClass = 'online';
-                }
+            // [DEBUG] Verifica se o roteador está em manutenção
+            // console.log(`[RouterCard] ID: ${router.id}, Nome: ${router.name}, Manutenção: ${router.is_maintenance}, Status: ${router.status}`);
+
+            // [NOVO] Prioriza o status de manutenção
+            if (router.is_maintenance) {
+                statusClass = 'maintenance';
+                statusText = 'Manutenção';
+                pingClass = 'maintenance';
+            } else if (router.status === 'online' || (router.latency !== null)) {
+                 if (router.latency !== null && router.latency > 200) { // Limite crítico (> 200ms)
+                     statusClass = 'critical';
+                     statusText = 'Online (Lento)';
+                     pingClass = 'critical';
+                 } else if (router.latency !== null && router.latency >= 125) { // Limite de aviso (>= 125ms)
+                     statusClass = 'warning';
+                     statusText = 'Online';
+                     pingClass = 'warning';
+                 } else {
+                     statusClass = 'online';
+                     statusText = 'Online';
+                     pingClass = 'online';
+                 }
             }
 
             card.className = `router-card ${statusClass}`;
@@ -233,13 +248,13 @@
                 ${router.status === 'online' ? `<i class="fas fa-cog settings-icon" onclick="openInterfaceModal(${router.id}, event)"></i>` : ''}
                 <div class="router-header">
                     <div class="router-name">${router.name || 'N/A'}</div>
-                    <div class="status-badge ${statusClass}">${statusText}</div>
+                    <div class="status-badge ${statusClass}" id="status-badge-${router.id}">${statusText}</div>
                 </div>
 
                 <div class="router-sub-info">
                     <span><i class="fas fa-network-wired"></i> ${router.ip || 'N/A'}</span>
                     <span><i class="fas fa-users"></i> ${router.connected_clients} Clientes</span>
-                    <span><i class="fas fa-tachometer-alt"></i> ${router.latency !== null ? router.latency + ' ms' : 'N/A'}</span>
+                    <span><i class="fas fa-tachometer-alt"></i> <span id="latency-${router.id}">${router.latency !== null ? router.latency + ' ms' : 'N/A'}</span></span>
                 </div>
             `;
 
@@ -382,6 +397,45 @@
                 closeInterfaceModal();
             }
         });
+
+        // --- [NOVO] Integração com Socket.io para Tempo Real ---
+        const socket = io();
+
+        socket.on('connect', () => {
+            console.log('✅ Conectado ao servidor de atualizações em tempo real.');
+        });
+
+        socket.on('routerStatusUpdate', (data) => {
+            // data = { id, status, latency }
+            updateRouterCardRealtime(data);
+        });
+
+        function updateRouterCardRealtime(data) {
+            const card = document.getElementById(`router-card-${data.id}`);
+            const badge = document.getElementById(`status-badge-${data.id}`);
+            const latencySpan = document.getElementById(`latency-${data.id}`);
+
+            if (card && badge) {
+                // Remove classes antigas
+                card.classList.remove('online', 'offline', 'warning', 'critical', 'maintenance');
+                badge.classList.remove('online', 'offline', 'warning', 'critical', 'maintenance');
+
+                let newClass = data.status;
+                let newText = data.status === 'online' ? 'Online' : 'Offline';
+
+                // Lógica de cores baseada na latência (igual ao createRouterCard)
+                if (data.status === 'online' && data.latency !== null) {
+                    if (data.latency > 200) { newClass = 'critical'; newText = 'Online (Lento)'; }
+                    else if (data.latency >= 125) { newClass = 'warning'; }
+                }
+
+                card.classList.add(newClass);
+                badge.classList.add(newClass);
+                badge.textContent = newText;
+
+                if (latencySpan) latencySpan.textContent = data.latency !== null ? data.latency + ' ms' : 'N/A';
+            }
+        }
     </script>
 </body>
 </html>

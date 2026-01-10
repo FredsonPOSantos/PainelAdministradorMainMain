@@ -76,7 +76,10 @@ body {
 .modal-content .input-group input,
 .modal-content .input-group select,
 .modal-content .input-group textarea {
-    background-color: var(--background-dark);
+    /* [MODIFICADO] Usa a cor de fundo do modal para os inputs, para ficarem "da mesma cor" */
+    background-color: var(--modal-background-color, var(--background-medium));
+    color: var(--modal-font-color, var(--text-primary));
+    border-color: var(--modal-border-color, var(--border-color));
 }
 
 .content-section { 
@@ -88,6 +91,49 @@ body {
 .input-group input:focus, .input-group select:focus, .input-group textarea:focus { outline: none; border-color: var(--primary-color, #4299e1); box-shadow: 0 0 0 2px rgba(66, 153, 225, 0.4); }
 .input-group input::placeholder, .input-group textarea::placeholder {
     color: var(--placeholder-color);
+}
+
+/* [NOVO] Estilização aprimorada para inputs de data (Calendários) */
+.input-group input[type="date"],
+input[type="date"] {
+    appearance: none;
+    -webkit-appearance: none;
+    font-family: var(--font-family, 'Inter', sans-serif);
+    font-size: 15px;
+    padding: 10px 15px;
+    border-radius: 8px;
+    background-color: var(--background-medium);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    min-height: 45px; /* Altura confortável e maior */
+    cursor: pointer;
+    position: relative;
+    width: 100%;
+    display: block;
+}
+
+/* Ícone do calendário customizado (SVG) */
+input[type="date"]::-webkit-calendar-picker-indicator {
+    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="%23a0aec0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>'); 
+    background-position: center;
+    background-size: 20px;
+    background-repeat: no-repeat;
+    color: transparent; /* Esconde o ícone padrão do navegador */
+    cursor: pointer;
+    width: 30px;
+    height: 100%;
+    position: absolute;
+    right: 10px;
+    top: 0;
+    bottom: 0;
+    opacity: 0.8;
+    transition: opacity 0.2s, transform 0.2s;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator:hover {
+    opacity: 1;
+    transform: scale(1.1);
+    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="%234299e1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>');
 }
 
 /* Botões */
@@ -163,6 +209,7 @@ body {
     display: flex; /* Alinha os botões na horizontal */
     align-items: center;
     gap: 8px; /* Espaçamento consistente entre os botões */
+    justify-content: flex-end; /* Alinha à direita se preferir, ou flex-start */
 }
 
 /* Regra base para TODOS os elementos de ação (botões e links) */
@@ -180,6 +227,7 @@ body {
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    position: relative; /* Garante contexto de posicionamento */
     text-decoration: none; /* Remove sublinhado dos links */
 }
 
@@ -187,11 +235,28 @@ body {
 .btn-edit { background-color: #dd6b20; color: #fff; }
 .btn-delete { background-color: #c53030; color: #fff; }
 .btn-preview { background-color: #3182ce; color: #fff; } /* Estilo para o novo botão de análise */
+/* [NOVO] Estilo para botão desabilitado visualmente (sistema) */
+.btn-disabled { 
+    background-color: #718096 !important; 
+    opacity: 0.5; 
+    cursor: not-allowed !important; 
+    pointer-events: none; 
+}
 .btn-reset-pass { background-color: var(--primary-color, #3182ce); color: #fff; }
 /* Modal Styles */
 .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.8); display: flex; justify-content: center; align-items: center; z-index: 1000; opacity: 0; visibility: hidden; transition: opacity 0.3s ease, visibility 0s 0.3s; }
 .modal-overlay:not(.hidden) { opacity: 1; visibility: visible; transition: opacity 0.3s ease, visibility 0s 0s; }
-.modal-content { background-color: var(--background-medium); padding: 25px; border-radius: 12px; width: 90%; max-width: 500px; position: relative; max-height: 90vh; display: flex; flex-direction: column; border: 1px solid var(--border-color); box-shadow: 0 10px 30px rgba(0,0,0,0.5); transform: scale(0.95); opacity: 0; transition: transform 0.3s ease, opacity 0.3s ease; }
+/* [MODIFICADO] Usa variáveis específicas para modais com fallback para o tema geral */
+.modal-content { 
+    background-color: var(--modal-background-color, var(--background-medium)); 
+    color: var(--modal-font-color, var(--text-primary));
+    border: 1px solid var(--modal-border-color, var(--border-color));
+    padding: 25px; 
+    border-radius: 12px; 
+    width: 90%; max-width: 500px; position: relative; max-height: 90vh; display: flex; flex-direction: column; 
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5); 
+    transform: scale(0.95); opacity: 0; transition: transform 0.3s ease, opacity 0.3s ease; 
+}
 .modal-overlay:not(.hidden) .modal-content { transform: scale(1); opacity: 1; }
 .modal-content.large { max-width: 850px; } /* Aumentado para o novo modal */
 .modal-content.small { max-width: 400px; }
@@ -220,6 +285,7 @@ body {
 /* Status Roteador */
 .status-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 8px; vertical-align: middle; }
 .status-online { background-color: #38a169; } .status-offline { background-color: #e53e3e; } .status-verificando { background-color: #dd6b20; } .status-erro { background-color: #718096; }
+.status-online { background-color: #38a169; } .status-offline { background-color: #e53e3e; } .status-verificando { background-color: #dd6b20; } .status-erro { background-color: #718096; } .status-maintenance { background-color: #d97706; } /* [NOVO] Laranja */
 
 /* Banners */
 .hidden { display: none !important; }
@@ -1011,41 +1077,86 @@ trix-editor {
 
 /* --- DEFINIÇÃO DOS TEMAS (Variáveis CSS Scoped) --- */
 
-/* Tema Rota Transportes */
-body.theme-rota {
+/* [RENOMEADO] Tema Rota Transportes (Padrão) */
+body.theme-rota-padrao {
     --primary-color: #dc335c;      /* Rosa/Vermelho Principal */
     --primary-color-dark: #c43c6c; /* Tom mais escuro para hover */
     --nav-title-color: #e04460;    /* Destaque nos títulos do menu */
     /* Mantemos o fundo escuro padrão para contraste, ou usamos um roxo muito escuro se preferir */
 }
 
-/* Tema Cidade Sol */
-body.theme-cidade-sol {
-    --primary-color: #f5de15;      /* Amarelo Principal */
-    --primary-color-dark: #d4bc14; /* Amarelo mais escuro */
-    --background-dark: #212837;    /* Azul Escuro (Fundo Principal) */
-    --background-medium: #2c364a;  /* Azul um pouco mais claro (Cards) */
+/* [RENOMEADO] Tema Rota Transportes (Roxo) */
+body.theme-rota-roxo {
+    --primary-color: #CC003E;      /* Vermelho Rota */
+    --primary-color-dark: #a30032;
+    --background-dark: #3D3175;    /* Roxo Escuro Fundo */
+    --background-medium: #69519B;  /* Roxo Médio Cards */
+    --sidebar-color: #3D3175;
+    --text-primary: #F6F7F7;       /* Branco/Cinza Claro */
+    --text-secondary: #F8F9F8;     /* Branco/Cinza Claro Secundário */
+    --nav-title-color: #75409C;    /* Roxo Claro Títulos */
+    --border-color: #75409C;
+}
+
+/* [RENOMEADO] Tema Cidade Sol (Azul) */
+body.theme-cidade-sol-azul {
+    --primary-color: #F7DB16;      /* Amarelo Forte (Ajustado) */
+    --primary-color-dark: #d4be12;
+    --background-dark: #728EB6;    /* Azul Médio */
+    --background-medium: #789DAD;  /* Azul Claro */
     --sidebar-color: #1a202c;      /* Sidebar escura */
     --text-primary: #ffffff;       /* Texto branco para contraste no azul */
-    --nav-title-color: #86a9c9;    /* Azul claro para títulos */
+    --text-secondary: #F7DB16;     /* Ênfase Amarelo nas fontes */
+    --nav-title-color: #F7DB16;    /* Amarelo Forte */
 }
 
-/* Tema Expresso Brasileiro */
-body.theme-expresso {
-    --primary-color: #F2CE1B;      /* Amarelo Expresso */
+/* [NOVO] Tema Cidade Sol (Amarelo) */
+body.theme-cidade-sol-amarelo {
+    --primary-color: #45637A;      /* Azul Petróleo solicitado */
+    --primary-color-dark: #2e4251;
+    --background-dark: #fff9c4;    /* Amarelo muito claro (Fundo) */
+    --background-medium: #fff59d;  /* Amarelo claro (Cards) */
+    --sidebar-color: #fbc02d;      /* Amarelo Ouro (Sidebar) */
+    --text-primary: #2c3e50;       /* Texto Escuro para contraste */
+    --text-secondary: #45637A;     /* Azul Petróleo */
+    --text-tertiary: #5d6d7e;
+    --nav-title-color: #1a202c;
+    --border-color: #f9a825;
+    --label-color: #2c3e50;
+    --placeholder-color: #7f8c8d;
+}
+
+/* [RENOMEADO] Tema Expresso Brasileiro (Amarelo) */
+body.theme-expresso-amarelo {
+    --primary-color: #F7DB17;      /* Amarelo Expresso */
     --primary-color-dark: #d9b918;
-    --background-dark: #2c3e50;    /* Azul Petróleo Escuro (Ajustado para legibilidade) */
-    --background-medium: #45637a;  /* Azul Petróleo Médio (Cards) */
-    --text-primary: #ffffff;
-    --nav-title-color: #97b6e4;    /* Azul claro */
+    --background-dark: #45637A;    /* Azul Petróleo */
+    --background-medium: #45637A;  /* Azul Petróleo (Cards) */
+    --text-primary: #FEFEFE;       /* Branco */
+    --text-secondary: #F7DB17;     /* Destaque Amarelo */
+    --nav-title-color: #F7DB17;    /* Amarelo */
+    --sidebar-color: #45637A;
 }
 
-/* Tema Oceano (Extra) */
+/* [RENOMEADO] Tema Expresso Brasileiro (Azul) */
+body.theme-expresso-azul {
+    --primary-color: #f4dc15;      /* Amarelo Ênfase */
+    --primary-color-dark: #d4be12;
+    --background-dark: #44647c;    /* Azul/Cinza Escuro */
+    --background-medium: #4c6c7c;  /* Azul/Cinza Médio */
+    --sidebar-color: #44647c;
+    --text-primary: #ffffff;       /* Branco */
+    --text-secondary: #97b6e4;     /* Azul Claro */
+    --nav-title-color: #97b6e4;
+    --border-color: #6b869d;
+}
+
+/* Tema Oceano (Ajustado: 35% mais escuro) */
 body.theme-oceano {
-    --primary-color: #00b4d8;
-    --background-dark: #03045e;
-    --background-medium: #0077b6;
-    --text-primary: #caf0f8;
+    --primary-color: #007a93;      /* Escurecido +15% */
+    --background-dark: #01023f;    /* Escurecido +15% */
+    --background-medium: #00507c;  /* Escurecido +15% */
+    --text-primary: #88a3a8;       /* Escurecido +15% */
 }
 
 /* Tema Claro (Light Mode) - Ajustado para alto contraste de texto */
@@ -1079,17 +1190,17 @@ body.theme-contrast {
     --nav-title-color: #ffff00;
 }
 
-/* Tema Verde Piscina (Teal) */
+/* Tema Verde Piscina (Teal) (Ajustado: 5% mais claro) */
 body.theme-teal {
-    --primary-color: #009688;      /* Teal */
-    --primary-color-dark: #00796b;
-    --background-dark: #e0f2f1;    /* Fundo muito claro teal */
+    --primary-color: #009e8e;      /* Clareado */
+    --primary-color-dark: #007f70;
+    --background-dark: #ebf7f6;    /* Clareado */
     --background-medium: #ffffff;
-    --sidebar-color: #004d40;      /* Sidebar escura teal */
-    --text-primary: #004d40;
-    --text-secondary: #00695c;
-    --nav-title-color: #80cbc4;    /* Títulos claros na sidebar escura */
-    --border-color: #b2dfdb;
+    --sidebar-color: #005143;      /* Clareado */
+    --text-primary: #005143;
+    --text-secondary: #006e60;
+    --nav-title-color: #86d0c9;
+    --border-color: #bbe2de;
 }
 
 /* Tema Escuro Light (Cinza / Gray) */
@@ -1150,6 +1261,43 @@ body.theme-linux {
     --border-color: #5b143a;
     --sidebar-color: #2C001E;
     --nav-title-color: #E95420;
+}
+
+/* [NOVO] Tema Pôr do Sol */
+body.theme-sunset {
+    --primary-color: #ff6b6b;      /* Laranja/Vermelho */
+    --primary-color-dark: #ee5253;
+    --background-dark: #2d1b2e;    /* Roxo muito escuro */
+    --background-medium: #462a48;  /* Roxo médio */
+    --sidebar-color: #2d1b2e;
+    --text-primary: #ffecd1;       /* Creme */
+    --text-secondary: #e0a4a4;
+    --nav-title-color: #ff9f43;    /* Laranja */
+    --border-color: #5e3c58;
+}
+
+/* [NOVO] Tema Abyss (VSCode) */
+body.theme-abyss {
+    --primary-color: #77088d;      /* Roxo Abyss */
+    --primary-color-dark: #5f0671;
+    --background-dark: #000c18;    /* Azul Profundo */
+    --background-medium: #051336;  /* Azul Médio */
+    --sidebar-color: #000c18;
+    --text-primary: #6688cc;       /* Azul Claro Texto */
+    --nav-title-color: #ddbb88;    /* Creme/Dourado */
+    --border-color: #203050;
+}
+
+/* [NOVO] Tema Kimbie Dark (VSCode) */
+body.theme-kimbie {
+    --primary-color: #dc3958;      /* Vermelho Kimbie */
+    --primary-color-dark: #b02e46;
+    --background-dark: #221a0f;    /* Marrom Escuro */
+    --background-medium: #362712;  /* Marrom Médio */
+    --sidebar-color: #221a0f;
+    --text-primary: #d3af86;       /* Areia */
+    --nav-title-color: #f06431;    /* Laranja */
+    --border-color: #5e452b;
 }
 
 /* [NOVO] Tema Blue Light Filter */

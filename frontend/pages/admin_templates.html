@@ -27,49 +27,56 @@
             <h3 id="modalTitle" style="margin: 0;">Adicionar Novo Template</h3>
             <button class="modal-close-btn">&times;</button>
         </div>
-        <form id="templateForm">
+        <form id="templateForm" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; padding: 10px;">
             <input type="hidden" id="templateId">
-            <div class="input-group">
+            
+            <div class="input-group" style="grid-column: 1 / -1;">
                 <label for="templateName">Nome do Template</label>
-                <input type="text" id="templateName" required>
+                <input type="text" id="templateName" required style="max-width: 100%;">
             </div>
+            
             <div class="input-group">
                 <label for="templateBaseModel">Modelo Base</label>
-                <select id="templateBaseModel" required>
+                <select id="templateBaseModel" required style="max-width: 100%;">
                     <option value="V1">V1 (Padrão)</option>
                     <option value="V2">V2 (Com Vídeo)</option>
                 </select>
             </div>
+            
             <div class="input-group">
                 <label for="templateLoginType">Tipo de Login</label>
-                <select id="templateLoginType" required>
+                <select id="templateLoginType" required style="max-width: 100%;">
                     <option value="simplificado">Simplificado (Email)</option>
                     <option value="cadastro_completo">Cadastro Completo</option>
                     <option value="padrao">Padrão (Email e Senha)</option>
                     <option value="validacao_sms">Validação por SMS</option>
                 </select>
             </div>
-            <div class="input-group">
-                <label for="templatePrimaryColor">Cor Primária</label>
-                <input type="color" id="templatePrimaryColor" value="#3182ce">
+
+            <!-- Grupo de Cores -->
+            <div style="grid-column: 1 / -1; display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; background: rgba(0,0,0,0.1); padding: 15px; border-radius: 8px;">
+                <div class="input-group" style="margin-bottom: 0;">
+                    <label for="templatePrimaryColor">Cor Primária</label>
+                    <input type="color" id="templatePrimaryColor" value="#3182ce" style="width: 100%; height: 40px; max-width: 100%;">
+                </div>
+                <div class="input-group" style="margin-bottom: 0;">
+                    <label for="templateFontColor">Cor da Fonte</label>
+                    <input type="color" id="templateFontColor" value="#2d3748" style="width: 100%; height: 40px; max-width: 100%;">
+                </div>
+                <div class="input-group" style="margin-bottom: 0;">
+                    <label for="templateFormBgColor">Cor do Formulário</label>
+                    <input type="color" id="templateFormBgColor" value="#ffffff" style="width: 100%; height: 40px; max-width: 100%;">
+                </div>
             </div>
+
             <div class="input-group">
-                <label for="templateFontColor">Cor da Fonte</label>
-                <input type="color" id="templateFontColor" value="#2d3748">
-            </div>
-             <div class="input-group">
                 <label for="templateFontSize">Tamanho da Fonte (ex: 16px)</label>
-                <input type="text" id="templateFontSize" placeholder="16px">
+                <input type="text" id="templateFontSize" placeholder="16px" style="max-width: 100%;">
             </div>
-            <!-- [NOVO] Campo para Cor do Formulário -->
-            <div class="input-group">
-                <label for="templateFormBgColor">Cor do Formulário</label>
-                <input type="color" id="templateFormBgColor" value="#ffffff">
-            </div>
-            <!-- [NOVO] Campo para Família da Fonte -->
+            
             <div class="input-group">
                 <label for="templateFontFamily">Família da Fonte</label>
-                <select id="templateFontFamily">
+                <select id="templateFontFamily" style="max-width: 100%;">
                     <option value="'Inter', sans-serif">Inter (Padrão)</option>
                     <option value="'Arial', sans-serif">Arial</option>
                     <option value="'Verdana', sans-serif">Verdana</option>
@@ -77,130 +84,127 @@
                 </select>
             </div>
 
-            <!-- [NOVO] Grupo para Logótipo com seletor de fonte -->
-            <div class="input-group-compound">
-                <label>Logótipo</label>
-                <div class="radio-group">
+            <!-- Grupo Logótipo -->
+            <div class="input-group-compound" style="grid-column: 1 / 2; border: 1px solid var(--border-color); padding: 15px; border-radius: 8px;">
+                <label style="display:block; margin-bottom: 10px; font-weight:bold; text-align: center;">Logótipo</label>
+                <div class="radio-group" style="justify-content: center; margin-bottom: 10px;">
                     <input type="radio" id="logoSourceUpload" name="logoSource" value="upload" checked>
                     <label for="logoSourceUpload">Upload</label>
                     <input type="radio" id="logoSourceUrl" name="logoSource" value="url">
-                    <label for="logoSourceUrl">URL Externa</label>
+                    <label for="logoSourceUrl">URL</label>
                 </div>
-                <div id="logoUploadGroup" class="input-group">
-                    <label for="templateLogoFile" class="sr-only">Ficheiro do Logótipo</label>
-                    <input type="file" id="templateLogoFile" accept="image/*" style="padding-top: 10px;">
+                <div id="logoUploadGroup" class="input-group" style="margin-bottom: 0;">
+                    <input type="file" id="templateLogoFile" accept="image/*" style="max-width: 100%;">
                 </div>
-                <div id="logoUrlGroup" class="hidden input-group">
-                    <label for="templateLogoUrl" class="sr-only">URL do Logótipo</label>
-                    <input type="text" id="templateLogoUrl" placeholder="Cole a URL externa do logótipo">
+                <div id="logoUrlGroup" class="hidden input-group" style="margin-bottom: 0;">
+                    <input type="text" id="templateLogoUrl" placeholder="URL externa" style="max-width: 100%;">
                 </div>
             </div>
 
-            <!-- [NOVO] Grupo para Fundo com seletor de fonte -->
-            <div class="input-group-compound">
-                <label>Imagem de Fundo</label>
-                <div class="radio-group">
+            <!-- Grupo Fundo -->
+            <div class="input-group-compound" style="grid-column: 2 / 3; border: 1px solid var(--border-color); padding: 15px; border-radius: 8px;">
+                <label style="display:block; margin-bottom: 10px; font-weight:bold; text-align: center;">Imagem de Fundo</label>
+                <div class="radio-group" style="justify-content: center; margin-bottom: 10px;">
                     <input type="radio" id="bgSourceUpload" name="bgSource" value="upload" checked>
                     <label for="bgSourceUpload">Upload</label>
                     <input type="radio" id="bgSourceUrl" name="bgSource" value="url">
-                    <label for="bgSourceUrl">URL Externa</label>
+                    <label for="bgSourceUrl">URL</label>
                 </div>
-                <div id="bgUploadGroup" class="input-group">
-                    <label for="templateBgFile" class="sr-only">Ficheiro de Fundo</label>
-                    <input type="file" id="templateBgFile" accept="image/*" style="padding-top: 10px;">
+                <div id="bgUploadGroup" class="input-group" style="margin-bottom: 0;">
+                    <input type="file" id="templateBgFile" accept="image/*" style="max-width: 100%;">
                 </div>
-                <div id="bgUrlGroup" class="hidden input-group">
-                    <label for="templateBgUrl" class="sr-only">URL da Imagem de Fundo</label>
-                    <input type="text" id="templateBgUrl" placeholder="Cole a URL externa da imagem de fundo">
+                <div id="bgUrlGroup" class="hidden input-group" style="margin-bottom: 0;">
+                    <input type="text" id="templateBgUrl" placeholder="URL externa" style="max-width: 100%;">
                 </div>
             </div>
 
-            <div class="input-group" id="videoUrlGroup" style="display: none;">
+            <div class="input-group" id="videoUrlGroup" style="display: none; grid-column: 1 / -1;">
                 <label for="templateVideoUrl">URL do Vídeo Promocional (para V2)</label>
-                <input type="text" id="templateVideoUrl" placeholder="https://exemplo.com/video.mp4">
+                <input type="text" id="templateVideoUrl" placeholder="https://exemplo.com/video.mp4" style="max-width: 100%;">
             </div>
+            
              <div class="input-group">
                 <label for="templateBanner">Banner Pré-Login</label>
-                <select id="templateBanner">
+                <select id="templateBanner" style="max-width: 100%;">
                     <option value="">Nenhum</option>
                     <!-- Opções de banners serão carregadas aqui -->
                 </select>
             </div>
-            <!-- [NOVO] Campo para Banner Pós-Login -->
             <div class="input-group">
                 <label for="templatePostLoginBanner">Banner Pós-Login</label>
-                <select id="templatePostLoginBanner">
+                <select id="templatePostLoginBanner" style="max-width: 100%;">
                     <option value="">Nenhum</option>
                 </select>
             </div>
 
-            <!-- [NOVO] Secção para Configurações da Tela de Status -->
-            <hr style="margin: 25px 0;">
-            <div class="section-header" style="padding: 0; margin-bottom: 15px;">
-                <h4>Configuração da Tela de Status</h4>
+            <!-- Secção Status -->
+            <div style="grid-column: 1 / -1;">
+                <hr style="margin: 20px 0; border-color: var(--border-color);">
+                <div class="section-header" style="padding: 0; margin-bottom: 15px; border: none;">
+                    <h4 style="text-align: left; color: var(--primary-color);">Configuração da Tela de Status</h4>
+                </div>
             </div>
-            <div class="input-group">
+            
+            <div class="input-group" style="grid-column: 1 / -1;">
                 <label for="templateStatusTitle">Título da Página de Status</label>
-                    <input type="text" id="templateStatusTitle" placeholder="Ex: Conectado com Sucesso!">
-                </div>
-                <div class="input-group">
-                    <label for="templateStatusMessage">Mensagem da Página de Status</label>
-                    <textarea id="templateStatusMessage" rows="3" placeholder="Ex: Você já pode navegar na internet."></textarea>
-                </div>
-                <div class="input-group-compound">
-                    <label>Logótipo da Página de Status</label>
-                    <div class="radio-group">
+                <input type="text" id="templateStatusTitle" placeholder="Ex: Conectado com Sucesso!" style="max-width: 100%;">
+            </div>
+            
+            <div class="input-group" style="grid-column: 1 / -1;">
+                <label for="templateStatusMessage">Mensagem da Página de Status</label>
+                <textarea id="templateStatusMessage" rows="3" placeholder="Ex: Você já pode navegar na internet." style="max-width: 100%; width: 100%;"></textarea>
+            </div>
+            
+            <!-- Status Logo -->
+            <div class="input-group-compound" style="grid-column: 1 / 2; border: 1px solid var(--border-color); padding: 15px; border-radius: 8px;">
+                <label style="display:block; margin-bottom: 10px; font-weight:bold; text-align: center;">Logótipo de Status</label>
+                <div class="radio-group" style="justify-content: center; margin-bottom: 10px;">
                         <input type="radio" id="statusLogoSourceUpload" name="statusLogoSource" value="upload" checked>
                         <label for="statusLogoSourceUpload">Upload</label>
                         <input type="radio" id="statusLogoSourceUrl" name="statusLogoSource" value="url">
-                        <label for="statusLogoSourceUrl">URL Externa</label>
+                    <label for="statusLogoSourceUrl">URL</label>
                     </div>
-                    <div id="statusLogoUploadGroup" class="input-group">
-                        <label for="templateStatusLogoFile" class="sr-only">Ficheiro do Logótipo de Status</label>
-                        <input type="file" id="templateStatusLogoFile" accept="image/*" style="padding-top: 10px;">
+                <div id="statusLogoUploadGroup" class="input-group" style="margin-bottom: 0;">
+                    <input type="file" id="templateStatusLogoFile" accept="image/*" style="max-width: 100%;">
                     </div>
-                    <div id="statusLogoUrlGroup" class="hidden input-group">
-                        <label for="templateStatusLogoUrl" class="sr-only">URL do Logótipo de Status</label>
-                        <input type="text" id="templateStatusLogoUrl" placeholder="URL (opcional, usa o logo principal se vazio)">
+                <div id="statusLogoUrlGroup" class="hidden input-group" style="margin-bottom: 0;">
+                    <input type="text" id="templateStatusLogoUrl" placeholder="URL (opcional)" style="max-width: 100%;">
                     </div>
                 </div>
 
-                <!-- [NOVO] Campos para personalização de fundo e fontes da tela de status -->
-                <div class="input-group-compound">
-                    <label>Fundo da Página de Status</label>
-                    <div class="radio-group">
+            <!-- Status Background -->
+            <div class="input-group-compound" style="grid-column: 2 / 3; border: 1px solid var(--border-color); padding: 15px; border-radius: 8px;">
+                <label style="display:block; margin-bottom: 10px; font-weight:bold; text-align: center;">Fundo de Status</label>
+                <div class="radio-group" style="justify-content: center; margin-bottom: 10px;">
                         <input type="radio" id="statusBgSourceColor" name="statusBgSource" value="color" checked>
                         <label for="statusBgSourceColor">Cor</label>
                         <input type="radio" id="statusBgSourceImage" name="statusBgSource" value="image">
-                        <label for="statusBgSourceImage">Imagem</label>
+                    <label for="statusBgSourceImage">Img</label>
                     </div>
-                    <div id="statusBgColorGroup">
-                        <input type="color" id="templateStatusBgColor" value="#f0f2f5">
+                <div id="statusBgColorGroup" style="text-align: center;">
+                    <input type="color" id="templateStatusBgColor" value="#f0f2f5" style="width: 100%; height: 40px; max-width: 100%;">
                     </div>
                     <div id="statusBgImageGroup" class="hidden">
-                        <div class="input-group" style="margin-bottom: 0px;">
-                            <label for="templateStatusBgFile" class="sr-only">Ficheiro de Fundo de Status</label>
-                            <input type="file" id="templateStatusBgFile" accept="image/*" style="padding-top: 10px;">
+                    <div class="input-group" style="margin-bottom: 5px;">
+                        <input type="file" id="templateStatusBgFile" accept="image/*" style="max-width: 100%;">
                         </div>
-                        <p class="input-hint" style="text-align: center; margin: 10px 0;">— ou —</p>
-                        <div class="input-group">
-                            <label for="templateStatusBgUrl" class="sr-only">URL do Fundo de Status</label>
-                            <input type="text" id="templateStatusBgUrl" placeholder="Cole uma URL de imagem externa">
+                    <div class="input-group" style="margin-bottom: 0;">
+                        <input type="text" id="templateStatusBgUrl" placeholder="URL da imagem" style="max-width: 100%;">
                         </div>
                     </div>
                 </div>
 
                 <div class="input-group">
-                    <label for="templateStatusH1FontSize">Tamanho da Fonte do Título (H1)</label>
-                    <input type="text" id="templateStatusH1FontSize" placeholder="Ex: 1.8em ou 24px">
+                <label for="templateStatusH1FontSize">Tam. Fonte Título (H1)</label>
+                <input type="text" id="templateStatusH1FontSize" placeholder="Ex: 1.8em" style="max-width: 100%;">
                 </div>
 
                 <div class="input-group">
-                    <label for="templateStatusPFontSize">Tamanho da Fonte da Mensagem (P)</label>
-                    <input type="text" id="templateStatusPFontSize" placeholder="Ex: 1.1em ou 16px">
+                <label for="templateStatusPFontSize">Tam. Fonte Mensagem (P)</label>
+                <input type="text" id="templateStatusPFontSize" placeholder="Ex: 1.1em" style="max-width: 100%;">
             </div>
 
-            <div class="modal-actions" style="margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--border-color);">
+            <div class="modal-actions" style="grid-column: 1 / -1; margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--border-color);">
                 <button type="button" id="cancelBtn" class="btn-secondary modal-close-btn-action">Cancelar</button>
                 <button type="submit" class="btn-primary">Guardar</button>
             </div>

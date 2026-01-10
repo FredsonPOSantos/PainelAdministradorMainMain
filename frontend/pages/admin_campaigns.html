@@ -28,46 +28,55 @@
             <h3 id="modalTitle" style="margin: 0;">Adicionar Nova Campanha</h3>
             <button class="modal-close-btn">&times;</button>
         </div>
-        <form id="campaignForm">
+        <form id="campaignForm" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; padding: 10px;">
             <input type="hidden" id="campaignId">
-            <div class="input-group">
+            
+            <div class="input-group" style="grid-column: 1 / -1;">
                 <label for="campaignName">Nome da Campanha</label>
-                <input type="text" id="campaignName" required>
+                <input type="text" id="campaignName" required style="max-width: 100%;">
             </div>
-            <div class="input-group">
+            
+            <div class="input-group" style="grid-column: 1 / -1;">
                 <label for="campaignTemplateId">Template</label>
-                <select id="campaignTemplateId" required>
+                <select id="campaignTemplateId" required style="max-width: 100%;">
                     <option value="">Selecione um Template</option>
                     <!-- Templates serão carregados aqui -->
                 </select>
             </div>
-            <div class="input-group">
-                <label for="campaignTargetType">Tipo de Alvo</label>
-                <select id="campaignTargetType" required>
-                    <option value="all">Todos os Roteadores</option>
-                    <option value="group">Grupo de Roteadores</option>
-                    <option value="single_router">Roteador Individual</option>
-                </select>
+
+            <!-- Grupo de Alvo -->
+            <div style="grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr; gap: 20px; background: rgba(0,0,0,0.1); padding: 15px; border-radius: 8px;">
+                <div class="input-group" style="margin-bottom: 0;">
+                    <label for="campaignTargetType">Tipo de Alvo</label>
+                    <select id="campaignTargetType" required style="max-width: 100%;">
+                        <option value="all">Todos os Roteadores</option>
+                        <option value="group">Grupo de Roteadores</option>
+                        <option value="single_router">Roteador Individual</option>
+                    </select>
+                </div>
+                <div class="input-group" style="margin-bottom: 0;">
+                    <label for="campaignTargetId">Alvo Específico</label>
+                    <select id="campaignTargetId" style="max-width: 100%;">
+                        <option value="">Selecione um alvo...</option>
+                    </select>
+                </div>
             </div>
-            <div class="input-group">
-                <label for="campaignTargetId">Alvo</label>
-                <select id="campaignTargetId">
-                    <option value="">Selecione um alvo...</option>
-                </select>
-            </div>
+
             <div class="input-group">
                 <label for="campaignStartDate">Data de Início</label>
-                <input type="date" id="campaignStartDate" required>
+                <input type="date" id="campaignStartDate" required style="max-width: 100%;">
             </div>
             <div class="input-group">
                 <label for="campaignEndDate">Data de Fim</label>
-                <input type="date" id="campaignEndDate" required>
+                <input type="date" id="campaignEndDate" required style="max-width: 100%;">
             </div>
-            <div class="input-group checkbox-group">
+            
+            <div class="input-group checkbox-group" style="grid-column: 1 / -1; justify-content: center;">
                 <input type="checkbox" id="campaignIsActive" checked>
                 <label for="campaignIsActive">Campanha Ativa</label>
             </div>
-            <div class="modal-actions" style="margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--border-color);">
+            
+            <div class="modal-actions" style="grid-column: 1 / -1; margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--border-color);">
                 <button type="button" id="cancelBtn" class="btn-secondary modal-close-btn-action">Cancelar</button>
                 <button type="submit" class="btn-primary">Guardar</button>
             </div>

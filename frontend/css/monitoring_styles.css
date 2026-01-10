@@ -166,6 +166,7 @@ body {
 .router-card.offline { border-left: 5px solid #ef4444; }
 .router-card.warning { border-left: 5px solid #f59e0b; }
 .router-card.critical { border-left: 5px solid #ea580c; }
+.router-card.maintenance { border-left: 5px solid #d97706; } /* [NOVO] Laranja para manutenção */
 
 .router-header {
     display: flex;
@@ -210,6 +211,7 @@ body {
 .status-badge.offline { background-color: #EF4444; color: white; }
 .status-badge.warning { background-color: #F59E0B; color: #111827; }
 .status-badge.critical { background-color: #ea580c; color: white; }
+.status-badge.maintenance { background-color: #d97706; color: white; } /* [NOVO] */
 
 .traffic-chart-container {
     margin-top: 15px;
@@ -229,6 +231,7 @@ body {
 .ping-indicator.offline { background: #ef4444; animation: none; }
 .ping-indicator.warning { background: #f59e0b; animation: none; }
 .ping-indicator.critical { background: #ea580c; animation: none; }
+.ping-indicator.maintenance { background: #d97706; animation: none; } /* [NOVO] */
 
 @keyframes pulse {
     0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }

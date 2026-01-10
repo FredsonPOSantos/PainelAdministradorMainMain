@@ -687,6 +687,23 @@ window.initSettingsPage = () => {
             
             filtersContainer.parentElement.insertBefore(tabsDiv, filtersContainer);
 
+            // [NOVO] Injeta o seletor de Tipo de Ação nos filtros
+            if (!document.getElementById('logActionType')) {
+                const select = document.createElement('select');
+                select.id = 'logActionType';
+                select.style.cssText = 'padding: 10px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--background-medium); color: var(--text-primary); margin-right: 10px; max-width: 150px;';
+                select.innerHTML = `
+                    <option value="">Todas as Ações</option>
+                    <option value="maintenance">Manutenção</option>
+                    <option value="login">Login/Acesso</option>
+                    <option value="user">Utilizadores</option>
+                    <option value="router">Roteadores</option>
+                    <option value="settings">Configurações</option>
+                `;
+                // Insere após o campo de palavra-chave
+                keywordInput.parentNode.insertBefore(select, keywordInput.nextSibling);
+            }
+
             document.getElementById('btn-log-activity').addEventListener('click', () => switchLogTab('activity'));
             document.getElementById('btn-log-system').addEventListener('click', () => switchLogTab('system'));
             document.getElementById('btn-log-offline').addEventListener('click', viewOfflineLogs);
@@ -699,15 +716,18 @@ window.initSettingsPage = () => {
             // Atualiza estilo dos botões
             const btnActivity = document.getElementById('btn-log-activity');
             const btnSystem = document.getElementById('btn-log-system');
+            const actionSelect = document.getElementById('logActionType');
             
             if (tab === 'activity') {
                 btnActivity.className = 'btn-primary';
                 btnSystem.className = 'btn-secondary';
+                if (actionSelect) actionSelect.style.display = 'inline-block'; // Mostra filtro
                 updateLogTableHeaders('activity');
                 loadAuditLogs();
             } else {
                 btnActivity.className = 'btn-secondary';
                 btnSystem.className = 'btn-primary';
+                if (actionSelect) actionSelect.style.display = 'none'; // Esconde filtro (não se aplica a sistema)
                 updateLogTableHeaders('system');
                 loadSystemLogs();
             }
@@ -831,6 +851,9 @@ window.initSettingsPage = () => {
                 }
                 if (filters.endDate) {
                     queryParams.append('endDate', filters.endDate);
+                }
+                if (filters.actionType) {
+                    queryParams.append('actionType', filters.actionType);
                 }
 
                 const queryString = queryParams.toString();
@@ -1013,8 +1036,9 @@ window.initSettingsPage = () => {
                 const keyword = document.getElementById('logKeyword').value;
                 const startDate = document.getElementById('logStartDate').value;
                 const endDate = document.getElementById('logEndDate').value;
+                const actionType = document.getElementById('logActionType')?.value; // [NOVO]
                 if (currentLogTab === 'activity') {
-                    loadAuditLogs({ keyword, startDate, endDate });
+                    loadAuditLogs({ keyword, startDate, endDate, actionType });
                 } else {
                     loadSystemLogs({ keyword, startDate, endDate });
                 }
@@ -1026,6 +1050,7 @@ window.initSettingsPage = () => {
                 document.getElementById('logKeyword').value = '';
                 document.getElementById('logStartDate').value = '';
                 document.getElementById('logEndDate').value = '';
+                if (document.getElementById('logActionType')) document.getElementById('logActionType').value = '';
                 if (currentLogTab === 'activity') {
                     loadAuditLogs();
                 } else {

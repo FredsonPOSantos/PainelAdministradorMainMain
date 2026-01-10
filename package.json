@@ -19,6 +19,7 @@
   "dotenv": "^17.2.2",
   "ejs": "^3.1.9",
   "express": "^5.1.0",
+  "express-rate-limit": "^8.2.1",
   "json2csv": "^6.0.0-alpha.2",
   "jsonwebtoken": "^9.0.2",
   "method-override": "^3.0.0",
@@ -31,7 +32,9 @@
   "pg": "^8.16.3",
   "ping": "^1.0.0",
   "radius": "^1.1.4",
+  "redis": "^5.10.0",
   "seedrandom": "^3.0.5",
+  "socket.io": "^4.8.3",
   "systeminformation": "^5.30.1"
  }
 }

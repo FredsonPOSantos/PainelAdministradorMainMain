@@ -65,18 +65,52 @@ if (window.initTemplatesPage) {
                 }
                 templates.forEach(template => { // [CORRIGIDO] A API retorna o array diretamente
                     const row = document.createElement('tr');
+                    
+                    // Lógica de Travamento (Sistema)
+                    const isSystem = template.is_system === true; // Garante que é booleano
+                    const isMaster = window.currentUserProfile && window.currentUserProfile.role === 'master';
+                    const canEdit = isMaster || !isSystem;
+
+                    // [NOVO] Adiciona ícone de cadeado se for sistema
+                    const systemBadge = isSystem ? '<i class="fas fa-lock" title="Padrão do Sistema" style="color: #cbd5e0; margin-left: 5px;"></i>' : '';
+                    
+                    // [NOVO] Botão de Visualizar
+                    const viewBtn = `<button class="btn-preview" title="Visualizar"><i class="fas fa-eye"></i></button>`;
+
+                    let actionButtons = '';
+                    if (canEdit) {
+                        actionButtons = `
+                            ${viewBtn}
+                            <button class="btn-edit" title="Editar Template"><i class="fas fa-pencil-alt"></i></button>
+                            <button class="btn-delete" title="Eliminar Template"><i class="fas fa-trash-alt"></i></button>
+                        `;
+                    } else {
+                        actionButtons = `
+                            ${viewBtn}
+                            <span style="color: #718096; cursor: not-allowed; margin-left: 8px;" title="Protegido pelo Sistema"><i class="fas fa-lock"></i></span>
+                        `;
+                    }
+
                     row.innerHTML = `
                         <td>${template.id}</td>
-                        <td>${template.name}</td>
+                        <td>${template.name} ${systemBadge}</td>
                         <td>${template.base_model}</td>
                         <td>${template.login_type}</td>
                         <td class="action-buttons">
-                            <button class="btn-edit" title="Editar Template"><i class="fas fa-pencil-alt"></i></button>
-                            <button class="btn-delete" title="Eliminar Template"><i class="fas fa-trash-alt"></i></button>
+                            ${actionButtons}
                         </td>
                     `;
-                    row.querySelector('.btn-edit').addEventListener('click', () => openModalForEdit(template));
-                    row.querySelector('.btn-delete').addEventListener('click', () => handleDelete(template.id, template.name));
+                    
+                    // [NOVO] Listener para o botão de visualizar
+                    const previewButton = row.querySelector('.btn-preview');
+                    if (previewButton) {
+                        previewButton.addEventListener('click', () => openModalForView(template));
+                    }
+
+                    if (canEdit) {
+                        row.querySelector('.btn-edit').addEventListener('click', () => openModalForEdit(template));
+                        row.querySelector('.btn-delete').addEventListener('click', () => handleDelete(template.id, template.name));
+                    }
                     tableBody.appendChild(row);
                 });
             } catch (error) {
@@ -145,13 +179,6 @@ if (window.initTemplatesPage) {
             let method = templateId ? 'PUT' : 'POST';
             let endpoint = templateId ? `/api/templates/${templateId}` : '/api/templates';
 
-            // [CORRIGIDO] Se for uma atualização (PUT) com FormData,
-            // enviamos como POST e adicionamos o campo _method para o backend interpretar como PUT.
-            if (method === 'PUT') {
-                formData.append('_method', 'PUT');
-                method = 'POST'; // A requisição HTTP real será um POST.
-            }
-
             try {
                 const result = await apiRequest(endpoint, method, formData);
                 showNotification(result.message, 'success');
@@ -202,8 +229,35 @@ if (window.initTemplatesPage) {
             }
         };
 
+        // [NOVO] Helper para restaurar o estado do formulário (habilitar campos)
+        const resetFormState = () => {
+            const submitBtn = templateForm.querySelector('button[type="submit"]');
+            if (submitBtn) submitBtn.style.display = 'block';
+            
+            const inputs = templateForm.querySelectorAll('input, select, textarea');
+            inputs.forEach(input => input.disabled = false);
+            
+            templateForm.querySelectorAll('.radio-group').forEach(el => el.style.display = 'flex');
+        };
+
+        // [NOVO] Abre o modal em modo de visualização (somente leitura)
+        const openModalForView = (template) => {
+            openModalForEdit(template); // Reutiliza a lógica de preenchimento
+            
+            modalTitle.textContent = 'Visualizar Template';
+            const submitBtn = templateForm.querySelector('button[type="submit"]');
+            if (submitBtn) submitBtn.style.display = 'none'; // Esconde botão de salvar
+            
+            const inputs = templateForm.querySelectorAll('input, select, textarea');
+            inputs.forEach(input => input.disabled = true); // Desabilita inputs
+            
+            // Esconde controles de upload/url para limpar a visualização
+            templateForm.querySelectorAll('.radio-group').forEach(el => el.style.display = 'none');
+        };
+
         const openModalForCreate = () => {
             templateForm.reset();
+            resetFormState(); // [NOVO] Garante que o formulário está editável
             document.getElementById('templateId').value = '';
             modalTitle.textContent = 'Adicionar Novo Template';
             videoUrlGroup.style.display = 'none';
@@ -224,6 +278,7 @@ if (window.initTemplatesPage) {
 
         const openModalForEdit = (template) => {
             templateForm.reset();
+            resetFormState(); // [NOVO] Garante que o formulário está editável
             document.getElementById('templateId').value = template.id;
             document.getElementById('templateName').value = template.name;
             document.getElementById('templateBaseModel').value = template.base_model;

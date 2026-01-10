@@ -36,15 +36,21 @@ if (window.initProfilePage) {
             { id: 'light', name: 'Claro (Light)', colors: { bg: '#f3f4f6', sidebar: '#ffffff', primary: '#2563eb' } },
             { id: 'vscode', name: 'VSCode Dark', colors: { bg: '#1e1e1e', sidebar: '#252526', primary: '#007acc' } },
             { id: 'gray', name: 'Escuro Suave', colors: { bg: '#37474f', sidebar: '#263238', primary: '#607d8b' } },
-            { id: 'oceano', name: 'Oceano', colors: { bg: '#03045e', sidebar: '#0077b6', primary: '#00b4d8' } },
-            { id: 'teal', name: 'Verde Piscina', colors: { bg: '#e0f2f1', sidebar: '#004d40', primary: '#009688' } },
+            { id: 'oceano', name: 'Oceano (Dark)', colors: { bg: '#01023f', sidebar: '#00507c', primary: '#007a93' } },
+            { id: 'teal', name: 'Verde Piscina', colors: { bg: '#ebf7f6', sidebar: '#005143', primary: '#009e8e' } },
             { id: 'contrast', name: 'Alto Contraste', colors: { bg: '#000000', sidebar: '#000000', primary: '#ffff00' } },
             { id: 'windows11', name: 'Windows 11', colors: { bg: '#1c1c1c', sidebar: '#323232', primary: '#0078d4' } },
             { id: 'linux', name: 'Linux (Ubuntu)', colors: { bg: '#300A24', sidebar: '#2C001E', primary: '#E95420' } },
             { id: 'bluelight', name: 'Filtro Azul', colors: { bg: '#211f1c', sidebar: '#1a1815', primary: '#D97706' } },
-            { id: 'rota', name: 'Rota Transportes', colors: { bg: '#1a202c', sidebar: '#1a202c', primary: '#dc335c' } },
-            { id: 'cidade-sol', name: 'Cidade Sol', colors: { bg: '#212837', sidebar: '#1a202c', primary: '#f5de15' } },
-            { id: 'expresso', name: 'Expresso Brasileiro', colors: { bg: '#2c3e50', sidebar: '#2c3e50', primary: '#F2CE1B' } }
+            { id: 'rota-padrao', name: 'Rota Transportes (Padrão)', colors: { bg: '#1a202c', sidebar: '#1a202c', primary: '#dc335c' } },
+            { id: 'rota-roxo', name: 'Rota Transportes (Roxo)', colors: { bg: '#3D3175', sidebar: '#3D3175', primary: '#CC003E' } },
+            { id: 'cidade-sol-azul', name: 'Cidade Sol (Azul)', colors: { bg: '#728EB6', sidebar: '#1a202c', primary: '#F7DB16' } },
+            { id: 'cidade-sol-amarelo', name: 'Cidade Sol (Amarelo)', colors: { bg: '#fff9c4', sidebar: '#fbc02d', primary: '#45637A' } },
+            { id: 'expresso-amarelo', name: 'Expresso BR (Amarelo)', colors: { bg: '#45637A', sidebar: '#45637A', primary: '#F7DB17' } },
+            { id: 'expresso-azul', name: 'Expresso BR (Azul)', colors: { bg: '#44647c', sidebar: '#44647c', primary: '#f4dc15' } },
+            { id: 'sunset', name: 'Pôr do Sol', colors: { bg: '#2d1b2e', sidebar: '#2d1b2e', primary: '#ff6b6b' } },
+            { id: 'abyss', name: 'Abyss (VSCode)', colors: { bg: '#000c18', sidebar: '#000c18', primary: '#77088d' } },
+            { id: 'kimbie', name: 'Kimbie (VSCode)', colors: { bg: '#221a0f', sidebar: '#221a0f', primary: '#dc3958' } }
         ];
 
         // --- Funções Auxiliares ---
@@ -62,7 +68,7 @@ if (window.initProfilePage) {
         // Aplica o tema ao corpo da página
         const applyTheme = (theme) => {
             // Remove todas as classes de tema conhecidas
-            document.body.classList.remove('theme-rota', 'theme-cidade-sol', 'theme-expresso', 'theme-oceano', 'theme-light', 'theme-contrast', 'theme-teal', 'theme-gray', 'theme-vscode', 'theme-windows11', 'theme-linux', 'theme-bluelight');
+            document.body.classList.remove('theme-rota-padrao', 'theme-rota-roxo', 'theme-cidade-sol-azul', 'theme-cidade-sol-amarelo', 'theme-expresso-amarelo', 'theme-expresso-azul', 'theme-oceano', 'theme-light', 'theme-contrast', 'theme-teal', 'theme-gray', 'theme-vscode', 'theme-windows11', 'theme-linux', 'theme-bluelight', 'theme-sunset', 'theme-abyss', 'theme-kimbie');
             
             // Adiciona a classe se não for o padrão
             if (theme && theme !== 'default') {
