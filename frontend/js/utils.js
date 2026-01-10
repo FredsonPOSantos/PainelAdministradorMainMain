@@ -113,3 +113,30 @@ async function apiRequest(endpoint, method = 'GET', body = null) {
     if (response.status === 204) return { success: true, data: null };
     return response.json();
 }
+
+/**
+ * [NOVO] Calcula a cor de contraste (preto ou branco) com base na cor de fundo (HEX).
+ * Usado para ajustar automaticamente a cor do texto.
+ * @param {string} hexcolor - A cor de fundo em formato HEX (ex: #ffffff).
+ * @returns {string} A cor de contraste (#1a202c para fundo claro, #edf2f7 para fundo escuro).
+ */
+function getContrastColor(hexcolor) {
+    if (!hexcolor) return '#edf2f7'; // Default para claro sobre escuro
+
+    // Remove # se presente
+    const hex = hexcolor.replace('#', '');
+    
+    // Validação simples
+    if (hex.length !== 6) return '#edf2f7';
+
+    // Converter para RGB
+    const r = parseInt(hex.substr(0, 2), 16);
+    const g = parseInt(hex.substr(2, 2), 16);
+    const b = parseInt(hex.substr(4, 2), 16);
+    
+    // Calcular YIQ (fórmula de percepção de luminosidade)
+    const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
+    
+    // Retorna escuro (#1a202c) para fundos claros, e claro (#edf2f7) para fundos escuros
+    return (yiq >= 128) ? '#1a202c' : '#edf2f7';
+}

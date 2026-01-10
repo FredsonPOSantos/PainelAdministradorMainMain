@@ -78,6 +78,69 @@ window.applyVisualSettings = (settings) => {
         }
     }
 
+    // --- LÓGICA DE CONTRASTE INTELIGENTE (SMART CONTRAST) ---
+    
+    // 1. Determina a cor de fundo de referência (Sidebar/Cards é a mais crítica)
+    const refBgColor = settings.sidebar_color || settings.background_color;
+    let baseTextColor = settings.font_color; // Pode ser undefined
+    
+    if (refBgColor) {
+        const contrastColor = getContrastColor(refBgColor);
+        
+        // Define uma variável CSS para uso geral de contraste (botões, ícones)
+        root.style.setProperty('--contrast-text-color', contrastColor);
+
+        // Se o utilizador NÃO definiu cor da fonte, usa o contraste calculado
+        if (!baseTextColor) {
+            baseTextColor = contrastColor;
+            root.style.setProperty('--text-primary', baseTextColor);
+            console.log(` -> Auto-ajuste: --text-primary para ${baseTextColor}`);
+        }
+
+        // Ajusta labels e títulos se não definidos
+        if (!settings.label_color) {
+            root.style.setProperty('--label-color', baseTextColor);
+        }
+        if (!settings.nav_title_color) {
+            root.style.setProperty('--nav-title-color', baseTextColor);
+        }
+    }
+
+    // 2. Ajusta cores Secundárias e Terciárias baseadas na cor Primária de Texto
+    // Isso corrige o problema onde o texto principal é escuro (fundo claro), mas os secundários continuam claros (invisíveis).
+    if (baseTextColor) {
+        // Verifica se a cor base é escura (para fundos claros) ou clara (para fundos escuros)
+        // Usamos uma lógica simples: se a cor de contraste dela for branca, ela é escura.
+        const isDarkText = getContrastColor(baseTextColor) === '#ffffff'; // Ex: Preto pede contraste Branco
+
+        if (isDarkText) {
+            // Modo Claro (Texto Escuro): Define tons de cinza escuro
+            root.style.setProperty('--text-secondary', '#4a5568'); // Gray 700
+            root.style.setProperty('--text-tertiary', '#718096');  // Gray 600
+            root.style.setProperty('--border-color', '#cbd5e0');   // Gray 300 (Bordas mais visíveis)
+            if (!settings.placeholder_color) root.style.setProperty('--placeholder-color', '#a0aec0');
+        } else {
+            // Modo Escuro (Texto Claro): Define tons de cinza claro (Padrão)
+            root.style.setProperty('--text-secondary', '#a0aec0'); // Gray 400
+            root.style.setProperty('--text-tertiary', '#cbd5e0');  // Gray 300
+            root.style.setProperty('--border-color', '#4a5568');   // Gray 700
+            if (!settings.placeholder_color) root.style.setProperty('--placeholder-color', '#718096');
+        }
+    }
+
+    // 3. Lógica Específica para Modais
+    // Se o modal tiver uma cor de fundo personalizada, o texto dentro dele deve contrastar com ELA, não com o fundo global.
+    // [MODIFICADO] Só aplica se não houver um tema ativo no body (para evitar conflito com temas)
+    const hasActiveTheme = document.body.className.includes('theme-');
+    if (settings.modal_background_color && !hasActiveTheme) {
+        const modalContrast = getContrastColor(settings.modal_background_color);
+        // Se não houver cor de fonte de modal definida, força o contraste
+        if (!settings.modal_font_color) {
+             root.style.setProperty('--modal-font-color', modalContrast);
+             // console.log(` -> Auto-ajuste Modal: --modal-font-color para ${modalContrast}`);
+        }
+    }
+
     // Lógica do logótipo
     const headerLogo = document.getElementById('headerLogo');
     if (headerLogo) {
@@ -134,6 +197,53 @@ const waitForElement = (selector, container, initFunctionName, pageName) => {
 };
 // --- FIM V13.1 / V14.4 ---
 
+// --- [NOVO] Monitor de Inatividade ---
+let idleTimer;
+const setupIdleMonitor = () => {
+    // Obtém o tempo limite das configurações (padrão 30 minutos se não definido)
+    const timeoutMinutes = window.systemSettings?.admin_session_timeout || 30;
+    const timeoutMillis = timeoutMinutes * 60 * 1000;
+
+    console.log(`[IdleMonitor] Monitor de inatividade iniciado. Tempo limite: ${timeoutMinutes} minutos.`);
+
+    const resetTimer = () => {
+        clearTimeout(idleTimer);
+        idleTimer = setTimeout(onIdleTimeout, timeoutMillis);
+    };
+
+    const onIdleTimeout = () => {
+        console.warn("[IdleMonitor] Sessão expirada por inatividade.");
+        
+        // Remove o token e dados do utilizador
+        localStorage.removeItem('adminToken');
+        window.currentUserProfile = null;
+        
+        // Mostra modal de sessão expirada
+        const modalHtml = `
+            <div id="sessionExpiredModal" class="modal-overlay visible" style="z-index: 10000;">
+                <div class="modal-content" style="text-align: center; max-width: 400px;">
+                    <div style="font-size: 3rem; margin-bottom: 10px;">⏳</div>
+                    <h3 style="color: var(--text-primary); margin-bottom: 10px;">Sessão Expirada</h3>
+                    <p style="color: var(--text-secondary); margin-bottom: 20px;">
+                        Você ficou inativo por mais de ${timeoutMinutes} minutos. Por segurança, sua sessão foi encerrada.
+                    </p>
+                    <button class="btn-primary" onclick="window.location.href='admin_login.html'" style="width: 100%;">Voltar ao Login</button>
+                </div>
+            </div>
+        `;
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+    };
+
+    // Eventos que resetam o timer (atividade do utilizador)
+    window.onload = resetTimer;
+    document.onmousemove = resetTimer;
+    document.onkeypress = resetTimer;
+    document.ontouchstart = resetTimer; // Para mobile
+    document.onclick = resetTimer;
+    document.onscroll = resetTimer;
+
+    resetTimer(); // Inicia a contagem
+};
 
 // --- INICIALIZAÇÃO PRINCIPAL (DOMContentLoaded) ---
 document.addEventListener('DOMContentLoaded', async () => {
@@ -805,6 +915,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             window.systemSettings = settings;
             applyVisualSettings(window.systemSettings);
             console.log("%c[Dashboard Init] Configurações visuais aplicadas com sucesso.", "color: green;");
+            
+            // [NOVO] Inicia o monitor de inatividade após carregar as configurações
+            setupIdleMonitor();
         } else {
             console.warn("Dashboard (V13.1.3): Configurações gerais não retornadas pela API.");
             window.systemSettings = {};

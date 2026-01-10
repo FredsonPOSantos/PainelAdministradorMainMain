@@ -115,6 +115,13 @@
                             <input type="text" id="companyName" placeholder="O nome que aparece no painel">
                         </div>
                         <div class="input-group">
+                            <label for="adminSessionTimeout">Tempo de Inatividade (minutos)</label>
+                            <input type="number" id="adminSessionTimeout" min="1" max="1440" placeholder="30">
+                            <small style="color: var(--text-secondary); display: block; margin-top: 5px;">
+                                Tempo máximo sem uso antes de bloquear a sessão automaticamente.
+                            </small>
+                        </div>
+                        <div class="input-group">
                             <label for="logoUpload">Logótipo do Painel (.png, .jpg, .svg)</label>
                             <input type="file" id="logoUpload" name="companyLogo" accept="image/png, image/jpeg, image/svg+xml">
                             <div class="logo-preview-container" style="margin-top: 15px; text-align: center; display: inline-flex;">

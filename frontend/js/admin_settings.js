@@ -453,7 +453,8 @@ window.initSettingsPage = () => {
                 'labelColor': 'label_color',
                 'placeholderColor': 'placeholder_color',
                 'tabLinkColor': 'tab_link_color',
-                'tabLinkActiveColor': 'tab_link_active_color'
+                'tabLinkActiveColor': 'tab_link_active_color',
+                'adminSessionTimeout': 'admin_session_timeout' // [NOVO] Mapeamento do timeout
             };
 
             // 1. Compara campos de texto e cor
@@ -608,6 +609,7 @@ window.initSettingsPage = () => {
                     'placeholderColor': settings.placeholder_color,
                     'tabLinkColor': settings.tab_link_color,
                     'tabLinkActiveColor': settings.tab_link_active_color,
+                    'adminSessionTimeout': settings.admin_session_timeout, // [NOVO] Preenche o input
                     // [NOVO] Campos de SMTP
                     'emailHost': settings.email_host,
                     'emailPort': settings.email_port,
