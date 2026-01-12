@@ -8,21 +8,21 @@
 /* [NOVO V13] Variáveis CSS para cores */
 :root {
     /* [NOVO] Variáveis de Tipografia e Navegação */
-    --nav-title-color: #8699ad;
-    --label-color: #cbd5e0;
-    --placeholder-color: #a0aec0;
-    --tab-link-color: #a0aec0;
-    --tab-link-active-color: #4299e1;
+    --nav-title-color: #94a3b8;    /* Slate 400 */
+    --label-color: #e2e8f0;        /* Slate 200 */
+    --placeholder-color: #64748b;  /* Slate 500 */
+    --tab-link-color: #94a3b8;
+    --tab-link-active-color: #3b82f6; /* Blue 500 */
 
-    --primary-color: #4299e1; /* Azul padrão */
-    --primary-color-dark: #3182ce; /* Azul escuro padrão */
-    --background-dark: #1a202c;
-    --background-medium: #2d3748;
-    --background-light: #4a5568;
-    --text-primary: #edf2f7;
-    --text-secondary: #a0aec0;
-    --text-tertiary: #cbd5e0;
-    --border-color: #4a5568;
+    --primary-color: #3b82f6;      /* Blue 500 - Azul Corporativo Vibrante */
+    --primary-color-dark: #2563eb; /* Blue 600 */
+    --background-dark: #0f172a;    /* Slate 900 - Fundo Profundo Profissional */
+    --background-medium: #1e293b;  /* Slate 800 - Cards/Sidebar */
+    --background-light: #334155;   /* Slate 700 - Hover */
+    --text-primary: #f8fafc;       /* Slate 50 - Texto Principal Claro */
+    --text-secondary: #cbd5e1;     /* Slate 300 - Texto Secundário */
+    --text-tertiary: #94a3b8;      /* Slate 400 */
+    --border-color: #334155;       /* Slate 700 - Bordas Sutis */
     --success-bg: rgba(47, 133, 90, 0.3);
     --success-text: #c6f6d5;
     --success-border: #2f855a;
@@ -39,10 +39,14 @@
     --perm-none-bg: rgba(113, 128, 150, 0.1);/* Cinza suave */
     --perm-text-color: var(--text-tertiary); /* Cor do texto dentro das células */
     --font-family: 'Inter', sans-serif;
-    --font-size: 16px;
+    --font-size: 14px; /* Ajustado para 14px para um visual mais UI/App */
     /* [NOVO] Variável para contraste automático (padrão claro) */
-    --contrast-text-color: #edf2f7;
+    --contrast-text-color: #f8fafc;
 
+    /* Modal defaults */
+    --modal-background-color: #1e293b;
+    --modal-font-color: #f8fafc;
+    --modal-border-color: #334155;
 }
 
 
@@ -1392,6 +1396,58 @@ body.theme-bluelight {
     --modal-border-color: var(--border-color);
 }
 
+/* [NOVO] Tema CS (Padrão) */
+body.theme-cs-padrao {
+    --primary-color: #f3d916;      /* Amarelo Botões */
+    --primary-color-dark: #d4be12; /* Tom mais escuro para hover */
+    --background-dark: linear-gradient(180deg, #003847 0%, #002533 100%); /* [MODIFICADO] Gradiente no fundo */
+    --background-medium: #004557;  /* Principal (Cards, Sidebar, Modal) */
+    --sidebar-color: #004557;      /* Barra Lateral */
+    --text-primary: #73c1c4;       /* Fonte Principal */
+    --text-secondary: #73c1c4;     /* Fonte Secundária / Bordas */
+    --nav-title-color: #23d7e0;    /* Fonte Destaque */
+    --border-color: #73c1c4;
+    --label-color: #fff9f6;
+    --placeholder-color: #73c1c4;
+    --modal-background-color: #004557; /* Fundo do Modal */
+    --modal-font-color: #fff9f6;
+    --modal-border-color: #73c1c4;
+}
+
+/* [NOVO] Tema RT (Padrão) */
+body.theme-rt-padrao {
+    --primary-color: #ec258e;      /* Rosa Principal */
+    --primary-color-dark: #c41e75;
+    --background-dark: #ffffff;    /* Fundo Branco */
+    --background-medium: #6c5c9d;  /* Roxo (Sidebar/Header/Cards) */
+    --sidebar-color: #6c5c9d;
+    --text-primary: rgba(100, 16, 65, 0.856);       /* Texto Branco (sobre roxo) */
+    --text-secondary: #b08fce;     /* Roxo Claro */
+    --nav-title-color: #b08fce;
+    --border-color: #7f42a4;       /* Roxo Médio */
+    --label-color: #ffffff;
+    --placeholder-color: #b08fce;
+    --modal-background-color: #6c5c9d;
+    --modal-font-color: #ffffff;
+    --modal-border-color: #7f42a4;
+}
+
+/* [NOVO] Tema EX (Padrão) */
+body.theme-eb-padrao {
+    --primary-color: #f7db17;      /* Amarelo */
+    --primary-color-dark: #d4be12;
+    --background-dark: #ffffff;    /* Fundo Branco */
+    --background-medium: #28345c;  /* Azul Escuro (Sidebar/Header/Cards) */
+    --sidebar-color: #28345c;
+    --text-primary: #809fcb;       /* Texto Branco */
+    --text-secondary: #c9d8ee;     /* Azul Claro */
+    --nav-title-color: #809fcb;    /* Azul Médio */
+    --border-color: #44637b;       /* Azul Acinzentado */
+    --modal-background-color: #28345c;
+    --modal-font-color: #ffffff;
+    --modal-border-color: #44637b;
+}
+
 /* [NOVO] Estilos para o Dropdown de Menções do Trix */
 .trix-mentions-dropdown {
     position: absolute;
@@ -1440,4 +1496,51 @@ body.theme-bluelight {
 
 .trix-mention-item:hover .mention-role {
     color: rgba(255, 255, 255, 0.8);
+}
+button.sub-tab-btn {
+    padding: 8px 16px;
+    background-color: #f0f0f0;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    color: #333;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    margin: 2px;
+}
+
+button.sub-tab-btn:hover {
+    background-color: #e5e5e5;
+    border-color: #ccc;
+}
+
+button.sub-tab-btn.active {
+    background-color: #007bff;
+    color: white;
+    border-color: #0056b3;
+}
+
+button.sub-tab-btn:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+}
+
+button.sub-tab-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* [NOVO] Estilos para conteúdo das sub-abas e inputs em linha */
+.sub-tab-content {
+    display: none;
+}
+.sub-tab-content.active {
+    display: block;
+    animation: fadeIn 0.3s ease-in-out;
+}
+.input-group-inline {
+    display: flex;
+    align-items: center;
+    gap: 10px;
 }

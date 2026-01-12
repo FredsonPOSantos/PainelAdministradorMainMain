@@ -50,7 +50,10 @@ if (window.initProfilePage) {
             { id: 'expresso-azul', name: 'Expresso BR (Azul)', colors: { bg: '#44647c', sidebar: '#44647c', primary: '#f4dc15' } },
             { id: 'sunset', name: 'Pôr do Sol', colors: { bg: '#2d1b2e', sidebar: '#2d1b2e', primary: '#ff6b6b' } },
             { id: 'abyss', name: 'Abyss (VSCode)', colors: { bg: '#000c18', sidebar: '#000c18', primary: '#77088d' } },
-            { id: 'kimbie', name: 'Kimbie (VSCode)', colors: { bg: '#221a0f', sidebar: '#221a0f', primary: '#dc3958' } }
+            { id: 'kimbie', name: 'Kimbie (VSCode)', colors: { bg: '#221a0f', sidebar: '#221a0f', primary: '#dc3958' } },
+            { id: 'cs-padrao', name: 'CS (Padrão)', colors: { bg: '#004557', sidebar: '#004557', primary: '#f3d916' } },
+            { id: 'rt-padrao', name: 'RT (Padrão)', colors: { bg: '#ffffff', sidebar: '#6c5c9d', primary: '#ec258e' } },
+            { id: 'eb-padrao', name: 'EB (Padrão)', colors: { bg: '#ffffff', sidebar: '#28345c', primary: '#f7db17' } }
         ];
 
         // --- Funções Auxiliares ---
@@ -68,7 +71,7 @@ if (window.initProfilePage) {
         // Aplica o tema ao corpo da página
         const applyTheme = (theme) => {
             // Remove todas as classes de tema conhecidas
-            document.body.classList.remove('theme-rota-padrao', 'theme-rota-roxo', 'theme-cidade-sol-azul', 'theme-cidade-sol-amarelo', 'theme-expresso-amarelo', 'theme-expresso-azul', 'theme-oceano', 'theme-light', 'theme-contrast', 'theme-teal', 'theme-gray', 'theme-vscode', 'theme-windows11', 'theme-linux', 'theme-bluelight', 'theme-sunset', 'theme-abyss', 'theme-kimbie');
+            document.body.classList.remove('theme-rota-padrao', 'theme-rota-roxo', 'theme-cidade-sol-azul', 'theme-cidade-sol-amarelo', 'theme-expresso-amarelo', 'theme-expresso-azul', 'theme-oceano', 'theme-light', 'theme-contrast', 'theme-teal', 'theme-gray', 'theme-vscode', 'theme-windows11', 'theme-linux', 'theme-bluelight', 'theme-sunset', 'theme-abyss', 'theme-kimbie', 'theme-cs-padrao', 'theme-rt-padrao', 'theme-eb-padrao');
             
             // Adiciona a classe se não for o padrão
             if (theme && theme !== 'default') {
@@ -122,7 +125,7 @@ if (window.initProfilePage) {
                 if (profileSectorInput) profileSectorInput.value = user.sector || '';
 
                 // Define o Tema Selecionado
-                const currentTheme = user.theme_preference || 'default';
+                const currentTheme = user.theme_preference || 'default'; // [MODIFICADO] Volta para o padrão do sistema
                 const themeRadio = document.querySelector(`input[name="theme"][value="${currentTheme}"]`);
                 if (themeRadio) themeRadio.checked = true;
                 applyTheme(currentTheme);

@@ -416,26 +416,26 @@ const resetAppearanceSettings = async (req, res) => {
     console.log("resetAppearanceSettings: Iniciando a reposição das configurações de aparência...");
 
     try {
-        // [MODIFICADO] Define os valores padrão do tema "Rota Transportes Claro" solicitado
+        // [MODIFICADO] Define os valores padrão do novo tema "Corporativo UI" (Slate/Blue)
         const defaults = {
-            primary_color: '#d64060',           // Rosa/Vermelho Vibrante
-            background_color: '#53346d',        // Roxo Escuro (Fundo Principal)
-            sidebar_color: '#53346d',           // Roxo Escuro (Sidebar)
-            font_color: '#ece4e2',              // Cinza Claro/Branco (Texto)
+            primary_color: '#3b82f6',           // Blue 500
+            background_color: '#0f172a',        // Slate 900 (Fundo Principal)
+            sidebar_color: '#1e293b',           // Slate 800 (Sidebar/Cards)
+            font_color: '#f8fafc',              // Slate 50 (Texto Principal)
             font_family: "'Inter', sans-serif",
             font_size: 14,
-            modal_background_color: '#6e599a',  // Roxo Médio (Fundo Modal)
-            modal_font_color: '#ffffff',        // Branco
-            modal_border_color: '#b48cb5',      // Roxo Claro (Bordas)
-            login_background_color: '#53346d',  // Roxo Escuro
-            login_form_background_color: '#6e599a', // Roxo Médio
-            login_font_color: '#ece4e2',
-            login_button_color: '#d64060',      // Rosa/Vermelho Vibrante
-            nav_title_color: '#b48cb5',         // Roxo Claro (Títulos Menu)
-            label_color: '#ece4e2',             // Cinza Claro (Labels)
-            placeholder_color: '#b48cb5',       // Roxo Claro (Placeholders)
-            tab_link_color: '#b48cb5',          // Roxo Claro (Abas inativas)
-            tab_link_active_color: '#d64060',   // Rosa/Vermelho (Aba ativa)
+            modal_background_color: '#1e293b',  // Slate 800
+            modal_font_color: '#f8fafc',        // Slate 50
+            modal_border_color: '#334155',      // Slate 700
+            login_background_color: '#0f172a',  // Slate 900
+            login_form_background_color: '#1e293b', // Slate 800
+            login_font_color: '#f8fafc',
+            login_button_color: '#3b82f6',      // Blue 500
+            nav_title_color: '#94a3b8',         // Slate 400
+            label_color: '#e2e8f0',             // Slate 200
+            placeholder_color: '#64748b',       // Slate 500
+            tab_link_color: '#94a3b8',          // Slate 400
+            tab_link_active_color: '#3b82f6',   // Blue 500
             // Resetar imagens para o padrão (null)
             logo_url: null,
             login_logo_url: null,
@@ -456,7 +456,7 @@ const resetAppearanceSettings = async (req, res) => {
             req,
             action: 'SETTINGS_RESET_APPEARANCE',
             status: 'SUCCESS',
-            description: `Utilizador "${req.user.email}" repôs as configurações de aparência para o padrão do sistema (Rota Transportes Claro).`,
+            description: `Utilizador "${req.user.email}" repôs as configurações de aparência para o padrão do sistema (Corporativo UI).`,
         });
 
         res.status(200).json({

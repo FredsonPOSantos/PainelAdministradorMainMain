@@ -928,9 +928,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // 3. [NOVO] Aplica o tema pessoal do utilizador
-    if (window.currentUserProfile.theme_preference) {
-        applyTheme(window.currentUserProfile.theme_preference);
-    }
+    // Se não houver preferência salva (primeiro acesso), aplica o 'default' (Padrão do Sistema)
+    // O 'default' agora corresponde ao tema Corporativo UI definido no CSS :root
+    const themeToApply = window.currentUserProfile.theme_preference || 'default';
+    applyTheme(themeToApply);
 
     // 4. Aplica permissões ao menu
     applyMenuPermissions(window.currentUserProfile.permissions, window.currentUserProfile.role);

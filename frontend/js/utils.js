@@ -56,7 +56,7 @@ function formatUptime(seconds) {
  */
 function applyTheme(theme) {
     // Lista de todas as classes de tema para garantir que apenas uma seja aplicada
-    const themeClasses = ['theme-rota-padrao', 'theme-rota-roxo', 'theme-cidade-sol-azul', 'theme-cidade-sol-amarelo', 'theme-expresso-amarelo', 'theme-expresso-azul', 'theme-oceano', 'theme-light', 'theme-contrast', 'theme-teal', 'theme-gray', 'theme-vscode', 'theme-windows11', 'theme-linux', 'theme-bluelight', 'theme-sunset', 'theme-abyss', 'theme-kimbie'];
+    const themeClasses = ['theme-rota-padrao', 'theme-rota-roxo', 'theme-cidade-sol-azul', 'theme-cidade-sol-amarelo', 'theme-expresso-amarelo', 'theme-expresso-azul', 'theme-oceano', 'theme-light', 'theme-contrast', 'theme-teal', 'theme-gray', 'theme-vscode', 'theme-windows11', 'theme-linux', 'theme-bluelight', 'theme-sunset', 'theme-abyss', 'theme-kimbie', 'theme-cs-padrao', 'theme-rt-padrao', 'theme-eb-padrao'];
     document.body.classList.remove(...themeClasses);
 
     // Adiciona a classe do novo tema, se não for o padrão

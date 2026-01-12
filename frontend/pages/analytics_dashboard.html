@@ -440,3 +440,27 @@
     </div>
 
 </div> <!-- [NOVO] Fim do contêiner principal -->
+
+<script>
+    // Lógica para alternar sub-abas (Atividade vs Registos)
+    document.querySelectorAll('.sub-tab-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const tabName = this.dataset.subtab;
+            const container = this.closest('.analytics-detail-section');
+            
+            if (container) {
+                // Remove active de todos os botões e conteúdos dentro desta secção
+                container.querySelectorAll('.sub-tab-btn').forEach(b => b.classList.remove('active'));
+                container.querySelectorAll('.sub-tab-content').forEach(c => c.classList.remove('active'));
+                
+                // Ativa o botão clicado
+                this.classList.add('active');
+                
+                // Ativa o conteúdo correspondente (ID: hotspot-details-{tabName})
+                const targetId = `hotspot-details-${tabName}`;
+                const targetContent = document.getElementById(targetId);
+                if (targetContent) targetContent.classList.add('active');
+            }
+        });
+    });
+</script>
