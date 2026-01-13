@@ -76,6 +76,11 @@ const createRaffleAsync = async (req, res) => {
             userQuery += ` AND u.accepts_marketing = true`; // [CORREÇÃO] Nome da coluna corrigido
         }
 
+        // [NOVO] Filtro para excluir vencedores anteriores
+        if (filters.exclude_winners) {
+            userQuery += ` AND u.id NOT IN (SELECT winner_id FROM raffles WHERE winner_id IS NOT NULL)`;
+        }
+
         // [NOVO] Ordenação necessária para o DISTINCT ON funcionar e pegar o registo mais recente
         userQuery += ` ORDER BY u.username, u.id DESC`;
 

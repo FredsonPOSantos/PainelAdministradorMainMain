@@ -174,7 +174,8 @@ if (window.initRafflesPage) {
                     router_id: document.getElementById('filterRouter').value,
                     start_date: document.getElementById('filterStartDate').value,
                     end_date: document.getElementById('filterEndDate').value,
-                    consent_only: document.getElementById('filterConsent').checked
+                    consent_only: document.getElementById('filterConsent').checked,
+                    exclude_winners: document.getElementById('filterExcludeWinners').checked // [NOVO]
                 },
                 socketId: socket.id
             };
@@ -233,7 +234,8 @@ if (window.initRafflesPage) {
                 'router_id': 'Roteador', 'router': 'Roteador',
                 'start_date': 'Data Início', 'startDate': 'Data Início',
                 'end_date': 'Data Fim', 'endDate': 'Data Fim',
-                'consent_only': 'Apenas Marketing', 'consent': 'Apenas Marketing'
+                'consent_only': 'Apenas Marketing', 'consent': 'Apenas Marketing',
+                'exclude_winners': 'Excluir Vencedores', 'excludeWinners': 'Excluir Vencedores' // [NOVO]
             };
 
             let html = '<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; background: var(--background-dark); padding: 15px; border-radius: 8px; border: 1px solid var(--border-color);">';
@@ -266,6 +268,68 @@ if (window.initRafflesPage) {
             }
             html += '</div>';
             return hasFilters ? html : '<span style="color: var(--text-secondary);">Nenhum filtro específico (Todos).</span>';
+        };
+
+        // [NOVO] Função para gerar certificado PDF
+        const printWinnerCertificate = (details) => {
+            if (!window.jspdf) {
+                showNotification("Biblioteca PDF não carregada.", 'error');
+                return;
+            }
+            
+            // Encontra o nome do vencedor
+            const winner = details.participants.find(p => p.id === details.winner_id);
+            const winnerName = winner ? winner.nome_completo : "Vencedor";
+            const dateStr = details.draw_date ? new Date(details.draw_date).toLocaleDateString('pt-BR') : new Date().toLocaleDateString('pt-BR');
+
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF({ orientation: 'landscape' });
+
+            // Design do Certificado
+            doc.setFillColor(250, 250, 250);
+            doc.rect(0, 0, 297, 210, 'F'); // Fundo
+            
+            // Borda
+            doc.setLineWidth(3);
+            doc.setDrawColor(66, 153, 225); // Azul Primário
+            doc.rect(10, 10, 277, 190);
+            
+            // Títulos
+            doc.setFont("helvetica", "bold");
+            doc.setTextColor(66, 153, 225);
+            doc.setFontSize(40);
+            doc.text("CERTIFICADO DE VENCEDOR", 148.5, 50, { align: "center" });
+
+            doc.setFontSize(20);
+            doc.setTextColor(80, 80, 80);
+            doc.text("Este certificado é concedido a", 148.5, 80, { align: "center" });
+
+            // Nome do Vencedor
+            doc.setFontSize(35);
+            doc.setTextColor(0, 0, 0);
+            doc.text(winnerName, 148.5, 105, { align: "center" });
+            doc.setLineWidth(1);
+            doc.line(70, 110, 227, 110); // Linha abaixo do nome
+
+            // Detalhes do Sorteio
+            doc.setFontSize(18);
+            doc.setTextColor(80, 80, 80);
+            doc.text(`Vencedor do sorteio: ${details.title}`, 148.5, 135, { align: "center" });
+            
+            if (details.raffle_number) {
+                doc.setFontSize(14);
+                doc.text(`Nº Sorteio: ${details.raffle_number}`, 148.5, 145, { align: "center" });
+            }
+
+            doc.setFontSize(14);
+            doc.text(`Data: ${dateStr}`, 148.5, 170, { align: "center" });
+
+            // Rodapé
+            doc.setFontSize(10);
+            doc.setTextColor(150, 150, 150);
+            doc.text("Rota Transportes - Sistema de Hotspot", 148.5, 190, { align: "center" });
+
+            doc.save(`Certificado_${winnerName.replace(/ /g, '_')}.pdf`);
         };
 
         const showDetails = async (raffleId) => {
@@ -310,11 +374,14 @@ if (window.initRafflesPage) {
                     `;
                 }
 
-                // [NOVO] Botão de exportação
+                // [MODIFICADO] Botões de ação (Exportar e Certificado)
                 const exportBtnHtml = `
-                    <button id="exportRaffleBtn" class="btn-secondary" style="padding: 5px 10px; font-size: 12px; display: flex; align-items: center; gap: 5px;">
-                        <i class="fas fa-file-excel"></i> Exportar Resultados
-                    </button>`;
+                    <div style="display: flex; gap: 5px;">
+                        ${details.winner_id ? `<button id="printCertificateBtn" class="btn-primary" style="padding: 5px 10px; font-size: 12px; display: flex; align-items: center; gap: 5px;"><i class="fas fa-certificate"></i> Certificado</button>` : ''}
+                        <button id="exportRaffleBtn" class="btn-secondary" style="padding: 5px 10px; font-size: 12px; display: flex; align-items: center; gap: 5px;">
+                            <i class="fas fa-file-excel"></i> Exportar Resultados
+                        </button>
+                    </div>`;
 
                 // [NOVO] Lógica para Tag de Marketing e Texto Explicativo
                 let filtersObj = details.filters;
@@ -359,6 +426,12 @@ if (window.initRafflesPage) {
                 const exportBtn = document.getElementById('exportRaffleBtn');
                 if (exportBtn) {
                     exportBtn.onclick = () => exportRaffleResults(details);
+                }
+
+                // [NOVO] Listener para certificado
+                const printBtn = document.getElementById('printCertificateBtn');
+                if (printBtn) {
+                    printBtn.onclick = () => printWinnerCertificate(details);
                 }
 
                 // [NOVO] Lógica de busca de participantes
