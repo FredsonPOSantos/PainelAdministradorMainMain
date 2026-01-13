@@ -1,343 +1,277 @@
 // Ficheiro: backend/controllers/raffleController.js
-// Descrição: Contém a lógica de negócio para o sistema de sorteios.
+// Descrição: Lógica de negócio para sorteios, refatorada para ser mais robusta e assíncrona.
 
 const { pool } = require('../connection');
 const { logAction } = require('../services/auditLogService');
-const seedrandom = require('seedrandom');
 
-// Gerar número do sorteio
-const generateRaffleNumber = (raffleId) => {
+// Função auxiliar para emitir progresso via Socket.io
+const emitProgress = (req, socketId, data) => {
+    const io = req.app.get('io');
+    if (io && socketId) {
+        // Garante que o cliente está numa sala única para não receber progresso de outros
+        io.to(socketId).emit('raffle_progress', data);
+    } else {
+        console.warn(`[RAFFLE] Tentativa de emitir progresso sem IO ou Socket ID. Socket ID: ${socketId}`);
+    }
+};
+
+// [NOVO] Função auxiliar para gerar número do sorteio
+const generateRaffleNumber = () => {
     const now = new Date();
     const day = String(now.getDate()).padStart(2, '0');
     const month = String(now.getMonth() + 1).padStart(2, '0');
     const year = String(now.getFullYear()).slice(-2);
     const hours = String(now.getHours()).padStart(2, '0');
     const minutes = String(now.getMinutes()).padStart(2, '0');
-    return `${day}${month}${year}-${hours}${minutes}.${raffleId}`;
+    const random = Math.floor(Math.random() * 1000);
+    return `${day}${month}${year}-${hours}${minutes}.${random}`;
 };
 
-// Criar um novo sorteio
-const createRaffle = async (req, res) => {
-    const { title, observation, filters } = req.body;
-    const { userId, email } = req.user;
+/**
+ * @description Cria um novo sorteio de forma assíncrona com feedback de progresso.
+ */
+const createRaffleAsync = async (req, res) => {
+    const { title, observation, filters, socketId } = req.body;
+    const userId = req.user ? req.user.userId : null; // Obtém o ID do utilizador logado
 
-    if (!title) {
-        return res.status(400).json({ success: false, message: 'O título é obrigatório.' });
+    if (!title || !filters || !socketId) {
+        return res.status(400).json({ success: false, message: 'Título, filtros e ID de socket são obrigatórios.' });
     }
 
-    const client = await pool.connect();
+    // Responde imediatamente para o frontend não ficar pendurado
+    res.status(202).json({ success: true, message: 'Processo de criação de sorteio iniciado.' });
+
+    // --- Inicia o processo em background ---
     try {
-        await client.query('BEGIN');
+        emitProgress(req, socketId, { status: 'Iniciando criação do sorteio...', progress: 10 });
 
-        const sequenceResult = await client.query("SELECT nextval('raffles_id_seq') as id");
-        const raffleId = sequenceResult.rows[0].id;
-        const raffleNumber = generateRaffleNumber(raffleId);
+        // 1. Construir a query para buscar participantes
+        // [MODIFICADO] Usa DISTINCT ON para evitar e-mails duplicados, selecionando o ID mais recente
+        let userQuery = `
+            SELECT DISTINCT ON (u.username) u.id
+            FROM userdetails u
+            LEFT JOIN routers r ON u.router_name = r.name
+            WHERE 1=1
+        `;
+        const queryParams = [];
+        let paramIndex = 1;
 
-        await client.query(
-            'INSERT INTO raffles (id, raffle_number, title, observation, created_by_user_id, filters) VALUES ($1, $2, $3, $4, $5, $6)',
-            [raffleId, raffleNumber, title, observation, userId, filters]
-        );
-
-        await client.query('COMMIT');
-
-        logAction({
-            req,
-            action: 'RAFFLE_CREATE',
-            status: 'SUCCESS',
-            description: `Sorteio #${raffleNumber} criado por ${email}`,
-            target_id: raffleId,
-            target_type: 'raffle'
-        });
-
-        res.status(201).json({ success: true, message: 'Sorteio criado com sucesso!', data: { raffleId, raffleNumber } });
-
-    } catch (error) {
-        await client.query('ROLLBACK');
-        console.error('Erro ao criar sorteio:', error);
-        res.status(500).json({ success: false, message: 'Erro interno do servidor.' });
-    } finally {
-        client.release();
-    }
-};
-
-// Obter todos os sorteios
-const getAllRaffles = async (req, res) => {
-    try {
-        const result = await pool.query(`
-            SELECT 
-                r.id, r.raffle_number, r.title, r.created_at, r.winner_id,
-                u_creator.email AS created_by_email,
-                u_winner.username AS winner_email
-            FROM raffles r
-            JOIN admin_users u_creator ON r.created_by_user_id = u_creator.id
-            LEFT JOIN userdetails u_winner ON r.winner_id = u_winner.id
-            ORDER BY r.created_at DESC
-        `);
-
-        res.json({ success: true, data: result.rows });
-
-    } catch (error) {
-        console.error('Erro ao buscar sorteios:', error);
-        res.status(500).json({ success: false, message: 'Erro interno do servidor.' });
-    }
-};
-
-// Obter um sorteio por ID
-const getRaffleById = async (req, res) => {
-    const { id } = req.params;
-
-    try {
-        const raffleResult = await pool.query(`
-            SELECT 
-                r.id, r.raffle_number, r.title, r.observation, r.created_at, r.filters,
-                u_creator.email AS created_by_email,
-                u_winner.username AS winner_email
-            FROM raffles r
-            JOIN admin_users u_creator ON r.created_by_user_id = u_creator.id
-            LEFT JOIN userdetails u_winner ON r.winner_id = u_winner.id
-            WHERE r.id = $1
-        `, [id]);
-
-        if (raffleResult.rows.length === 0) {
-            return res.status(404).json({ success: false, message: 'Sorteio não encontrado.' });
+        // [CORREÇÃO] Filtro de campanha removido da query direta pois não há coluna campaign_id em userdetails.
+        // A filtragem por campanha deve ser feita indiretamente (por data/roteador) ou implementada futuramente.
+        
+        if (filters.router_id) {
+            userQuery += ` AND r.id = $${paramIndex++}`;
+            queryParams.push(filters.router_id);
+        }
+        if (filters.start_date) {
+            userQuery += ` AND u.created_at >= $${paramIndex++}`;
+            queryParams.push(filters.start_date);
+        }
+        if (filters.end_date) {
+            // [CORREÇÃO] Usa casting para DATE para incluir todo o dia final (até 23:59:59)
+            userQuery += ` AND u.created_at::date <= $${paramIndex++}`;
+            queryParams.push(filters.end_date);
+        }
+        if (filters.consent_only) {
+            userQuery += ` AND u.accepts_marketing = true`; // [CORREÇÃO] Nome da coluna corrigido
         }
 
-        const participantsResult = await pool.query(`
-            SELECT u.id, u.username as email
-            FROM raffle_participants rp
-            JOIN userdetails u ON rp.user_id = u.id
-            WHERE rp.raffle_id = $1
-        `, [id]);
+        // [NOVO] Ordenação necessária para o DISTINCT ON funcionar e pegar o registo mais recente
+        userQuery += ` ORDER BY u.username, u.id DESC`;
 
-        const response = {
-            ...raffleResult.rows[0],
-            participants: participantsResult.rows
-        };
-
-        res.json({ success: true, data: response });
-
-    } catch (error) {
-        console.error(`Erro ao buscar sorteio ${id}:`, error);
-        res.status(500).json({ success: false, message: 'Erro interno do servidor.' });
-    }
-};
-
-// Realizar o sorteio
-const drawRaffle = async (req, res) => {
-    const { id } = req.params;
-    const { email } = req.user;
-
-    const client = await pool.connect();
-    try {
-        await client.query('BEGIN');
-
-        const raffleResult = await client.query('SELECT * FROM raffles WHERE id = $1', [id]);
-        if (raffleResult.rows.length === 0) {
-            return res.status(404).json({ success: false, message: 'Sorteio não encontrado.' });
-        }
-
-        const raffle = raffleResult.rows[0];
-        if (raffle.winner_id) {
-            return res.status(400).json({ success: false, message: 'Este sorteio já foi realizado.' });
-        }
-
-        const { filters } = raffle;
-        let query = 'SELECT id, username as email FROM userdetails';
-        const params = [];
-        const whereClauses = [];
-
-        if (filters.consent) {
-            whereClauses.push('accepts_marketing = true');
-        }
-
-        if (filters.campaign) {
-            const campaignResult = await client.query('SELECT target_id FROM campaigns WHERE id = $1', [filters.campaign]);
-            if (campaignResult.rows.length > 0) {
-                const routerId = campaignResult.rows[0].target_id;
-                const routerResult = await client.query('SELECT name FROM routers WHERE id = $1', [routerId]);
-                if (routerResult.rows.length > 0) {
-                    whereClauses.push(`router_name = $${params.length + 1}`);
-                    params.push(routerResult.rows[0].name);
-                }
-            }
-        }
-
-        if (filters.router) {
-            const routerResult = await client.query('SELECT name FROM routers WHERE id = $1', [filters.router]);
-            if (routerResult.rows.length > 0) {
-                whereClauses.push(`router_name = $${params.length + 1}`);
-                params.push(routerResult.rows[0].name);
-            }
-        }
-
-        if (filters.startDate && filters.endDate) {
-            const endDate = new Date(filters.endDate);
-            endDate.setDate(endDate.getDate() + 1);
-            whereClauses.push(`data_cadastro BETWEEN $${params.length + 1} AND $${params.length + 2}`);
-            params.push(filters.startDate, endDate.toISOString().split('T')[0]);
-        }
-
-        if (filters.loginStartDate && filters.loginEndDate) {
-            const subQuery = `SELECT username FROM radacct WHERE acctstarttime BETWEEN $${params.length + 1} AND $${params.length + 2}`;
-            whereClauses.push(`username IN (${subQuery})`);
-            params.push(filters.loginStartDate, filters.loginEndDate);
-        }
-
-        if (whereClauses.length > 0) {
-            query += ' WHERE ' + whereClauses.join(' AND ');
-        }
-
-        const participantsResult = await client.query(query, params);
-        const participants = participantsResult.rows;
+        emitProgress(req, socketId, { status: 'Coletando participantes elegíveis...', progress: 30 });
+        
+        const { rows: participants } = await pool.query(userQuery, queryParams);
 
         if (participants.length === 0) {
-            return res.status(400).json({ success: false, message: 'Nenhum participante encontrado com os filtros selecionados.' });
+            throw new Error('Nenhum participante encontrado com os filtros aplicados.');
         }
 
-        // Salvar participantes
-        for (const participant of participants) {
-            await client.query('INSERT INTO raffle_participants (raffle_id, user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING', [id, participant.id]);
+        emitProgress(req, socketId, { status: `${participants.length} participantes encontrados. Salvando dados...`, progress: 60 });
+
+        // 2. Inserir o sorteio e os participantes no banco de dados
+        const client = await pool.connect();
+        try {
+            await client.query('BEGIN');
+
+            const raffleNumber = generateRaffleNumber();
+            const raffleResult = await client.query(
+                'INSERT INTO raffles (title, observation, filters, created_by_user_id, raffle_number) VALUES ($1, $2, $3, $4, $5) RETURNING id',
+                [title, observation, JSON.stringify(filters), userId, raffleNumber]
+            );
+            const raffleId = raffleResult.rows[0].id;
+
+            // Insere todos os participantes em lote
+            const participantValues = participants.map(p => `(${raffleId}, ${p.id})`).join(',');
+            if (participantValues) {
+                await client.query(`INSERT INTO raffle_participants (raffle_id, user_id) VALUES ${participantValues}`);
+            }
+
+            await client.query('COMMIT');
+            
+            emitProgress(req, socketId, { status: 'Sorteio criado com sucesso!', progress: 100 });
+
+            await logAction({
+                req,
+                action: 'RAFFLE_CREATE',
+                status: 'SUCCESS',
+                description: `Utilizador "${req.user.email}" criou o sorteio "${title}" com ${participants.length} participantes.`,
+                target_id: raffleId
+            });
+
+        } catch (dbError) {
+            await client.query('ROLLBACK');
+            throw dbError; // Lança o erro para o catch principal
+        } finally {
+            client.release();
         }
 
-        // Lógica do sorteio determinístico
-        const seed = `${raffle.raffle_number}-${participants.length}`;
-        const rng = seedrandom(seed);
-        const winnerIndex = Math.floor(rng() * participants.length);
-        const winner = participants[winnerIndex];
+    } catch (error) {
+        console.error('Erro no processo assíncrono de criação de sorteio:', error);
+        emitProgress(req, socketId, { status: 'Erro!', progress: 100, error: error.message });
+        await logAction({
+            req,
+            action: 'RAFFLE_CREATE_FAILURE',
+            status: 'FAILURE',
+            description: `Falha ao criar sorteio "${title}". Erro: ${error.message}`
+        });
+    }
+};
 
-        await client.query('UPDATE raffles SET winner_id = $1 WHERE id = $2', [winner.id, id]);
+/**
+ * @description Realiza o sorteio de um vencedor de forma assíncrona.
+ */
+const drawWinnerAsync = async (req, res) => {
+    const { id } = req.params;
+    const { socketId } = req.body;
 
-        await client.query('COMMIT');
+    if (!socketId) {
+        return res.status(400).json({ success: false, message: 'ID de socket é obrigatório.' });
+    }
 
-        logAction({
+    res.status(202).json({ success: true, message: 'Processo de sorteio iniciado.' });
+
+    try {
+        emitProgress(req, socketId, { status: 'Carregando participantes...', progress: 20 });
+
+        const { rows: participants } = await pool.query(
+            'SELECT user_id FROM raffle_participants WHERE raffle_id = $1',
+            [id]
+        );
+
+        if (participants.length === 0) {
+            throw new Error('Este sorteio não tem participantes.');
+        }
+
+        emitProgress(req, socketId, { status: `Sorteando um vencedor entre ${participants.length} participantes...`, progress: 60 });
+
+        // Simula um pequeno delay para dar a sensação de "sorteio"
+        await new Promise(resolve => setTimeout(resolve, 1500));
+
+        const winnerIndex = Math.floor(Math.random() * participants.length);
+        const winnerId = participants[winnerIndex].user_id;
+
+        emitProgress(req, socketId, { status: 'Vencedor selecionado! Atualizando registro...', progress: 90 });
+
+        const winnerDetails = await pool.query('SELECT nome_completo, username as email FROM userdetails WHERE id = $1', [winnerId]);
+        const winnerName = winnerDetails.rows[0]?.nome_completo || 'Desconhecido';
+
+        await pool.query(
+            'UPDATE raffles SET winner_id = $1, draw_date = NOW() WHERE id = $2',
+            [winnerId, id]
+        );
+
+        emitProgress(req, socketId, { status: `Parabéns, ${winnerName}!`, progress: 100, winner: winnerName });
+
+        await logAction({
             req,
             action: 'RAFFLE_DRAW',
             status: 'SUCCESS',
-            description: `Sorteio #${raffle.raffle_number} realizado por ${email}. Vencedor: ${winner.email}`,
-            target_id: id,
-            target_type: 'raffle'
+            description: `Utilizador "${req.user.email}" sorteou o vencedor para o sorteio ID ${id}. Vencedor: ${winnerName} (ID: ${winnerId})`,
+            target_id: id
         });
 
-        res.json({ success: true, message: 'Sorteio realizado com sucesso!', data: { winner } });
-
     } catch (error) {
-        await client.query('ROLLBACK');
-        console.error(`Erro ao realizar sorteio ${id}:`, error);
-        res.status(500).json({ success: false, message: 'Erro interno do servidor.' });
-    } finally {
-        client.release();
-    }
-};
-
-const getCampaigns = async (req, res) => {
-    try {
-        const result = await pool.query('SELECT id, name FROM campaigns');
-        res.json({ success: true, data: result.rows });
-    } catch (error) {
-        console.error('Erro ao buscar campanhas:', error);
-        res.status(500).json({ success: false, message: 'Erro interno do servidor.' });
-    }
-};
-
-const getRouters = async (req, res) => {
-    try {
-        const result = await pool.query('SELECT id, name FROM routers');
-        res.json({ success: true, data: result.rows });
-    } catch (error) {
-        console.error('Erro ao buscar roteadores:', error);
-        res.status(500).json({ success: false, message: 'Erro interno do servidor.' });
-    }
-};
-
-// [NOVO] Atualizar um sorteio
-const updateRaffle = async (req, res) => {
-    const { id } = req.params;
-    const { title, observation, filters } = req.body;
-    const { email } = req.user;
-
-    if (!title) {
-        return res.status(400).json({ success: false, message: 'O título é obrigatório.' });
-    }
-
-    try {
-        const result = await pool.query(
-            'UPDATE raffles SET title = $1, observation = $2, filters = $3 WHERE id = $4 RETURNING *',
-            [title, observation, filters, id]
-        );
-
-        if (result.rows.length === 0) {
-            return res.status(404).json({ success: false, message: 'Sorteio não encontrado.' });
-        }
-
-        logAction({
+        console.error(`Erro no processo de sorteio para o ID ${id}:`, error);
+        emitProgress(req, socketId, { status: 'Erro!', progress: 100, error: error.message });
+        await logAction({
             req,
-            action: 'RAFFLE_UPDATE',
-            status: 'SUCCESS',
-            description: `Sorteio #${result.rows[0].raffle_number} atualizado por ${email}`,
-            target_id: id,
-            target_type: 'raffle'
+            action: 'RAFFLE_DRAW_FAILURE',
+            status: 'FAILURE',
+            description: `Falha ao sortear vencedor para o sorteio ID ${id}. Erro: ${error.message}`,
+            target_id: id
         });
-
-        res.json({ success: true, message: 'Sorteio atualizado com sucesso!', data: result.rows[0] });
-
-    } catch (error) {
-        console.error(`Erro ao atualizar sorteio ${id}:`, error);
-        res.status(500).json({ success: false, message: 'Erro interno do servidor.' });
     }
 };
 
-// [NOVO] Deletar um sorteio
+const getAllRaffles = async (req, res) => {
+    try {
+        const query = `
+            SELECT r.id, r.raffle_number, r.title, r.created_at, r.draw_date, u.nome_completo as winner_name
+            FROM raffles r
+            LEFT JOIN userdetails u ON r.winner_id = u.id
+            ORDER BY r.id DESC
+        `;
+        const { rows } = await pool.query(query);
+        res.json({ success: true, data: rows });
+    } catch (error) {
+        // [NOVO] Adiciona log detalhado do erro no backend para facilitar a depuração
+        console.error("Erro ao buscar a lista de sorteios:", error); // Mantém o log no servidor
+        res.status(500).json({ 
+            success: false, 
+            message: 'Erro ao buscar sorteios.',
+            db_error: error.message, // Adiciona o erro do DB na resposta
+            db_code: error.code 
+        });
+    }
+};
+
+const getRaffleDetails = async (req, res) => {
+    const { id } = req.params;
+    try {
+        const raffleQuery = 'SELECT * FROM raffles WHERE id = $1';
+        // [MODIFICADO] Inclui o campo accepts_marketing na consulta
+        const participantsQuery = 'SELECT u.id, u.nome_completo, u.username as email, u.accepts_marketing FROM raffle_participants rp JOIN userdetails u ON rp.user_id = u.id WHERE rp.raffle_id = $1';
+        
+        const raffleRes = await pool.query(raffleQuery, [id]);
+        if (raffleRes.rowCount === 0) return res.status(404).json({ message: 'Sorteio não encontrado.' });
+
+        const participantsRes = await pool.query(participantsQuery, [id]);
+
+        res.json({ success: true, data: { ...raffleRes.rows[0], participants: participantsRes.rows } });
+    } catch (error) {
+        // [MODIFICADO] Adiciona log detalhado do erro no backend e na resposta da API
+        console.error(`Erro ao buscar detalhes do sorteio ID ${id}:`, error);
+        res.status(500).json({ 
+            success: false, 
+            message: 'Erro ao buscar detalhes do sorteio.',
+            db_error: error.message, // Passa a mensagem de erro real do DB para depuração
+            db_code: error.code
+        });
+    }
+};
+
 const deleteRaffle = async (req, res) => {
     const { id } = req.params;
-    const { email } = req.user;
 
-    const client = await pool.connect();
+    // [NOVO] Restrição de Segurança: Apenas o DPO pode excluir sorteios para fins de auditoria.
+    if (req.user.role !== 'DPO') {
+        return res.status(403).json({ success: false, message: 'Acesso negado. Apenas o DPO pode excluir registos de sorteios.' });
+    }
+
     try {
-        await client.query('BEGIN');
-
-        // Obter número do sorteio para o log
-        const raffleInfo = await client.query('SELECT raffle_number FROM raffles WHERE id = $1', [id]);
-        if (raffleInfo.rows.length === 0) {
-            await client.query('ROLLBACK');
-            return res.status(404).json({ success: false, message: 'Sorteio não encontrado.' });
-        }
-        const raffleNumber = raffleInfo.rows[0].raffle_number;
-
-        // Deletar participantes primeiro para evitar violação de chave estrangeira
-        await client.query('DELETE FROM raffle_participants WHERE raffle_id = $1', [id]);
-        
-        // Deletar o sorteio
-        await client.query('DELETE FROM raffles WHERE id = $1', [id]);
-
-        await client.query('COMMIT');
-
-        logAction({
-            req,
-            action: 'RAFFLE_DELETE',
-            status: 'SUCCESS',
-            description: `Sorteio #${raffleNumber} (ID: ${id}) deletado por ${email}`,
-            target_id: id,
-            target_type: 'raffle'
-        });
-
-        res.json({ success: true, message: 'Sorteio e seus participantes foram deletados com sucesso.' });
-
+        await pool.query('DELETE FROM raffle_participants WHERE raffle_id = $1', [id]);
+        await pool.query('DELETE FROM raffles WHERE id = $1', [id]);
+        res.json({ success: true, message: 'Sorteio e participantes removidos.' });
     } catch (error) {
-        await client.query('ROLLBACK');
-        console.error(`Erro ao deletar sorteio ${id}:`, error);
-        res.status(500).json({ success: false, message: 'Erro interno do servidor.' });
-    } finally {
-        client.release();
+        res.status(500).json({ success: false, message: 'Erro ao deletar sorteio.' });
     }
 };
 
 module.exports = {
-    createRaffle,
+    createRaffleAsync,
+    drawWinnerAsync,
     getAllRaffles,
-    getRaffleById,
-    drawRaffle,
-    getCampaigns,
-    getRouters,
-    updateRaffle,
+    getRaffleDetails,
     deleteRaffle
 };

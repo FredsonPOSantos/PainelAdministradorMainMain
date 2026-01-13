@@ -8,15 +8,13 @@ const authMiddleware = require('../middlewares/authMiddleware');
 const checkPermission = require('../middlewares/roleMiddleware');
 
 // Rotas para sorteios
-router.post('/', authMiddleware, checkPermission('raffles.create'), raffleController.createRaffle);
-router.get('/', authMiddleware, checkPermission('raffles.read'), raffleController.getAllRaffles);
-router.get('/:id', authMiddleware, checkPermission('raffles.read'), raffleController.getRaffleById);
-router.put('/:id', authMiddleware, checkPermission('raffles.update'), raffleController.updateRaffle);
-router.delete('/:id', authMiddleware, checkPermission('raffles.delete'), raffleController.deleteRaffle);
-router.post('/:id/draw', authMiddleware, checkPermission('raffles.draw'), raffleController.drawRaffle); // Já estava correto
+// [NOVO] Rotas assíncronas para criação e sorteio (usadas pelo admin_raffles.js)
+router.post('/create-async', authMiddleware, checkPermission('raffles.create'), raffleController.createRaffleAsync);
+router.post('/:id/draw-async', authMiddleware, checkPermission('raffles.draw'), raffleController.drawWinnerAsync);
 
-// Rotas para obter dados para os filtros
-router.get('/data/campaigns', authMiddleware, checkPermission('raffles.read'), raffleController.getCampaigns);
-router.get('/data/routers', authMiddleware, checkPermission('raffles.read'), raffleController.getRouters);
+// Rotas CRUD padrão
+router.get('/', authMiddleware, checkPermission('raffles.read'), raffleController.getAllRaffles);
+router.get('/:id', authMiddleware, checkPermission('raffles.read'), raffleController.getRaffleDetails);
+router.delete('/:id', authMiddleware, checkPermission('raffles.delete'), raffleController.deleteRaffle);
 
 module.exports = router;

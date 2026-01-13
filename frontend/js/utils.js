@@ -107,7 +107,10 @@ async function apiRequest(endpoint, method = 'GET', body = null) {
 
     if (!response.ok) {
         const errorData = await response.json().catch(() => ({ message: `Erro HTTP ${response.status}` }));
-        throw new Error(errorData.message || 'Erro desconhecido na API.');
+        // [MODIFICADO] Cria um objeto de erro que pode conter mais detalhes
+        const error = new Error(errorData.message || 'Erro desconhecido na API.');
+        error.details = errorData; // Anexa o objeto de erro completo para depuração no frontend
+        throw error;
     }
 
     if (response.status === 204) return { success: true, data: null };

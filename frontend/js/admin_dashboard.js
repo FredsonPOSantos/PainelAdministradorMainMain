@@ -522,6 +522,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                     window.cleanupSystemHealthPage();
                     window.cleanupSystemHealthPage = undefined;
                 }
+                if (window.cleanupRafflesPage) {
+                    window.cleanupRafflesPage();
+                    window.cleanupRafflesPage = undefined;
+                }
                 // [CORREÇÃO] Remove event listeners "fantasmas" de páginas anteriores.
                 // A maneira mais eficaz de remover todos os listeners de um elemento é
                 // substituí-lo por um clone dele mesmo. Isso evita que scripts de uma página
@@ -533,20 +537,33 @@ document.addEventListener('DOMContentLoaded', async () => {
                 mainContentArea.innerHTML = html;
 
                 // [CORREÇÃO] Scripts inseridos via innerHTML não são executados.
-                // Precisamos encontrá-los e recriá-los para que o navegador os execute.
-                // Isso é crucial para carregar bibliotecas como Chart.js a partir do HTML dinâmico.
+                // Precisamos encontrá-los e recriá-los. Para scripts externos, precisamos esperar que carreguem.
                 const scripts = mainContentArea.querySelectorAll("script");
+                const scriptPromises = [];
+
                 scripts.forEach(oldScript => {
                     const newScript = document.createElement("script");
-                    // Copia todos os atributos (como src, type, etc.)
                     Array.from(oldScript.attributes).forEach(attr => {
                         newScript.setAttribute(attr.name, attr.value);
                     });
-                    // Copia o conteúdo do script, se houver
                     newScript.textContent = oldScript.textContent;
-                    // Substitui o script antigo pelo novo para acionar a execução
+
+                    // Se for um script externo (tem 'src'), criamos uma promessa para esperar o carregamento.
+                    if (oldScript.src) {
+                        const promise = new Promise((resolve, reject) => {
+                            newScript.onload = resolve;
+                            newScript.onerror = reject;
+                        });
+                        scriptPromises.push(promise);
+                    }
+
                     oldScript.parentNode.replaceChild(newScript, oldScript);
-                    console.log(`[loadPage] Script "${newScript.src || 'inline'}" re-executado.`);
+                });
+
+                // [CORREÇÃO] Espera que todos os scripts externos (como socket.io.js) terminem de carregar
+                // antes de tentar inicializar a lógica da página.
+                await Promise.all(scriptPromises).catch(error => {
+                    console.error("Falha ao carregar um script externo:", error);
                 });
 
             } else {
