@@ -21,4 +21,11 @@ router.get(
     hotspotController.getTotalHotspotUsers
 );
 
+// [NOVO] Rota para estatísticas do relatório completo (Gráfico + Tabela)
+router.get(
+    '/report-stats',
+    [authMiddleware, checkPermission('hotspot.read')],
+    hotspotController.getHotspotReportStats
+);
+
 module.exports = router;

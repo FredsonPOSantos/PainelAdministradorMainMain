@@ -43,6 +43,7 @@ if (window.initAnalyticsDashboard) {
             'serverHealth': 'analytics.details.server_health'
         };
 
+        const exportFullPdfBtn = document.getElementById('exportFullPdfBtn');
 
         const fillCard = (id, value) => {
             const element = document.getElementById(id);
@@ -1178,6 +1179,104 @@ if (window.initAnalyticsDashboard) {
             }
         };
 
+        // [NOVO] Função para gerar o Relatório PDF Completo
+        const generateFullReportPDF = () => {
+            if (!analyticsPageData || Object.keys(analyticsPageData).length === 0) {
+                showNotification('Ainda não há dados carregados para exportar.', 'warning');
+                return;
+            }
+
+            if (!window.jspdf) {
+                showNotification('Biblioteca PDF não carregada.', 'error');
+                return;
+            }
+
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            const pageWidth = doc.internal.pageSize.width;
+            const margin = 14;
+            let yPos = 20;
+
+            // --- Cabeçalho ---
+            doc.setFontSize(22);
+            doc.setTextColor(40, 40, 40);
+            doc.text("Relatório do Dashboard Analítico", margin, yPos);
+            
+            yPos += 10;
+            doc.setFontSize(10);
+            doc.setTextColor(100, 100, 100);
+            doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, margin, yPos);
+            doc.text(`Gerado por: ${window.currentUserProfile?.email || 'Sistema'}`, margin, yPos + 5);
+
+            yPos += 15;
+            doc.setLineWidth(0.5);
+            doc.setDrawColor(200, 200, 200);
+            doc.line(margin, yPos, pageWidth - margin, yPos);
+            yPos += 10;
+
+            // --- Resumo Executivo (Cards) ---
+            doc.setFontSize(16);
+            doc.setTextColor(0, 0, 0);
+            doc.text("Resumo Executivo", margin, yPos);
+            yPos += 10;
+
+            const summaryData = [
+                ['Métrica', 'Valor Principal', 'Detalhe'],
+                ['Acessos ao Painel', `Sucesso: ${analyticsPageData.logins.success}`, `Falhas: ${analyticsPageData.logins.failure}`],
+                ['Usuários Hotspot', `Total: ${analyticsPageData.hotspotUsers.total}`, `Marketing: ${analyticsPageData.hotspotUsers.marketing}`],
+                ['Roteadores', `Online: ${analyticsPageData.routers.online}`, `Offline: ${analyticsPageData.routers.offline}`],
+                ['Tickets de Suporte', `Abertos: ${analyticsPageData.tickets.open}`, `Total: ${analyticsPageData.tickets.total}`],
+                ['Pedidos LGPD', `Pendentes: ${analyticsPageData.lgpd.pending}`, `Concluídos: ${analyticsPageData.lgpd.completed}`],
+                ['Atividade Admin', `Ações (24h): ${analyticsPageData.adminActivity.actionsLast24h}`, `-`],
+                ['Sorteios', `Ativos: ${analyticsPageData.raffles.active}`, `Total: ${analyticsPageData.raffles.total}`],
+                ['Campanhas', `Ativas: ${analyticsPageData.campaigns.active}`, `Views: ${analyticsPageData.campaigns.totalViews}`]
+            ];
+
+            doc.autoTable({
+                startY: yPos,
+                head: [summaryData[0]],
+                body: summaryData.slice(1),
+                theme: 'grid',
+                headStyles: { fillColor: [66, 153, 225], textColor: 255 },
+                styles: { fontSize: 10, cellPadding: 5 },
+                columnStyles: { 0: { fontStyle: 'bold' } }
+            });
+
+            yPos = doc.lastAutoTable.finalY + 15;
+
+            // --- Top Roteadores ---
+            if (analyticsPageData.userDistributionByRouter) {
+                doc.setFontSize(14);
+                doc.text("Top 10 Roteadores por Usuários", margin, yPos);
+                yPos += 6;
+
+                const routerData = analyticsPageData.userDistributionByRouter.labels.map((label, index) => [
+                    label,
+                    analyticsPageData.userDistributionByRouter.data[index]
+                ]);
+
+                doc.autoTable({
+                    startY: yPos,
+                    head: [['Roteador', 'Total de Usuários']],
+                    body: routerData,
+                    theme: 'striped',
+                    headStyles: { fillColor: [45, 55, 72] }
+                });
+                yPos = doc.lastAutoTable.finalY + 15;
+            }
+
+            // --- Rodapé ---
+            const pageCount = doc.internal.getNumberOfPages();
+            for (let i = 1; i <= pageCount; i++) {
+                doc.setPage(i);
+                doc.setFontSize(8);
+                doc.setTextColor(150);
+                doc.text(`Página ${i} de ${pageCount}`, pageWidth / 2, doc.internal.pageSize.height - 10, { align: 'center' });
+            }
+
+            doc.save(`Relatorio_Dashboard_Analitico_${new Date().toISOString().slice(0, 10)}.pdf`);
+        };
+
         // Adiciona os listeners de clique aos cards
         document.querySelectorAll('.stat-card.clickable').forEach(card => {
             card.addEventListener('click', () => {
@@ -1227,6 +1326,10 @@ if (window.initAnalyticsDashboard) {
                     }
                 }
             });
+        }
+
+        if (exportFullPdfBtn) {
+            exportFullPdfBtn.addEventListener('click', generateFullReportPDF);
         }
 
         loadAnalyticsData();

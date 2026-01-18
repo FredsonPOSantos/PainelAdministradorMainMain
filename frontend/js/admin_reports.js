@@ -18,6 +18,17 @@ if (window.initReportsPage) {
         const btnCsv = document.getElementById('exportCsvBtn');
         const btnPdf = document.getElementById('exportPdfBtn');
 
+        // [NOVO] Cria o botão de relatório completo dinamicamente
+        const btnFullReport = document.createElement('button');
+        btnFullReport.id = 'exportFullHotspotPdfBtn';
+        btnFullReport.type = 'button'; // [CORREÇÃO] Impede que o botão submeta o formulário e recarregue a página
+        btnFullReport.className = 'btn-primary';
+        btnFullReport.innerHTML = '<i class="fas fa-file-pdf"></i> Relatório Gráfico Completo';
+        btnFullReport.style.display = 'none'; // Escondido por padrão
+        btnFullReport.style.marginLeft = '10px';
+        // Insere após o botão de PDF padrão
+        if(btnPdf && btnPdf.parentNode) btnPdf.parentNode.appendChild(btnFullReport);
+
         let currentData = []; // Armazena os dados carregados para exportação
         let currentReportConfig = null; // Configuração do relatório ativo
 
@@ -428,11 +439,112 @@ if (window.initReportsPage) {
                 currentReportConfig = null;
                 filtersArea.classList.add('hidden');
             }
+
+            // [NOVO] Mostra o botão de relatório completo apenas para hotspot_users
+            if (type === 'hotspot_users') {
+                btnFullReport.style.display = 'inline-block';
+            } else {
+                btnFullReport.style.display = 'none';
+            }
         });
 
         btnPreview.addEventListener('click', fetchData);
         btnExcel.addEventListener('click', exportToExcel);
         btnCsv.addEventListener('click', exportToCsv);
         btnPdf.addEventListener('click', exportToPdf);
+
+        // [NOVO] Lógica para gerar o relatório completo com gráfico
+        btnFullReport.addEventListener('click', async (e) => {
+            e.preventDefault(); // [CORREÇÃO] Garante que nenhum evento padrão ocorra
+            if (!window.jspdf || !window.Chart) {
+                showNotification('Bibliotecas necessárias (PDF/Chart) não carregadas.', 'error');
+                return;
+            }
+
+            window.showPagePreloader('A gerar relatório gráfico...');
+
+            try {
+                // 1. Buscar estatísticas do backend
+                const response = await apiRequest('/api/hotspot/report-stats');
+                if (!response.success) throw new Error(response.message);
+                
+                const { stats, chartData } = response;
+
+                // 2. Gerar Gráfico em Canvas Oculto
+                const canvas = document.createElement('canvas');
+                canvas.width = 800;
+                canvas.height = 400;
+                canvas.style.display = 'none';
+                document.body.appendChild(canvas);
+
+                const chartInstance = new Chart(canvas, {
+                    type: 'line',
+                    data: {
+                        labels: chartData.map(d => d.day),
+                        datasets: [{
+                            label: 'Novos Registos (Últimos 60 dias)',
+                            data: chartData.map(d => parseInt(d.count)),
+                            borderColor: '#3b82f6',
+                            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                            borderWidth: 2,
+                            fill: true,
+                            tension: 0.4
+                        }]
+                    },
+                    options: {
+                        animation: false, // Desativa animação para renderização imediata
+                        responsive: false
+                    }
+                });
+
+                // 3. Criar PDF
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF();
+                const pageWidth = doc.internal.pageSize.width;
+
+                // Cabeçalho
+                doc.setFontSize(20);
+                doc.setTextColor(40, 40, 40);
+                doc.text("Relatório de Performance do Hotspot", 14, 20);
+                doc.setFontSize(10);
+                doc.setTextColor(100);
+                doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 14, 28);
+
+                // Tabela de Resumo (Total, 60, 30, 15)
+                doc.autoTable({
+                    startY: 35,
+                    head: [['Período', 'Total de Utilizadores', 'Média Diária (aprox.)']],
+                    body: [
+                        ['Total Geral', stats.total, (stats.total / 365).toFixed(1)], // Média anual estimada
+                        ['Últimos 60 Dias', stats.last_60, (stats.last_60 / 60).toFixed(1)],
+                        ['Últimos 30 Dias', stats.last_30, (stats.last_30 / 30).toFixed(1)],
+                        ['Últimos 15 Dias', stats.last_15, (stats.last_15 / 15).toFixed(1)]
+                    ],
+                    theme: 'grid',
+                    headStyles: { fillColor: [66, 153, 225] }
+                });
+
+                // Adicionar Imagem do Gráfico
+                const chartImg = canvas.toDataURL('image/png');
+                const imgY = doc.lastAutoTable.finalY + 15;
+                doc.setFontSize(14);
+                doc.setTextColor(0);
+                doc.text("Evolução de Registos (60 Dias)", 14, imgY - 5);
+                doc.addImage(chartImg, 'PNG', 14, imgY, 180, 90);
+
+                // Limpeza
+                chartInstance.destroy();
+                canvas.remove();
+
+                doc.save(`Relatorio_Hotspot_Grafico_${new Date().toISOString().slice(0,10)}.pdf`);
+                showNotification('Relatório gerado com sucesso!', 'success');
+
+            } catch (error) {
+                console.error(error);
+                showNotification(`Erro ao gerar relatório: ${error.message}`, 'error');
+            } finally {
+                window.hidePagePreloader();
+            }
+        });
     };
 }           

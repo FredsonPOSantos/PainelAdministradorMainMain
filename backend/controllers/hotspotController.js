@@ -104,9 +104,48 @@ const getTotalHotspotUsers = async (req, res) => {
   }
 };
 
+/**
+ * [NOVO] Obtém estatísticas agregadas para o relatório completo do Hotspot.
+ * Retorna contagens (Total, 60d, 30d, 15d) e dados para o gráfico de evolução.
+ */
+const getHotspotReportStats = async (req, res) => {
+    try {
+        const statsQuery = `
+            SELECT 
+                COUNT(*) as total,
+                COUNT(*) FILTER (WHERE data_cadastro >= NOW() - INTERVAL '60 days') as last_60,
+                COUNT(*) FILTER (WHERE data_cadastro >= NOW() - INTERVAL '30 days') as last_30,
+                COUNT(*) FILTER (WHERE data_cadastro >= NOW() - INTERVAL '15 days') as last_15
+            FROM userdetails
+        `;
+        
+        const chartQuery = `
+            SELECT TO_CHAR(data_cadastro, 'DD/MM') as day, COUNT(*) as count
+            FROM userdetails
+            WHERE data_cadastro >= NOW() - INTERVAL '60 days'
+            GROUP BY TO_CHAR(data_cadastro, 'YYYY-MM-DD'), TO_CHAR(data_cadastro, 'DD/MM')
+            ORDER BY TO_CHAR(data_cadastro, 'YYYY-MM-DD') ASC
+        `;
+
+        const [statsRes, chartRes] = await Promise.all([
+            pool.query(statsQuery),
+            pool.query(chartQuery)
+        ]);
+
+        res.json({
+            success: true,
+            stats: statsRes.rows[0],
+            chartData: chartRes.rows
+        });
+    } catch (error) {
+        console.error('Erro ao buscar estatísticas do relatório hotspot:', error);
+        res.status(500).json({ success: false, message: 'Erro interno.' });
+    }
+};
 
 // [MODIFICADO] Exporta a nova função
 module.exports = {
     searchUsers,
-    getTotalHotspotUsers 
+    getTotalHotspotUsers,
+    getHotspotReportStats // [NOVO]
 };
