@@ -48,9 +48,8 @@ const ticketRoutes = require('./routes/tickets');
 const notificationRoutes = require('./routes/notificationRoutes');
 const raffleRoutes = require('./routes/raffles');
 const dashboardRoutes = require('./routes/dashboard'); // [NOVO] Importa a rota do dashboard
+const dashboardAnalyticsRoutes = require('./routes/AnalyticsRoutes'); // [NOVO] Importa as rotas do dashboard analítico
 const publicRoutes = require('./routes/publicRoutes'); // [NOVO] Importa as rotas públicas
-// [NOVO] Importa as rotas do dashboard analítico
-const dashboardAnalyticsRoutes = require('./routes/AnalyticsRoutes');
 const monitoringRoutes = require('./routes/monitoring'); // <-- 1. IMPORTE A NOVA ROTA
 const profileRoutes = require('./routes/profileRoutes'); // [NOVO]
 const roleRoutes = require('./routes/roleRoutes');       // [NOVO]
@@ -144,10 +143,9 @@ app.use('/api/tickets', ticketRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/raffles', raffleRoutes);
 app.use('/api/dashboard', dashboardRoutes); // [NOVO] Regista a rota do dashboard
+app.use('/api/dashboard/analytics', dashboardAnalyticsRoutes); // [NOVO] Regista as rotas analíticas detalhadas
 app.use('/api/public', publicApiLimiter, publicRoutes);     // [MODIFICADO] Aplica Rate Limit
 app.use('/api/public/tickets', publicApiLimiter, publicTicketRoutes); // [MODIFICADO] Aplica Rate Limit
-// [NOVO] Monta as novas rotas sob o prefixo /api/dashboard/analytics
-app.use('/api/dashboard/analytics', dashboardAnalyticsRoutes);
 app.use('/api/monitoring', monitoringRoutes); // <-- 2. USE A NOVA ROTA
 
 // --- [NOVO] Rotas de Logs ---

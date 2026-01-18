@@ -8,14 +8,14 @@ const searchUsers = async (req, res) => {
         // --- ALTERAÇÃO: Formata as datas para o padrão brasileiro DD-MM-YYYY HH24:MI ---
         let query = `
             SELECT 
-                id AS "ID", 
-                username AS "Email", 
-                nome_completo AS "Nome Completo", 
-                telefone AS "Telefone", 
-                mac_address AS "Endereço MAC", 
-                router_name AS "Roteador", 
-                TO_CHAR(data_cadastro, 'DD-MM-YYYY HH24:MI') AS "Data de Cadastro", 
-                COALESCE(TO_CHAR(ultimo_login, 'DD-MM-YYYY HH24:MI'), 'N/A') AS "Último Login" 
+                id, 
+                username as email, 
+                nome_completo as name, 
+                telefone as phone, 
+                mac_address, 
+                router_name, 
+                TO_CHAR(data_cadastro, 'DD-MM-YYYY HH24:MI') as created_at, 
+                COALESCE(TO_CHAR(ultimo_login, 'DD-MM-YYYY HH24:MI'), 'N/A') as last_login 
             FROM userdetails WHERE 1=1`;
             
         const params = [];

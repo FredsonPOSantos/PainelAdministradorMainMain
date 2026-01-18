@@ -6,7 +6,11 @@ if (window.initSystemHealthPage) {
     window.initSystemHealthPage = () => {
         console.log("A inicializar Dashboard de Saúde do Sistema...");
 
-        const loadHealthData = async () => {
+        const loadHealthData = async (showLoader = false) => {
+            if (showLoader && window.showPagePreloader) {
+                window.showPagePreloader('A verificar saúde do sistema...');
+            }
+
             try {
                 const response = await apiRequest('/api/dashboard/health');
                 if (!response.success) throw new Error(response.message);
@@ -127,12 +131,16 @@ if (window.initSystemHealthPage) {
             } catch (error) {
                 console.error("Erro ao carregar saúde do sistema:", error);
                 showNotification("Erro ao carregar dados de saúde.", "error");
+            } finally {
+                if (showLoader && window.hidePagePreloader) {
+                    window.hidePagePreloader();
+                }
             }
         };
 
-        loadHealthData();
+        loadHealthData(true);
         // Auto-refresh a cada 30 segundos
-        const interval = setInterval(loadHealthData, 30000);
+        const interval = setInterval(() => loadHealthData(false), 30000);
         
         // Função de limpeza para parar o intervalo ao sair da página
         window.cleanupSystemHealthPage = () => {

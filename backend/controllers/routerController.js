@@ -32,6 +32,75 @@ const getAllRouters = async (req, res) => {
 };
 
 /**
+ * [NOVO] Gera um relatório detalhado dos roteadores com disponibilidade e data de ativação.
+ */
+const getRouterReport = async (req, res) => {
+    try {
+        // 1. Buscar dados básicos e a data do primeiro registo de utilizador (proxy para data de ativação)
+        const query = `
+            SELECT
+                r.id,
+                r.name,
+                r.ip_address,
+                r.status,
+                r.observacao,
+                TO_CHAR(MIN(u.data_cadastro), 'DD/MM/YYYY HH24:MI') as first_activity
+            FROM routers r
+            LEFT JOIN userdetails u ON r.name = u.router_name
+            GROUP BY r.id
+            ORDER BY r.name ASC
+        `;
+        const { rows: routers } = await pool.query(query);
+
+        // 2. Calcular disponibilidade dos últimos 30 dias via InfluxDB
+        if (queryApi && influxBucket) {
+            const availabilityPromises = routers.map(async (router) => {
+                if (!router.ip_address) return { id: router.id, availability: 'N/A' };
+
+                try {
+                    // Conta quantas janelas de 5 minutos tiveram uptime > 0 nos últimos 30 dias
+                    const fluxQuery = `
+                        from(bucket: "${influxBucket}")
+                          |> range(start: -30d)
+                          |> filter(fn: (r) => r._measurement == "system_resource")
+                          |> filter(fn: (r) => r.router_host == "${router.ip_address}")
+                          |> filter(fn: (r) => r._field == "uptime_seconds")
+                          |> aggregateWindow(every: 5m, fn: count)
+                          |> filter(fn: (r) => r._value > 0)
+                          |> count()
+                    `;
+                    const result = await queryApi.collectRows(fluxQuery);
+                    const onlineWindows = result.length > 0 ? result[0]._value : 0;
+                    
+                    // Total de janelas em 30 dias (30 dias * 24 horas * 12 janelas/hora = 8640)
+                    const totalWindows = 8640;
+                    const percentage = ((onlineWindows / totalWindows) * 100).toFixed(2);
+                    
+                    return { id: router.id, availability: `${percentage}%` };
+                } catch (e) {
+                    console.error(`Erro ao calcular disponibilidade para ${router.name}:`, e.message);
+                    return { id: router.id, availability: 'Erro' };
+                }
+            });
+
+            const availabilityResults = await Promise.all(availabilityPromises);
+            const availabilityMap = new Map(availabilityResults.map(i => [i.id, i.availability]));
+
+            routers.forEach(r => {
+                r.availability_30d = availabilityMap.get(r.id) || 'N/A';
+            });
+        } else {
+            routers.forEach(r => r.availability_30d = 'N/A (Sem Influx)');
+        }
+
+        res.json(routers);
+    } catch (error) {
+        console.error('Erro ao gerar relatório de roteadores:', error);
+        res.status(500).json({ message: 'Erro interno ao gerar relatório.' });
+    }
+};
+
+/**
  * [MODIFICADO] Obtém o status detalhado de todos os roteadores, buscando métricas em tempo real do InfluxDB.
  */
 const getRoutersStatus = async (req, res) => {
@@ -1267,6 +1336,7 @@ const manageBackups = async (req, res) => {
 module.exports = {
   getRoutersStatus, // Exporta a nova função
   getAllRouters,
+  getRouterReport, // [NOVO] Exporta a função de relatório
   updateRouter,
   deleteRouter,
   deleteRouterPermanently, // Exporta a nova função

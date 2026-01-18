@@ -15,6 +15,9 @@ router.get('/', verifyToken, checkPermission('routers.read'), routerController.g
 router.put('/:id', verifyToken, checkPermission('routers.update'), routerController.updateRouter);
 router.delete('/:id', verifyToken, checkPermission('routers.delete'), routerController.deleteRouter);
 
+// [NOVO] Rota para relatório detalhado de roteadores (Disponibilidade e Histórico)
+router.get('/report', verifyToken, checkPermission('routers.read'), routerController.getRouterReport);
+
 // [NOVO] Rota para exclusão permanente de um roteador
 router.delete('/:id/permanent', verifyToken, checkPermission('routers.individual.delete_permanent'), routerController.deleteRouterPermanently);
 

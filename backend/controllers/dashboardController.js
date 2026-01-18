@@ -77,7 +77,10 @@ const getAnalyticsStats = async (req, res) => {
             adminActivityRes, // [CORRIGIDO] Nome da variável ajustado para clareza (era routerActivityRes na ordem errada ou implícita)
             lastWinnersRes,
             rafflesRes, // [NOVO]
-            campaignsRes // [NOVO]
+            campaignsRes, // [NOVO]
+            bufferCountRes, // [NOVO] Resultado do buffer offline
+            groupDistRes,   // [NOVO] Distribuição por grupo
+            topRoutersRes   // [NOVO] Top roteadores
         ] = await Promise.all([
             // 1. Acessos ao Painel
             pool.query(`
@@ -141,7 +144,24 @@ const getAnalyticsStats = async (req, res) => {
                     } catch (e) { return 0; }
                 }
                 return 0;
-            })()
+            })(),
+            // 11. Distribuição de Usuários por Grupo [NOVO]
+            pool.query(`
+                SELECT rg.name as group_name, COUNT(u.id)::int as user_count
+                FROM router_groups rg
+                JOIN routers r ON r.group_id = rg.id
+                JOIN userdetails u ON u.router_name = r.name
+                GROUP BY rg.name
+            `),
+            // 12. Top Roteadores por Usuários [NOVO]
+            pool.query(`
+                SELECT router_name, COUNT(*)::int as user_count
+                FROM userdetails
+                WHERE router_name IS NOT NULL
+                GROUP BY router_name
+                ORDER BY user_count DESC
+                LIMIT 10
+            `)
         ]);
 
         // Formata os resultados para enviar ao frontend
@@ -167,10 +187,19 @@ const getAnalyticsStats = async (req, res) => {
             serverHealth: {
                 uptime: process.uptime() * 1000, // Em milissegundos para consistência com JS Date
                 radiusStatus: 'online', // Simulado, idealmente viria de uma verificação real
-                bufferCount: typeof lastWinnersRes === 'number' ? lastWinnersRes : 0, // lastWinnersRes aqui é o resultado da promise 10 (buffer)
+                bufferCount: typeof bufferCountRes === 'number' ? bufferCountRes : 0,
                 postgres: { ...pgConnectionStatus },
                 influx: getInfluxConnectionStatus()
-            } 
+            },
+            // [NOVO] Dados para os gráficos de roteadores
+            userDistributionByGroup: {
+                labels: groupDistRes.rows.map(r => r.group_name),
+                data: groupDistRes.rows.map(r => parseInt(r.user_count, 10))
+            },
+            userDistributionByRouter: {
+                labels: topRoutersRes.rows.map(r => r.router_name),
+                data: topRoutersRes.rows.map(r => parseInt(r.user_count, 10))
+            }
         };
 
         // Calcula o total de tickets
@@ -268,19 +297,18 @@ const getRouterUsers = async (req, res) => {
 
     try { // [CORRIGIDO] A coluna de email na tabela 'userdetails' é 'username'.
         let query = `
-            SELECT u.nome_completo as fullname, u.username as email, MAX(a.timestamp) as last_login
-            FROM userdetails u
-            LEFT JOIN audit_logs a ON u.username = a.user_email AND a.action = 'LOGIN_SUCCESS'
+            SELECT nome_completo as fullname, username as email, ultimo_login as last_login
+            FROM userdetails
         `;
 
         const params = [];
 
         if (routerName && routerName !== 'all') {
-            query += ` WHERE u.router_name = $1`;
+            query += ` WHERE router_name = $1`;
             params.push(routerName);
         }
 
-        query += ` GROUP BY u.id, u.nome_completo, u.username ORDER BY last_login DESC NULLS LAST LIMIT 100;`;
+        query += ` ORDER BY ultimo_login DESC NULLS LAST LIMIT 100;`;
 
         const { rows } = await pool.query(query, params);
         res.json({ success: true, data: rows });
@@ -290,4 +318,63 @@ const getRouterUsers = async (req, res) => {
     }
 };
 
-module.exports = { getDashboardStats, getAnalyticsStats, getSystemHealth, getRouterUsers };
+/**
+ * [NOVO] Obtém detalhes analíticos das campanhas (Templates mais usados, Top Campanhas)
+ */
+const getCampaignsAnalytics = async (req, res) => {
+    try {
+        // 1. Templates mais utilizados em campanhas ativas
+        const templatesQuery = `
+            SELECT t.name as template_name, COUNT(c.id)::int as campaign_count, COALESCE(SUM(c.view_count), 0)::int as total_views
+            FROM templates t
+            JOIN campaigns c ON c.template_id = t.id
+            WHERE c.is_active = true
+            GROUP BY t.name
+            ORDER BY total_views DESC
+            LIMIT 5
+        `;
+        
+        // 2. Top 10 Campanhas por visualização
+        const campaignsQuery = `
+            SELECT name, view_count
+            FROM campaigns
+            WHERE is_active = true
+            ORDER BY view_count DESC
+            LIMIT 10
+        `;
+
+        const [templatesRes, campaignsRes] = await Promise.all([
+            pool.query(templatesQuery),
+            pool.query(campaignsQuery)
+        ]);
+
+        res.json({
+            success: true,
+            data: {
+                top_templates_table: templatesRes.rows,
+                top_campaigns_chart: {
+                    labels: campaignsRes.rows.map(c => c.name),
+                    data: campaignsRes.rows.map(c => parseInt(c.view_count, 10))
+                }
+            }
+        });
+    } catch (error) {
+        console.error('Erro ao buscar análise de campanhas:', error);
+        res.status(500).json({ success: false, message: 'Erro interno.' });
+    }
+};
+
+/**
+ * [NOVO] Obtém detalhes analíticos de saúde do servidor (Eventos recentes)
+ */
+const getServerHealthAnalytics = async (req, res) => {
+    try {
+        const eventsRes = await pool.query("SELECT timestamp, action, description FROM audit_logs ORDER BY timestamp DESC LIMIT 20");
+        res.json({ success: true, data: { service_events: eventsRes.rows } });
+    } catch (error) {
+        console.error('Erro ao buscar análise de saúde:', error);
+        res.status(500).json({ success: false, message: 'Erro interno.' });
+    }
+};
+
+module.exports = { getDashboardStats, getAnalyticsStats, getSystemHealth, getRouterUsers, getCampaignsAnalytics, getServerHealthAnalytics };

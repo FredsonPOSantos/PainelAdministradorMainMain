@@ -201,6 +201,21 @@
                             <input type="color" id="tabLinkActiveColor" class="color-picker">
                         </div>
                     </div>
+                    <!-- Coluna 4: Comportamento do Sistema (Garantindo Visibilidade) -->
+                    <div class="settings-column">
+                        <p class="column-title">Comportamento do Sistema</p>
+                        <div class="input-group checkbox-group" style="justify-content: flex-start; margin-bottom: 15px;">
+                            <input type="checkbox" id="loaderEnabled" checked>
+                            <label for="loaderEnabled">Ativar Loader de Página</label>
+                        </div>
+                        <div class="input-group">
+                            <label for="loaderTimeout">Tempo Limite do Loader (ms)</label>
+                            <input type="number" id="loaderTimeout" min="1000" step="500" placeholder="10000">
+                            <small style="color: var(--text-secondary); display: block; margin-top: 5px;">
+                                Tempo máximo de espera (segurança) antes de forçar a remoção do loader.
+                            </small>
+                        </div>
+                    </div>
                 </div>
             </div>
 

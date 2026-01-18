@@ -1,128 +1,102 @@
-<!-- Ficheiro: pages/admin_system_health.html -->
-
-<!-- [NOVO] Loader específico para a secção Saúde do Sistema -->
-<div id="health-section-loader" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(17, 24, 39, 0.95); z-index: 50; display: flex; flex-direction: column; justify-content: center; align-items: center; border-radius: 12px;">
-    <div class="bus-animation-wrapper">
-        <div class="bus">
-            <div class="bus-roof"></div>
-            <div class="bus-body">
-                <div class="bus-windows"><div class="window"></div><div class="window"></div><div class="window"></div></div>
-            </div>
-            <div class="bus-wheels"><div class="wheel front"></div><div class="wheel back"></div></div>
-        </div>
-    </div>
-    <h3 class="loading-text">Verificando saúde do sistema...</h3>
-</div>
-
+<!-- Ficheiro: frontend/pages/admin_system_health.html -->
 <div class="page-header">
-    <h3><i class="fas fa-heartbeat" style="margin-right: 10px;"></i>Saúde do Sistema</h3>
+    <h3>Saúde do Sistema</h3>
+    <button class="btn-secondary" onclick="window.loadPage('admin_system_health')">
+        <i class="fas fa-sync-alt"></i> Atualizar Agora
+    </button>
 </div>
 
-<div id="systemHealthContainer" class="content-section" style="background: transparent; border: none; padding: 0; width: 100%; align-items: stretch;">
-    <div class="stats-grid" style="grid-template-columns: repeat(4, 1fr);">
-        <!-- PostgreSQL Status -->
-        <div class="stat-card health-card" id="pgHealthCard">
-            <div class="stat-card-icon"><i class="fas fa-database"></i></div>
-            <div class="stat-card-info">
-                <span class="stat-card-title">PostgreSQL</span>
-                <div class="stat-card-value" id="pgStatusText">Verificando...</div>
-                <div class="stat-card-details" id="pgStatusDetails"></div>
-            </div>
-        </div>
-
-        <!-- InfluxDB Status -->
-        <div class="stat-card health-card" id="influxHealthCard">
-            <div class="stat-card-icon"><i class="fas fa-chart-area"></i></div>
-            <div class="stat-card-info">
-                <span class="stat-card-title">InfluxDB</span>
-                <div class="stat-card-value" id="influxStatusText">Verificando...</div>
-                <div class="stat-card-details" id="influxStatusDetails"></div>
-            </div>
-        </div>
-
-        <!-- Server Uptime -->
-        <div class="stat-card health-card">
-            <div class="stat-card-icon color-blue"><i class="fas fa-clock"></i></div>
-            <div class="stat-card-info">
-                <span class="stat-card-title">Uptime do Servidor</span>
-                <div class="stat-card-value" id="serverUptimeText">...</div>
-            </div>
-        </div>
-
-        <!-- Error Buffer -->
-        <div class="stat-card health-card" id="bufferHealthCard">
-            <div class="stat-card-icon"><i class="fas fa-archive"></i></div>
-            <div class="stat-card-info">
-                <span class="stat-card-title">Buffer de Erros Offline</span>
-                <div class="stat-card-value" id="bufferCountText">...</div>
-                <div class="stat-card-details">Erros aguardando conexão</div>
-                <button id="viewOfflineLogsBtn" class="btn-secondary btn-sm" style="margin-top: 10px; display: none;" onclick="viewOfflineLogs()">Ver Logs</button>
-            </div>
+<div id="systemHealthContainer" class="stats-grid">
+    <!-- PostgreSQL -->
+    <div class="stat-card" id="pgHealthCard">
+        <div class="stat-card-icon color-gray"><i class="fas fa-database"></i></div>
+        <div class="stat-card-info">
+            <div class="stat-card-title">PostgreSQL</div>
+            <div class="stat-card-value" id="pgStatusText">Verificando...</div>
+            <div class="stat-card-details" id="pgStatusDetails">-</div>
         </div>
     </div>
 
-    <!-- [NOVO] Secção de Hardware do Servidor -->
-    <div class="section-header" style="margin-top: 30px;">
+    <!-- InfluxDB -->
+    <div class="stat-card" id="influxHealthCard">
+        <div class="stat-card-icon color-gray"><i class="fas fa-chart-area"></i></div>
+        <div class="stat-card-info">
+            <div class="stat-card-title">InfluxDB</div>
+            <div class="stat-card-value" id="influxStatusText">Verificando...</div>
+            <div class="stat-card-details" id="influxStatusDetails">-</div>
+        </div>
+    </div>
+
+    <!-- Server Uptime -->
+    <div class="stat-card">
+        <div class="stat-card-icon color-blue"><i class="fas fa-clock"></i></div>
+        <div class="stat-card-info">
+            <div class="stat-card-title">Tempo de Atividade</div>
+            <div class="stat-card-value" id="serverUptimeText">Verificando...</div>
+            <div class="stat-card-details">Servidor Node.js</div>
+        </div>
+    </div>
+
+    <!-- Offline Buffer -->
+    <div class="stat-card" id="bufferHealthCard">
+        <div class="stat-card-icon color-gray"><i class="fas fa-archive"></i></div>
+        <div class="stat-card-info">
+            <div class="stat-card-title">Buffer Offline</div>
+            <div class="stat-card-value" id="bufferCountText">0</div>
+            <div class="stat-card-details">Registos pendentes</div>
+        </div>
+    </div>
+</div>
+
+<!-- Hardware Stats -->
+<div class="content-section" style="margin-top: 20px;">
+    <div class="section-header">
         <h4>Recursos do Servidor</h4>
     </div>
-    <div class="stats-grid" style="grid-template-columns: repeat(4, 1fr);">
-        <!-- CPU -->
-        <div class="stat-card health-card">
+    <div class="stats-grid">
+        <div class="stat-card">
             <div class="stat-card-icon color-orange"><i class="fas fa-microchip"></i></div>
             <div class="stat-card-info">
-                <span class="stat-card-title">Uso de CPU</span>
-                <div class="stat-card-value" id="serverCpuText">...</div>
-                <div class="stat-card-details" id="serverTempText">Temp: ...</div>
+                <div class="stat-card-title">CPU</div>
+                <div class="stat-card-value" id="serverCpuText">-</div>
+                <div class="stat-card-details" id="serverTempText">Temp: -</div>
             </div>
         </div>
-
-        <!-- Memória -->
-        <div class="stat-card health-card">
-            <div class="stat-card-icon color-blue"><i class="fas fa-memory"></i></div>
+        <div class="stat-card">
+            <div class="stat-card-icon color-purple"><i class="fas fa-memory"></i></div>
             <div class="stat-card-info">
-                <span class="stat-card-title">Memória RAM</span>
-                <div class="stat-card-value" id="serverMemText">...</div>
-                <div class="stat-card-details" id="serverMemDetails">...</div>
+                <div class="stat-card-title">Memória</div>
+                <div class="stat-card-value" id="serverMemText">-</div>
+                <div class="stat-card-details" id="serverMemDetails">-</div>
             </div>
         </div>
-
-        <!-- Disco -->
-        <div class="stat-card health-card">
-            <div class="stat-card-icon color-purple"><i class="fas fa-hdd"></i></div>
+        <div class="stat-card">
+            <div class="stat-card-icon color-teal"><i class="fas fa-hdd"></i></div>
             <div class="stat-card-info">
-                <span class="stat-card-title">Disco Principal</span>
-                <div class="stat-card-value" id="serverDiskText">...</div>
-                <div class="stat-card-details" id="serverDiskDetails">...</div>
+                <div class="stat-card-title">Disco</div>
+                <div class="stat-card-value" id="serverDiskText">-</div>
+                <div class="stat-card-details" id="serverDiskDetails">-</div>
             </div>
-        </div>
-    </div>
-
-    <div class="content-section">
-        <div class="section-header">
-            <h4>Últimos Erros de Sistema</h4>
-            <button class="btn-secondary btn-sm" onclick="loadPage('admin_logs', document.querySelector('.nav-item[data-page=\'admin_logs\']'))">Ver Todos</button>
-        </div>
-        <div class="table-container">
-            <table id="recentErrorsTable">
-                <thead>
-                    <tr>
-                        <th>Data/Hora</th>
-                        <th>Mensagem</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr><td colspan="2" style="text-align: center;">A carregar...</td></tr>
-                </tbody>
-            </table>
         </div>
     </div>
 </div>
 
-<script>
-    // [NOVO] Script para remover o loader após 1.5 segundos (tempo simulado para carregar dados)
-    setTimeout(() => {
-        const loader = document.getElementById('health-section-loader');
-        if(loader) loader.style.display = 'none';
-    }, 1500);
-</script>
-<script src="js/admin_system_health.js"></script>
+<!-- Recent Errors -->
+<div class="content-section" style="margin-top: 20px;">
+    <div class="section-header">
+        <h4>Erros Recentes do Sistema</h4>
+    </div>
+    <div class="table-container">
+        <table id="recentErrorsTable">
+            <thead>
+                <tr>
+                    <th>Data/Hora</th>
+                    <th>Mensagem de Erro</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr><td colspan="2" style="text-align: center;">A carregar...</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>

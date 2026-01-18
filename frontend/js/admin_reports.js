@@ -32,11 +32,11 @@ if (window.initReportsPage) {
                     { id: 'routerId', label: 'Roteador', type: 'select', source: '/api/routers', key: 'id', text: 'name' }
                 ],
                 columns: [
-                    { key: 'nome_completo', label: 'Nome' },
-                    { key: 'username', label: 'E-mail' },
-                    { key: 'telefone', label: 'Telefone' },
+                    { key: 'name', label: 'Nome' },
+                    { key: 'email', label: 'E-mail' },
+                    { key: 'phone', label: 'Telefone' },
                     { key: 'router_name', label: 'Roteador' },
-                    { key: 'created_at', label: 'Cadastro', type: 'datetime' }
+                    { key: 'created_at', label: 'Cadastro' }
                 ]
             },
             'audit_logs': {
@@ -71,13 +71,15 @@ if (window.initReportsPage) {
                 ]
             },
             'routers': {
-                title: 'Inventário de Roteadores',
-                endpoint: '/api/routers', // Usa a rota de lista simples
+                title: 'Inventário e Performance de Roteadores',
+                endpoint: '/api/routers/report', // [MODIFICADO] Usa a nova rota de relatório detalhado
                 filters: [], // Sem filtros por enquanto, lista tudo
                 columns: [
                     { key: 'name', label: 'Nome' },
                     { key: 'ip_address', label: 'IP' },
-                    { key: 'status', label: 'Status' },
+                    { key: 'status', label: 'Status Atual' },
+                    { key: 'availability_30d', label: 'Disp. (30d)' }, // [NOVO]
+                    { key: 'first_activity', label: 'Primeira Atividade' }, // [NOVO]
                     { key: 'observacao', label: 'Observação' }
                 ]
             },
@@ -89,7 +91,7 @@ if (window.initReportsPage) {
                     { key: 'raffle_number', label: 'Número' },
                     { key: 'title', label: 'Título' },
                     { key: 'created_at', label: 'Data Criação', type: 'datetime' },
-                    { key: 'winner_email', label: 'Vencedor' }
+                    { key: 'winner_name', label: 'Vencedor' }
                 ]
             },
             'lgpd_requests': {

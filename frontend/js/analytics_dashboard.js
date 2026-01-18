@@ -1129,8 +1129,8 @@ if (window.initAnalyticsDashboard) {
                     datasets: [{
                         label: 'Visualizações',
                         data: chartData.data,
-                        backgroundColor: 'rgba(0, 199, 190, 0.5)', // Cor ciano do card
-                        borderColor: 'rgba(0, 199, 190, 1)',
+                        backgroundColor: 'rgba(11, 197, 234, 0.5)', // Cor ciano do card
+                        borderColor: 'rgba(11, 197, 234, 1)',
                         borderWidth: 1
                     }]
                 },
@@ -1141,14 +1141,10 @@ if (window.initAnalyticsDashboard) {
                     scales: {
                         x: {
                             beginAtZero: true,
-                            ticks: {
-                                color: 'var(--text-secondary)'
-                            }
+                            ticks: { color: 'var(--text-secondary)' }
                         },
                         y: {
-                            ticks: {
-                                color: 'var(--text-secondary)'
-                            }
+                            ticks: { color: 'var(--text-secondary)' }
                         }
                     },
                     plugins: {

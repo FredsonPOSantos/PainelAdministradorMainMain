@@ -454,7 +454,8 @@ window.initSettingsPage = () => {
                 'placeholderColor': 'placeholder_color',
                 'tabLinkColor': 'tab_link_color',
                 'tabLinkActiveColor': 'tab_link_active_color',
-                'adminSessionTimeout': 'admin_session_timeout' // [NOVO] Mapeamento do timeout
+                'adminSessionTimeout': 'admin_session_timeout', // [NOVO] Mapeamento do timeout
+                'loaderTimeout': 'loader_timeout' // [NOVO]
             };
 
             // 1. Compara campos de texto e cor
@@ -468,6 +469,18 @@ window.initSettingsPage = () => {
                         formData.append(fieldMapping[id], currentValue);
                         hasChanges = true;
                     }
+                }
+            }
+
+            // [NOVO] Verifica checkbox do loader
+            const loaderEnabledCheckbox = document.getElementById('loaderEnabled');
+            if (loaderEnabledCheckbox) {
+                const initialVal = initialAppearanceSettings.loader_enabled;
+                const currentVal = loaderEnabledCheckbox.checked;
+                // O banco retorna true/false, o checkbox é boolean.
+                if (initialVal !== currentVal) {
+                    formData.append('loader_enabled', currentVal);
+                    hasChanges = true;
                 }
             }
 
@@ -610,6 +623,7 @@ window.initSettingsPage = () => {
                     'tabLinkColor': settings.tab_link_color,
                     'tabLinkActiveColor': settings.tab_link_active_color,
                     'adminSessionTimeout': settings.admin_session_timeout, // [NOVO] Preenche o input
+                    'loaderTimeout': settings.loader_timeout, // [NOVO]
                     // [NOVO] Campos de SMTP
                     'emailHost': settings.email_host,
                     'emailPort': settings.email_port,
@@ -623,6 +637,12 @@ window.initSettingsPage = () => {
                     if (el) {
                         el.value = fields[id] || '';
                     }
+                }
+
+                // Preenche o checkbox de 'loader_enabled'
+                const loaderEnabledCheckbox = document.getElementById('loaderEnabled');
+                if (loaderEnabledCheckbox) {
+                    loaderEnabledCheckbox.checked = settings.loader_enabled !== false; // Default true se undefined
                 }
 
                 // Preenche o checkbox de 'email_secure'

@@ -6,19 +6,72 @@ let isProfileLoaded = false;
 window.currentUserProfile = null;
 window.systemSettings = null; 
 
+let preloaderTimeout = null; // [NOVO] Variável para controlar o timeout do loader
+let progressInterval = null; // [NOVO] Variável para a animação da barra
+
 // [NOVO] Funções Globais para o Preloader (Autocarro)
 window.showPagePreloader = (message = 'A carregar...') => {
+    // Verifica se o loader está ativado nas configurações
+    const isEnabled = window.systemSettings?.loader_enabled !== false; // Default true
+    if (!isEnabled) return;
+
     const preloader = document.getElementById('page-preloader');
     if (preloader) {
         const textEl = preloader.querySelector('.loading-text');
         if (textEl) textEl.textContent = message;
         preloader.classList.remove('loaded');
+
+        // [NOVO] Lógica da Barra de Progresso Simulada
+        const bar = document.getElementById('loaderProgressBar');
+        const pct = document.getElementById('loaderPercentage');
+        if (bar && pct) {
+            bar.style.width = '0%';
+            pct.textContent = '0%';
+            
+            if (progressInterval) clearInterval(progressInterval);
+            let width = 0;
+            progressInterval = setInterval(() => {
+                // Avança rápido no início, depois desacelera
+                if (width >= 90) {
+                    // Fica parado em 90% até o carregamento real terminar
+                } else {
+                    width += Math.random() * 10;
+                    if (width > 90) width = 90;
+                    bar.style.width = `${width}%`;
+                    pct.textContent = `${Math.round(width)}%`;
+                }
+            }, 200);
+        }
+        
+        // [NOVO] Define um timeout de segurança baseado nas configurações
+        if (preloaderTimeout) clearTimeout(preloaderTimeout);
+        
+        const timeoutMs = window.systemSettings?.loader_timeout || 10000; // Default 10s
+        preloaderTimeout = setTimeout(() => {
+            console.warn(`[Preloader] Timeout de segurança atingido (${timeoutMs}ms). Forçando remoção.`);
+            window.hidePagePreloader();
+        }, timeoutMs);
     }
 };
 
 window.hidePagePreloader = () => {
     const preloader = document.getElementById('page-preloader');
     if (preloader) {
+        // Limpa o timeout de segurança se existir
+        if (preloaderTimeout) {
+            clearTimeout(preloaderTimeout);
+            preloaderTimeout = null;
+        }
+
+        // [NOVO] Finaliza a barra de progresso
+        if (progressInterval) clearInterval(progressInterval);
+        const bar = document.getElementById('loaderProgressBar');
+        const pct = document.getElementById('loaderPercentage');
+        if (bar && pct) {
+            bar.style.width = '100%';
+            pct.textContent = '100%';
+        }
+
         // Delay reduzido para 300ms para uma sensação de maior velocidade
         setTimeout(() => { preloader.classList.add('loaded'); }, 300);
     }

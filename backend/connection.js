@@ -281,6 +281,20 @@ async function checkAndUpgradeSchema(client) {
         console.log("   ✅ Coluna 'is_system' adicionada em templates.");
     }
 
+    // [NOVO] Configurações do Loader (Preloader)
+    const loaderEnabledExists = await checkColumn('system_settings', 'loader_enabled');
+    if (!loaderEnabledExists) {
+        console.log("   -> Adicionando coluna 'loader_enabled' à tabela 'system_settings'...");
+        await client.query('ALTER TABLE system_settings ADD COLUMN loader_enabled BOOLEAN DEFAULT TRUE');
+        console.log("   ✅ Coluna 'loader_enabled' adicionada.");
+    }
+    const loaderTimeoutExists = await checkColumn('system_settings', 'loader_timeout');
+    if (!loaderTimeoutExists) {
+        console.log("   -> Adicionando coluna 'loader_timeout' à tabela 'system_settings'...");
+        await client.query('ALTER TABLE system_settings ADD COLUMN loader_timeout INTEGER DEFAULT 10000'); // 10 segundos (Generoso)
+        console.log("   ✅ Coluna 'loader_timeout' adicionada.");
+    }
+
     // [NOVO] Garante que todas as permissões do sistema existem na tabela 'permissions'
     // Isto assegura que o Master tenha acesso a tudo (exceto LGPD) e que as permissões apareçam na matriz.
     const systemPermissions = [

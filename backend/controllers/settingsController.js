@@ -16,7 +16,7 @@ const getGeneralSettings = async (req, res) => {
     // console.log("getGeneralSettings: Buscando configurações...");
     try {
         const settings = await pool.query(
-            'SELECT company_name, logo_url, primary_color, background_color, font_color, font_family, font_size, background_image_url, modal_background_color, modal_font_color, modal_border_color, sidebar_color, login_background_color, login_form_background_color, login_font_color, login_button_color, login_logo_url, email_host, email_port, email_secure, email_user, email_from, nav_title_color, label_color, placeholder_color, tab_link_color, tab_link_active_color, terms_content, marketing_policy_content, admin_session_timeout FROM system_settings WHERE id = 1'
+            'SELECT company_name, logo_url, primary_color, background_color, font_color, font_family, font_size, background_image_url, modal_background_color, modal_font_color, modal_border_color, sidebar_color, login_background_color, login_form_background_color, login_font_color, login_button_color, login_logo_url, email_host, email_port, email_secure, email_user, email_from, nav_title_color, label_color, placeholder_color, tab_link_color, tab_link_active_color, terms_content, marketing_policy_content, admin_session_timeout, loader_enabled, loader_timeout FROM system_settings WHERE id = 1'
         ); 
 
         if (settings.rows.length === 0) {
@@ -351,7 +351,9 @@ const updateAppearanceSettings = async (req, res) => {
             'placeholder_color',
             'tab_link_color',
             'tab_link_active_color',
-            'admin_session_timeout' // [NOVO] Campo para tempo de inatividade
+            'admin_session_timeout', // [NOVO] Campo para tempo de inatividade
+            'loader_enabled', // [NOVO] Ativar/Desativar Loader
+            'loader_timeout'  // [NOVO] Tempo limite do loader
         ];
 
         fields.forEach(field => {
