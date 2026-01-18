@@ -1,8 +1,21 @@
-console.log("--- [GEMINI] EXECUTANDO A VERSÃO MAIS RECENTE DO SERVIDOR ---");
-
 // Ficheiro: backend/server.js
 const path = require('path');
-require('dotenv').config();
+const fs = require('fs');
+
+// [CORREÇÃO ROBUSTA V2] Tenta carregar o .env de múltiplos locais
+const possibleEnvPaths = [
+    path.resolve(__dirname, '../.env'), // Raiz do projeto
+    path.resolve(__dirname, '.env'),    // Pasta backend/
+    path.resolve(process.cwd(), '.env') // Diretório atual
+];
+
+for (const envPath of possibleEnvPaths) {
+    if (fs.existsSync(envPath)) {
+        require('dotenv').config({ path: envPath });
+        // console.log(`[SERVER] .env carregado de: ${envPath}`); // Reduz ruído
+        break;
+    }
+}
 const express = require('express'); // [CORREÇÃO] A importação do express já existe.
 const http = require('http'); // [NOVO] Necessário para Socket.io
 const { Server } = require("socket.io"); // [NOVO] Socket.io
@@ -186,7 +199,7 @@ const startPeriodicRouterCheck = () => {
         return;
     }
 
-    console.log('✅ [SRV-ADM] Agendando verificação periódica de status de roteadores (a cada 60 segundos)...');
+    // console.log('✅ [SRV-ADM] Agendando verificação periódica de status de roteadores (a cada 60 segundos)...');
     
     const checkRouters = async () => {
         // [MODIFICADO] Verifica a conexão antes de cada ciclo
@@ -194,7 +207,7 @@ const startPeriodicRouterCheck = () => {
             console.warn('🟡 [ROUTER-CHECK] Ciclo de verificação pulado. PostgreSQL está offline.');
             return;
         }
-        console.log('🔄 [ROUTER-CHECK] Iniciando ciclo de verificação de status...');
+        // console.log('🔄 [ROUTER-CHECK] Iniciando ciclo de verificação de status...');
         let client;
         try {
             client = await pool.connect();
@@ -212,7 +225,7 @@ const startPeriodicRouterCheck = () => {
             const routersToCheck = routersResult.rows;
             
             if (routersToCheck.length === 0) {
-                console.log('⏹️ [ROUTER-CHECK] Nenhum roteador com IP configurado para verificar. Ciclo concluído.');
+                // console.log('⏹️ [ROUTER-CHECK] Nenhum roteador com IP configurado para verificar. Ciclo concluído.');
             } else {
                 for (const router of routersToCheck) {
                     // [MODIFICADO] Realiza 3 pings para calcular a média
@@ -243,7 +256,7 @@ const startPeriodicRouterCheck = () => {
                     // [NOVO] Emite evento via Socket.io para atualização em tempo real
                     io.emit('routerStatusUpdate', { id: router.id, status: newStatus, latency });
                 }
-                console.log(`⏹️ [ROUTER-CHECK] Ciclo de verificação concluído. ${routersToCheck.length} roteador(es) verificado(s).`);
+                // console.log(`⏹️ [ROUTER-CHECK] Ciclo de verificação concluído. ${routersToCheck.length} roteador(es) verificado(s).`);
             }
         } catch (error) {
             console.error('❌ [ROUTER-CHECK] Erro durante a verificação periódica de roteadores:', error);

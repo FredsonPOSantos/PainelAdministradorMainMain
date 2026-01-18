@@ -2,10 +2,31 @@
 // Descrição: Centraliza e valida a conexão com a base de dados PostgreSQL (SRV-ADM)
 
 let pgReconnectInterval = null;
-require('dotenv').config();
-const { Pool } = require('pg');
-const fs = require('fs');
 const path = require('path');
+const fs = require('fs');
+
+// [CORREÇÃO ROBUSTA V2] Tenta carregar o .env de múltiplos locais
+const possibleEnvPaths = [
+    path.resolve(__dirname, '../.env'), // Raiz do projeto (se rodar de backend/)
+    path.resolve(__dirname, '.env'),    // Pasta backend/
+    path.resolve(process.cwd(), '.env') // Diretório atual de execução
+];
+
+let envLoaded = false;
+for (const envPath of possibleEnvPaths) {
+    if (fs.existsSync(envPath)) {
+        require('dotenv').config({ path: envPath });
+        // console.log(`[CONNECTION] .env carregado de: ${envPath}`);
+        envLoaded = true;
+        break;
+    }
+}
+
+if (!envLoaded) {
+    console.error("[CONNECTION] ❌ ERRO CRÍTICO: Arquivo .env não encontrado em nenhum dos locais esperados!");
+}
+const { Pool } = require('pg');
+const bcrypt = require('bcrypt'); // [NOVO] Necessário para criar a senha do admin padrão
 
 // Cria a pool de conexões usando as variáveis de ambiente
 const pool = new Pool({
@@ -64,7 +85,7 @@ pool.on('error', (err) => {
  * Esta função é idempotente, ou seja, pode ser executada várias vezes sem causar erros.
  */
 async function checkAndUpgradeSchema(client) {
-    console.log('🔍 [DB-UPGRADE] A verificar o esquema da base de dados para atualizações...');
+    // console.log('🔍 [DB-UPGRADE] A verificar o esquema da base de dados para atualizações...');
 
     const checkColumn = async (tableName, columnName) => {
         const res = await client.query(`
@@ -127,6 +148,47 @@ async function checkAndUpgradeSchema(client) {
             // Atualiza roles de sistema conhecidas para evitar que sejam deletadas acidentalmente
             await client.query("UPDATE roles SET is_system = true WHERE slug IN ('master', 'gestao', 'estetica', 'DPO')");
             console.log("   ✅ Coluna 'is_system' adicionada.");
+        }
+    }
+
+    // [NOVO] Verifica e cria a tabela 'admin_users' se não existir
+    const adminUsersTableExists = await checkTable('admin_users');
+    if (!adminUsersTableExists) {
+        console.log("   -> Tabela 'admin_users' não encontrada. Criando...");
+        await client.query(`
+            CREATE TABLE admin_users (
+                id SERIAL PRIMARY KEY,
+                email VARCHAR(255) UNIQUE NOT NULL,
+                password_hash VARCHAR(255) NOT NULL,
+                role VARCHAR(50) NOT NULL REFERENCES roles(slug) ON UPDATE CASCADE,
+                nome_completo VARCHAR(255),
+                phone VARCHAR(50),
+                sector VARCHAR(100),
+                matricula VARCHAR(100),
+                cpf VARCHAR(20),
+                is_active BOOLEAN DEFAULT TRUE,
+                must_change_password BOOLEAN DEFAULT FALSE,
+                reset_token VARCHAR(255),
+                reset_token_expires TIMESTAMP,
+                avatar_url VARCHAR(255),
+                theme_preference VARCHAR(50) DEFAULT 'default',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        `);
+        console.log("   ✅ Tabela 'admin_users' criada.");
+
+        // Cria utilizador padrão: admin@rota.com / admin
+        try {
+            const salt = await bcrypt.genSalt(10);
+            const hash = await bcrypt.hash('admin', salt);
+            
+            await client.query(`
+                INSERT INTO admin_users (email, password_hash, role, nome_completo, is_active)
+                VALUES ('admin@rota.com', $1, 'master', 'Administrador Sistema', true)
+            `, [hash]);
+            console.log("   ✅ Utilizador padrão criado: admin@rota.com / admin");
+        } catch (err) {
+            console.error("   ❌ Erro ao criar utilizador padrão:", err.message);
         }
     }
 
@@ -360,7 +422,7 @@ async function checkAndUpgradeSchema(client) {
         }
     }
 
-    console.log('✅ [DB-UPGRADE] Verificação do esquema concluída.');
+    // console.log('✅ [DB-UPGRADE] Verificação do esquema concluída.');
 }
 
 const startPgReconnect = () => {
@@ -410,14 +472,14 @@ const testInitialConnection = async () => {
 
     const info = result.rows[0];
 
-    console.log('\n🔍 [SRV-ADM] Detalhes da conexão PostgreSQL:');
-    console.log(`   🧑 Usuário conectado: ${info.user}`);
-    console.log(`   🗃️ Banco de dados:     ${info.database}`);
-    console.log(`   🌐 Host:               ${info.host}`);
-    console.log(`   🔌 Porta:              ${info.port}`);
-    console.log(`   ⚡ Tempo de conexão:   ${duration} ms\n`);
+    // console.log('\n🔍 [SRV-ADM] Detalhes da conexão PostgreSQL:');
+    // console.log(`   🧑 Usuário conectado: ${info.user}`);
+    // console.log(`   🗃️ Banco de dados:     ${info.database}`);
+    // console.log(`   🌐 Host:               ${info.host}`);
+    // console.log(`   🔌 Porta:              ${info.port}`);
+    // console.log(`   ⚡ Tempo de conexão:   ${duration} ms\n`);
 
-    console.log('✅ [SRV-ADM] Conectado com sucesso no PostgreSQL!\n');
+    // console.log('✅ [SRV-ADM] Conectado com sucesso no PostgreSQL!\n');
 
     // [NOVO] Atualiza o status global
     pgConnectionStatus.connected = true;
@@ -436,7 +498,7 @@ const testInitialConnection = async () => {
     try {
         const checkRadacct = await client.query("SELECT 1 FROM information_schema.tables WHERE table_name = 'radacct'");
         if (checkRadacct.rowCount > 0) {
-            console.log('🔄 [SYNC] A sincronizar histórico de logins do FreeRADIUS...');
+            // console.log('🔄 [SYNC] A sincronizar histórico de logins do FreeRADIUS...');
             const syncResult = await client.query(`
                 UPDATE userdetails u
                 SET ultimo_login = r.last_login
@@ -448,7 +510,7 @@ const testInitialConnection = async () => {
                 WHERE u.username = r.username
                 AND (u.ultimo_login IS NULL OR u.ultimo_login < r.last_login)
             `);
-            console.log(`   ✅ [SYNC] ${syncResult.rowCount} registos de último login atualizados.`);
+            // console.log(`   ✅ [SYNC] ${syncResult.rowCount} registos de último login atualizados.`);
         }
     } catch (syncError) {
         console.warn('⚠️ [SYNC] Aviso: Falha na sincronização inicial de logins (verifique se o FreeRADIUS está configurado):', syncError.message);
@@ -457,7 +519,7 @@ const testInitialConnection = async () => {
     // [NOVO] Inicia verificação periódica de campanhas (1x por hora)
     if (!maintenanceIntervalStarted) {
         maintenanceIntervalStarted = true;
-        console.log('🕒 [MAINTENANCE] Agendada verificação de campanhas expiradas (1h).');
+        // console.log('🕒 [MAINTENANCE] Agendada verificação de campanhas expiradas (1h).');
         setInterval(async () => {
             try {
                 // Usa uma nova conexão da pool para não interferir
@@ -473,7 +535,7 @@ const testInitialConnection = async () => {
                         WHERE is_active = true AND end_date < CURRENT_DATE
                     `);
                     if (result.rowCount > 0) {
-                        console.log(`[MAINTENANCE] ${result.rowCount} campanhas expiradas foram desativadas.`);
+                        // console.log(`[MAINTENANCE] ${result.rowCount} campanhas expiradas foram desativadas.`);
                     }
                 } finally {
                     client.release();
@@ -484,7 +546,7 @@ const testInitialConnection = async () => {
         }, 3600000); // 3600000 ms = 1 hora
 
         // [NOVO] Tarefas frequentes (5 min) - Sincronização de Logs Hotspot
-        console.log('🕒 [MAINTENANCE] Agendada sincronização de logins do FreeRADIUS (5m).');
+        // console.log('🕒 [MAINTENANCE] Agendada sincronização de logins do FreeRADIUS (5m).');
         setInterval(async () => {
             try {
                 const client = await pool.connect();
@@ -510,7 +572,7 @@ const testInitialConnection = async () => {
                             AND (u.ultimo_login IS NULL OR u.ultimo_login < r.last_login)
                         `);
                         if (syncResult.rowCount > 0) {
-                            console.log(`[MAINTENANCE] Sincronizados ${syncResult.rowCount} registos de último login do Hotspot.`);
+                            // console.log(`[MAINTENANCE] Sincronizados ${syncResult.rowCount} registos de último login do Hotspot.`);
                         }
                     }
                 } finally {
