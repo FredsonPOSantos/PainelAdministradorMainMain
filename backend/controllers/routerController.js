@@ -1286,61 +1286,67 @@ const manageBackups = async (req, res) => {
         return res.status(400).json({ message: 'ID ou nome do arquivo inválido para esta ação.' });
     }
 
+    let client = null;
+
     try {
         const routerResult = await pool.query('SELECT ip_address, api_port FROM routers WHERE id = $1', [id]);
         if (routerResult.rowCount === 0) return res.status(404).json({ message: 'Roteador não encontrado.' });
         const { ip_address, api_port } = routerResult.rows[0];
 
-        const client = new RouterOSClient({ host: ip_address, user: username, password: password, port: api_port || 8797, keepalive: false, timeout: 120 });
-        
-        // [CORREÇÃO] Adiciona tratamento de erro para evitar crash do servidor
-        const { data, message } = await new Promise(async (resolve, reject) => {
-            client.on('error', reject);
-            try {
-                await client.connect();
-                let responseData = null;
-                let responseMessage = '';
-
-                if (action === 'list') {
-                    const files = await client.write('/file/print');
-                    responseData = files.filter(f => f.type === 'backup' || (f.name && f.name.endsWith('.backup')));
-                } else if (action === 'create') {
-                    const name = fileName || `backup_painel_${new Date().toISOString().slice(0,10).replace(/-/g,'')}`;
-                    await client.write('/system/backup/save', { 'name': name });
-                    responseMessage = 'Backup criado com sucesso.';
-                } else if (action === 'restore') {
-                    try {
-                        await client.write('/system/backup/load', { 'name': fileName, 'password': '' });
-                    } catch (e) {
-                        if (!e.message.includes('closed') && !e.message.includes('ended')) throw e;
-                    }
-                    responseMessage = 'Comando de restauração enviado. O roteador irá reiniciar.';
-                } else if (action === 'delete') {
-                    // [CORREÇÃO] Verifica se é um ID interno (*...) ou nome de arquivo
-                    let idToDelete = fileName;
-                    if (!fileName.startsWith('*')) {
-                        // Se não for ID, tenta encontrar o arquivo pelo nome para obter o ID real
-                        const files = await client.write('/file/print', ['?name=' + fileName]);
-                        if (files.length > 0 && files[0]['.id']) {
-                            idToDelete = files[0]['.id'];
-                        } else {
-                            // Se não encontrar o arquivo, lança erro para retornar 404
-                            throw new Error("no such item (file not found)");
-                        }
-                    }
-                    await client.write('/file/remove', { '.id': idToDelete });
-                    responseMessage = 'Backup excluído.';
-                }
-                resolve({ data: responseData, message: responseMessage });
-            } catch (err) {
-                reject(err);
-            } finally {
-                try { client.close(); } catch (e) { /* Ignora erro ao fechar se já estiver fechado */ }
-            }
+        // [MODIFICADO] Remove o wrapper 'new Promise' para simplificar e evitar erros de gestão de estado
+        client = new RouterOSClient({ 
+            host: ip_address, 
+            user: username, 
+            password: password, 
+            port: api_port || 8797, 
+            keepalive: false, 
+            timeout: 120 
         });
+        
+        await client.connect();
 
-        res.json({ success: true, message, data });
+        let responseData = null;
+        let responseMessage = '';
+
+        if (action === 'list') {
+            const files = await client.write('/file/print');
+            responseData = files.filter(f => f.type === 'backup' || (f.name && f.name.endsWith('.backup')));
+        } else if (action === 'create') {
+            const name = fileName || `backup_painel_${new Date().toISOString().slice(0,10).replace(/-/g,'')}`;
+            await client.write('/system/backup/save', { 'name': name });
+            responseMessage = 'Backup criado com sucesso.';
+        } else if (action === 'restore') {
+            try {
+                await client.write('/system/backup/load', { 'name': fileName, 'password': '' });
+            } catch (e) {
+                if (!e.message.includes('closed') && !e.message.includes('ended') && !e.message.includes('ECONNRESET')) throw e;
+            }
+            responseMessage = 'Comando de restauração enviado. O roteador irá reiniciar.';
+        } else if (action === 'delete') {
+            // [CORREÇÃO] Verifica se é um ID interno (*...) ou nome de arquivo
+            let idToDelete = fileName;
+            if (!fileName.startsWith('*')) {
+                // Se não for ID, tenta encontrar o arquivo pelo nome para obter o ID real
+                const files = await client.write('/file/print', ['?name=' + fileName]);
+                if (files.length > 0 && files[0]['.id']) {
+                    idToDelete = files[0]['.id'];
+                } else {
+                    // Se não encontrar o arquivo, lança erro para retornar 404
+                    throw new Error("no such item (file not found)");
+                }
+            }
+            await client.write('/file/remove', { '.id': idToDelete });
+            responseMessage = 'Backup excluído.';
+        }
+
+        client.close();
+        res.json({ success: true, message: responseMessage, data: responseData });
+
     } catch (error) {
+        if (client) {
+            try { client.close(); } catch (e) { /* Ignora erro ao fechar */ }
+        }
+
         console.error(`Erro em manageBackups (Router ${id}, Action ${action}):`, error.message);
         if (error.message && error.message.toLowerCase().includes('timeout')) {
             return res.status(504).json({ message: `Gateway Timeout: O roteador não respondeu a tempo.` });
