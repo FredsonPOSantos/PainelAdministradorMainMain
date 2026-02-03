@@ -1346,7 +1346,7 @@ const manageBackups = async (req, res) => {
             return res.status(504).json({ message: `Gateway Timeout: O roteador não respondeu a tempo.` });
         }
         // [NOVO] Tratamento específico para arquivo não encontrado (evita erro 500)
-        if (error.message && (error.message.includes('no such item') || error.message.includes('file not found'))) {
+        if (error.message && (error.message.includes('no such item') || error.message.includes('file not found') || error.message.includes('input does not match any value'))) {
              return res.status(404).json({ message: 'Arquivo de backup não encontrado no roteador.' });
         }
         const errorMessage = error.message || (typeof error === 'string' ? error : 'Erro desconhecido');
