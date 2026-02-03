@@ -1282,6 +1282,10 @@ const manageBackups = async (req, res) => {
     const { id } = req.params;
     const { username, password, action, fileName } = req.body;
 
+    if ((action === 'delete' || action === 'restore') && (!fileName || fileName === 'undefined')) {
+        return res.status(400).json({ message: 'ID ou nome do arquivo inválido para esta ação.' });
+    }
+
     try {
         const routerResult = await pool.query('SELECT ip_address, api_port FROM routers WHERE id = $1', [id]);
         if (routerResult.rowCount === 0) return res.status(404).json({ message: 'Roteador não encontrado.' });
@@ -1319,12 +1323,13 @@ const manageBackups = async (req, res) => {
             } catch (err) {
                 reject(err);
             } finally {
-                client.close();
+                try { client.close(); } catch (e) { /* Ignora erro ao fechar se já estiver fechado */ }
             }
         });
 
         res.json({ success: true, message, data });
     } catch (error) {
+        console.error(`Erro em manageBackups (Router ${id}, Action ${action}):`, error.message);
         if (error.message && error.message.toLowerCase().includes('timeout')) {
             return res.status(504).json({ message: `Gateway Timeout: O roteador não respondeu a tempo.` });
         }

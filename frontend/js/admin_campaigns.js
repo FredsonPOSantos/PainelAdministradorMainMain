@@ -191,8 +191,14 @@ if (window.initCampaignsPage) {
         const previewCampaign = (campaignId) => {
             // [CORRIGIDO] Constrói a URL para o SERVIDOR do hotspot (porta 3001),
             // que irá renderizar o template EJS com os dados da campanha de pré-visualização.
-            // Usamos window.location.hostname para tornar o IP dinâmico.
-            const previewUrl = `http://${window.location.hostname}:3001/?previewCampaignId=${campaignId}`;
+            
+            // Ajuste para ambiente de produção: Se estiver no Admin (.47), o Portal está no .46
+            let portalHost = window.location.hostname;
+            if (portalHost === '10.0.0.47') {
+                portalHost = '10.0.0.46';
+            }
+
+            const previewUrl = `http://${portalHost}:3001/?previewCampaignId=${campaignId}`;
             window.open(previewUrl, '_blank');
         };
 

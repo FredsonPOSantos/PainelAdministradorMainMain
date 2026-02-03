@@ -1761,7 +1761,7 @@ const initRouterDashboard = () => {
                                 <!-- [CORREÇÃO] Removido btn-sm -->
                                 <button class="btn-primary" onclick="restoreBackup('${f.name}')" title="Restaurar"><i class="fas fa-undo"></i></button>
                                 <!-- [CORREÇÃO] Usa 'btn-delete' para o ícone de lixeira -->
-                                <button class="btn-delete" style="background-color: #ef4444; color: white; border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer;" onclick="deleteBackup('${f['.id']}')" title="Excluir"><i class="fas fa-trash"></i></button>
+                                <button class="btn-delete" style="background-color: #ef4444; color: white; border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer;" onclick="deleteBackup('${f['.id'] || f.id || ''}')" title="Excluir"><i class="fas fa-trash-alt"></i></button>
                             </td>
                         </tr>
                     `).join('') + '</tbody></table>';
@@ -1791,6 +1791,10 @@ const initRouterDashboard = () => {
         };
 
         window.deleteBackup = async (id) => {
+            if (!id || id === 'undefined') {
+                alert('Erro: ID do backup inválido ou não encontrado.');
+                return;
+            }
             if(!confirm('Excluir este backup?')) return;
             if (!await ensureAuth("Excluir Backup")) return;
             try {
