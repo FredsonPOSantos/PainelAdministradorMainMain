@@ -197,7 +197,7 @@ const createPublicTicket = async (req, res) => {
                 const aiResponse = await aiService.generateInitialResponse(title, message);
                 if (aiResponse) {
                     await pool.query(
-                        'INSERT INTO ticket_messages (ticket_id, user_id, message) VALUES ($1, NULL, $2)',
+                        'INSERT INTO ticket_messages (ticket_id, user_id, message) VALUES ($1, $2, $3)',
                         [ticketId, null, aiResponse]
                     );
                 }
@@ -257,11 +257,11 @@ const getAllTickets = async (req, res) => {
         let query = `
             SELECT 
                 t.id, t.ticket_number, t.title, t.status, t.created_at, t.updated_at,
-                u_creator.email AS created_by_email,
+                COALESCE(u_creator.email, t.guest_email) AS created_by_email,
                 u_assignee.email AS assigned_to_email,
                 (SELECT r.rating FROM ticket_ratings r WHERE r.ticket_id = t.id) AS rating
             FROM tickets t
-            JOIN admin_users u_creator ON t.created_by_user_id = u_creator.id
+            LEFT JOIN admin_users u_creator ON t.created_by_user_id = u_creator.id
             LEFT JOIN admin_users u_assignee ON t.assigned_to_user_id = u_assignee.id
             ${whereString}
             ORDER BY t.updated_at DESC
@@ -304,12 +304,17 @@ const getTicketById = async (req, res) => {
                 t.id, t.ticket_number, t.title, t.status, t.created_at, t.updated_at,
                 t.created_by_user_id,
                 t.assigned_to_user_id,
-                u_creator.email AS created_by_email,
+                COALESCE(u_creator.email, t.guest_email) AS created_by_email,
+                t.guest_name,
+                t.guest_email,
+                t.guest_phone,
+                t.guest_department,
+                t.guest_location,
                 u_assignee.email AS assigned_to_email,
                 (SELECT r.rating FROM ticket_ratings r WHERE r.ticket_id = t.id) AS rating,
                 (SELECT r.comment FROM ticket_ratings r WHERE r.ticket_id = t.id) AS rating_comment
             FROM tickets t
-            JOIN admin_users u_creator ON t.created_by_user_id = u_creator.id
+            LEFT JOIN admin_users u_creator ON t.created_by_user_id = u_creator.id
             LEFT JOIN admin_users u_assignee ON t.assigned_to_user_id = u_assignee.id
             WHERE t.id = $1
         `, [id]);
@@ -377,17 +382,20 @@ const addMessageToTicket = async (req, res) => {
         await client.query('UPDATE tickets SET updated_at = NOW() WHERE id = $1', [id]);
 
         // Lógica de notificação para novas mensagens
-        const ticketInfo = await client.query('SELECT created_by_user_id, assigned_to_user_id, ticket_number FROM tickets WHERE id = $1', [id]);
-        const { created_by_user_id, assigned_to_user_id, ticket_number } = ticketInfo.rows[0];
+        const ticketInfo = await client.query('SELECT created_by_user_id, assigned_to_user_id, ticket_number, guest_email, guest_name, title FROM tickets WHERE id = $1', [id]);
+        const { created_by_user_id, assigned_to_user_id, ticket_number, guest_email, guest_name, title } = ticketInfo.rows[0];
 
-        const creatorInfo = await client.query('SELECT role FROM admin_users WHERE id = $1', [created_by_user_id]);
-        const creatorRole = creatorInfo.rows[0].role;
+        let creatorRole = null;
+        if (created_by_user_id) {
+            const creatorInfo = await client.query('SELECT role FROM admin_users WHERE id = $1', [created_by_user_id]);
+            if (creatorInfo.rows.length > 0) creatorRole = creatorInfo.rows[0].role;
+        }
 
         const recipients = new Set();
         const emailRecipients = new Set(); // Para controlar quem recebe e-mail
 
         // 1. Notificar o criador do ticket, se não for ele mesmo a responder
-        if (created_by_user_id !== userId) {
+        if (created_by_user_id && created_by_user_id !== userId) {
             recipients.add(created_by_user_id);
             emailRecipients.add(created_by_user_id);
         }
@@ -425,6 +433,13 @@ const addMessageToTicket = async (req, res) => {
         masters.rows.forEach(m => {
             if (m.id !== userId) recipients.add(m.id);
         });
+
+        // [NOVO] Notificar o convidado (guest) por e-mail se for ticket público
+        if (guest_email) {
+             const emailSubject = `Nova Resposta no Ticket: #${ticket_number}`;
+             const emailText = `Olá ${guest_name || 'Cliente'},\n\nUma nova mensagem foi adicionada ao seu ticket #${ticket_number} - "${title}".\n\nMensagem:\n${message}\n\nAtenciosamente,\nEquipe de Suporte`;
+             await sendEmail(guest_email, emailSubject, emailText);
+        }
 
         const notificationMessage = `Nova resposta no ticket #${ticket_number} de ${email}`;
         for (const recipientId of recipients) {

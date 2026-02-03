@@ -10,8 +10,13 @@ const queries = [
         ticket_number VARCHAR(255) UNIQUE NOT NULL,
         title VARCHAR(255) NOT NULL,
         status VARCHAR(50) NOT NULL DEFAULT 'open',
-        created_by_user_id INTEGER NOT NULL REFERENCES admin_users(id),
+        created_by_user_id INTEGER REFERENCES admin_users(id), -- [ATUALIZADO] Permite NULL para tickets públicos
         assigned_to_user_id INTEGER REFERENCES admin_users(id),
+        guest_name VARCHAR(255),
+        guest_email VARCHAR(255),
+        guest_phone VARCHAR(50),
+        guest_department VARCHAR(100),
+        guest_location VARCHAR(100),
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
         updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );`,

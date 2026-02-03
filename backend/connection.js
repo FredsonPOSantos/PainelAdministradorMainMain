@@ -295,6 +295,40 @@ async function checkAndUpgradeSchema(client) {
         console.log("   ✅ Coluna 'loader_timeout' adicionada.");
     }
 
+    // [NOVO] Verifica e adiciona colunas para tickets públicos na tabela 'tickets'
+    const ticketsTableExists = await checkTable('tickets');
+    if (ticketsTableExists) {
+        const guestColumns = [
+            { name: 'guest_name', type: 'VARCHAR(255)' },
+            { name: 'guest_email', type: 'VARCHAR(255)' },
+            { name: 'guest_phone', type: 'VARCHAR(50)' },
+            { name: 'guest_department', type: 'VARCHAR(100)' },
+            { name: 'guest_location', type: 'VARCHAR(100)' }
+        ];
+
+        for (const col of guestColumns) {
+            const exists = await checkColumn('tickets', col.name);
+            if (!exists) {
+                console.log(`   -> Adicionando coluna '${col.name}' à tabela 'tickets'...`);
+                await client.query(`ALTER TABLE tickets ADD COLUMN ${col.name} ${col.type}`);
+                console.log(`   ✅ Coluna '${col.name}' adicionada.`);
+            }
+        }
+
+        // Verifica se created_by_user_id permite NULL (necessário para tickets públicos)
+        const isNullableRes = await client.query(`
+            SELECT is_nullable 
+            FROM information_schema.columns 
+            WHERE table_name = 'tickets' AND column_name = 'created_by_user_id'
+        `);
+        
+        if (isNullableRes.rows.length > 0 && isNullableRes.rows[0].is_nullable === 'NO') {
+             console.log("   -> Alterando 'created_by_user_id' em 'tickets' para permitir NULL (tickets públicos)...");
+             await client.query('ALTER TABLE tickets ALTER COLUMN created_by_user_id DROP NOT NULL');
+             console.log("   ✅ Coluna 'created_by_user_id' agora permite NULL.");
+        }
+    }
+
     // [NOVO] Garante que todas as permissões do sistema existem na tabela 'permissions'
     // Isto assegura que o Master tenha acesso a tudo (exceto LGPD) e que as permissões apareçam na matriz.
     const systemPermissions = [

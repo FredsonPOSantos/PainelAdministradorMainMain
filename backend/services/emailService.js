@@ -87,7 +87,13 @@ const sendExclusionRequestNotificationEmail = async (requesterInfo) => {
         `,
     };
 
-    await transporter.sendMail(mailOptions);
+    try {
+        await transporter.sendMail(mailOptions);
+        console.log(`[EmailService] Notificação de exclusão enviada para TI.`);
+    } catch (error) {
+        console.error(`[EmailService] Falha ao enviar notificação de exclusão (O pedido foi registado, mas o email falhou):`, error.message);
+        // Não lançamos o erro para não impedir o fluxo principal
+    }
 };
 
 module.exports = { sendPasswordResetEmail, sendExclusionRequestNotificationEmail };
