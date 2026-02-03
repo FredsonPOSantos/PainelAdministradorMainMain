@@ -1310,7 +1310,11 @@ const manageBackups = async (req, res) => {
 
         if (action === 'list') {
             const files = await client.write('/file/print');
-            responseData = files.filter(f => f.type === 'backup' || (f.name && f.name.endsWith('.backup')));
+            // [CORREÇÃO] Filtra e mapeia 'last-modified' para 'creation-time' se necessário
+            responseData = files
+                .filter(f => f.type === 'backup' || (f.name && f.name.endsWith('.backup')))
+                .map(f => ({ ...f, 'creation-time': f['creation-time'] || f['last-modified'] }));
+
         } else if (action === 'create') {
             const name = fileName || `backup_painel_${new Date().toISOString().slice(0,10).replace(/-/g,'')}`;
             await client.write('/system/backup/save', { 'name': name });
@@ -1330,9 +1334,9 @@ const manageBackups = async (req, res) => {
                 const files = await client.write('/file/print', ['?name=' + fileName]);
                         
                         // [DEBUG] Log para ajudar a identificar o problema
-                        console.log(`[BACKUP] Excluindo '${fileName}'. Encontrados: ${files.length}`);
+                        console.log(`[BACKUP] Excluindo '${fileName}'. Resultado da busca:`, files);
 
-                if (files.length > 0 && files[0]['.id']) {
+                        if (files && files.length > 0 && files[0]['.id']) {
                     idToDelete = files[0]['.id'];
                 } else {
                     throw new Error("no such item (file not found)");
