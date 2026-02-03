@@ -8,17 +8,23 @@ const { InfluxDB, Point } = require('@influxdata/influxdb-client');
 
 // --- GUARDIÃO INTERNO: Previne que o agente pare em caso de erros ---
 process.on('uncaughtException', (err) => {
+    const msg = err.message || String(err);
     // [MELHORIA] Filtra erros de protocolo causados por instabilidade de rede (não são críticos do sistema)
-    if (err.message && (err.message.includes('Tried to process unknown reply') || err.message.includes('UNKNOWNREPLY'))) {
-        console.warn(`[SISTEMA] ⚠️ Instabilidade de conexão detectada (Ignorando erro de protocolo): ${err.message}`);
+    if (msg.includes('Tried to process unknown reply') || msg.includes('UNKNOWNREPLY') || msg.includes('!empty')) {
+        console.warn(`[SISTEMA] ⚠️ Instabilidade de conexão detectada (Ignorando erro de protocolo): ${msg}`);
         return;
     }
 
-    console.error(`[SISTEMA] ⚠️ Erro crítico capturado (o agente continuará rodando): ${err.message}`);
+    console.error(`[SISTEMA] ⚠️ Erro crítico capturado (o agente continuará rodando):`, err);
     // Não sai do processo (process.exit), permitindo que o setInterval continue
 });
 
 process.on('unhandledRejection', (reason, promise) => {
+    const msg = reason instanceof Error ? reason.message : String(reason);
+    if (msg.includes('Tried to process unknown reply') || msg.includes('!empty')) {
+         // Silencia erros de protocolo em promises para evitar poluição de logs
+         return;
+    }
     console.error('[SISTEMA] ⚠️ Promessa rejeitada não tratada:', reason);
 });
 // -------------------------------------------------------------------
@@ -386,7 +392,12 @@ const collectMetrics = async (host) => {
 
     // [CORREÇÃO] Adiciona listener para erros de conexão (evita o crash "Unhandled 'error' event")
     client.on('error', (err) => {
-        logToDB('ERROR', `Erro de conexão (Socket): ${err.message}`, host);
+        const msg = err.message || String(err);
+        if (msg.includes('Tried to process unknown reply') || msg.includes('!empty')) {
+            // Ignora erros de protocolo conhecidos para não poluir o log
+            return;
+        }
+        logToDB('ERROR', `Erro de conexão (Socket): ${msg}`, host);
     });
 
     const runCommand = async (cmd, args = []) => {
