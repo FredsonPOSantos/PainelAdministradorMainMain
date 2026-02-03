@@ -1316,7 +1316,19 @@ const manageBackups = async (req, res) => {
                     }
                     responseMessage = 'Comando de restauração enviado. O roteador irá reiniciar.';
                 } else if (action === 'delete') {
-                    await client.write('/file/remove', { '.id': fileName });
+                    // [CORREÇÃO] Verifica se é um ID interno (*...) ou nome de arquivo
+                    let idToDelete = fileName;
+                    if (!fileName.startsWith('*')) {
+                        // Se não for ID, tenta encontrar o arquivo pelo nome para obter o ID real
+                        const files = await client.write('/file/print', ['?name=' + fileName]);
+                        if (files.length > 0 && files[0]['.id']) {
+                            idToDelete = files[0]['.id'];
+                        } else {
+                            // Se não encontrar o arquivo, lança erro para retornar 404
+                            throw new Error("no such item (file not found)");
+                        }
+                    }
+                    await client.write('/file/remove', { '.id': idToDelete });
                     responseMessage = 'Backup excluído.';
                 }
                 resolve({ data: responseData, message: responseMessage });
@@ -1332,6 +1344,10 @@ const manageBackups = async (req, res) => {
         console.error(`Erro em manageBackups (Router ${id}, Action ${action}):`, error.message);
         if (error.message && error.message.toLowerCase().includes('timeout')) {
             return res.status(504).json({ message: `Gateway Timeout: O roteador não respondeu a tempo.` });
+        }
+        // [NOVO] Tratamento específico para arquivo não encontrado (evita erro 500)
+        if (error.message && (error.message.includes('no such item') || error.message.includes('file not found'))) {
+             return res.status(404).json({ message: 'Arquivo de backup não encontrado no roteador.' });
         }
         const errorMessage = error.message || (typeof error === 'string' ? error : 'Erro desconhecido');
         res.status(500).json({ message: errorMessage });
