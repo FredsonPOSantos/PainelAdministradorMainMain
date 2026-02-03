@@ -1331,13 +1331,15 @@ const manageBackups = async (req, res) => {
             let idToDelete = fileName;
             if (!fileName.startsWith('*')) {
                 // Se não for ID, tenta encontrar o arquivo pelo nome para obter o ID real
-                const files = await client.write('/file/print', ['?name=' + fileName]);
+                        // [CORREÇÃO] Busca todos os arquivos e filtra no código para evitar erros de sintaxe de query da API
+                        const files = await client.write('/file/print');
+                        const targetFile = files.find(f => f.name === fileName);
                         
                         // [DEBUG] Log para ajudar a identificar o problema
-                        console.log(`[BACKUP] Excluindo '${fileName}'. Resultado da busca:`, files);
+                        console.log(`[BACKUP] Excluindo '${fileName}'. Encontrado:`, targetFile ? targetFile['.id'] : 'Não');
 
-                        if (files && files.length > 0 && files[0]['.id']) {
-                    idToDelete = files[0]['.id'];
+                        if (targetFile && targetFile['.id']) {
+                            idToDelete = targetFile['.id'];
                 } else {
                     throw new Error("no such item (file not found)");
                 }
