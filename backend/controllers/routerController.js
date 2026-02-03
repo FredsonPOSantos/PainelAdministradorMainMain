@@ -1333,7 +1333,9 @@ const manageBackups = async (req, res) => {
                 // Se não for ID, tenta encontrar o arquivo pelo nome para obter o ID real
                         // [CORREÇÃO] Busca todos os arquivos e filtra no código para evitar erros de sintaxe de query da API
                         const files = await client.write('/file/print');
-                        const targetFile = files.find(f => f.name === fileName);
+                        // Garante que files é um array antes de usar .find
+                        const filesList = Array.isArray(files) ? files : (files ? [files] : []);
+                        const targetFile = filesList.find(f => f.name === fileName);
                         
                         // [DEBUG] Log para ajudar a identificar o problema
                         console.log(`[BACKUP] Excluindo '${fileName}'. Encontrado:`, targetFile ? targetFile['.id'] : 'Não');
