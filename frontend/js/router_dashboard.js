@@ -1755,8 +1755,8 @@ const initRouterDashboard = () => {
                     res.data.map(f => `
                         <tr>
                             <td>${f.name}</td>
-                            <td>${(f.size / 1024).toFixed(1)} KB</td>
-                            <td>${f['creation-time']}</td>
+                            <td>${f.size ? (f.size / 1024).toFixed(1) + ' KB' : 'N/A'}</td>
+                            <td>${f['creation-time'] || 'N/A'}</td>
                             <td class="action-buttons">
                                 <!-- [CORREÇÃO] Removido btn-sm -->
                                 <button class="btn-primary" onclick="restoreBackup('${f.name.replace(/'/g, "\\'")}')" title="Restaurar"><i class="fas fa-undo"></i></button>

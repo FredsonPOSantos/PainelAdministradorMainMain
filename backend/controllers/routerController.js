@@ -1328,10 +1328,13 @@ const manageBackups = async (req, res) => {
             if (!fileName.startsWith('*')) {
                 // Se não for ID, tenta encontrar o arquivo pelo nome para obter o ID real
                 const files = await client.write('/file/print', ['?name=' + fileName]);
+                        
+                        // [DEBUG] Log para ajudar a identificar o problema
+                        console.log(`[BACKUP] Excluindo '${fileName}'. Encontrados: ${files.length}`);
+
                 if (files.length > 0 && files[0]['.id']) {
                     idToDelete = files[0]['.id'];
                 } else {
-                    // Se não encontrar o arquivo, lança erro para retornar 404
                     throw new Error("no such item (file not found)");
                 }
             }
@@ -1347,7 +1350,9 @@ const manageBackups = async (req, res) => {
             try { client.close(); } catch (e) { /* Ignora erro ao fechar */ }
         }
 
-        console.error(`Erro em manageBackups (Router ${id}, Action ${action}):`, error.message);
+        // [DEBUG] Log completo do erro para ver detalhes do 500
+        console.error(`Erro em manageBackups (Router ${id}, Action ${action}):`, error);
+
         if (error.message && error.message.toLowerCase().includes('timeout')) {
             return res.status(504).json({ message: `Gateway Timeout: O roteador não respondeu a tempo.` });
         }
