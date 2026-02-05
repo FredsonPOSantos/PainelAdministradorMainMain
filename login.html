@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>A redirecionar...</title>
+    <style>
+        body { font-family: sans-serif; background-color: #f4f4f4; text-align: center; padding-top: 50px; }
+        .loader { border: 5px solid #f3f3f3; border-radius: 50%; border-top: 5px solid #3498db; width: 50px; height: 50px; animation: spin 2s linear infinite; margin: 20px auto; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+    <h1>Aguarde um momento</h1>
+    <p>Estamos a preparar a sua ligação à rede...</p>
+    <div class="loader"></div>
+
+    <script>
+        // Função para construir o URL de redirecionamento de forma segura
+        function redirectToPortal() {
+            // Base do URL do nosso servidor frontend
+            const baseUrl = 'http://10.0.0.46:3001/index.html';
+            
+            // Variáveis que o MikroTik substitui
+            const mac = '$(mac)';
+            const ip = '$(ip)';
+            const username = '$(username)';
+            const linkLoginOnly = '$(link-login-only)';
+            const linkOrig = '$(link-orig)';
+            const error = '$(error)';
+            // NOVA VARIÁVEL CAPTURADA
+            const serverName = '$(server-name)';
+            
+            // Monta a string de parâmetros apenas com os valores que existem
+            const params = new URLSearchParams();
+            if (mac) params.append('mac', mac);
+            if (ip) params.append('ip', ip);
+            if (username) params.append('username', username);
+            if (linkLoginOnly) params.append('link-login-only', linkLoginOnly);
+            if (linkOrig) params.append('link-orig', linkOrig);
+            if (error) params.append('error', error);
+            // ADICIONA O NOME DO ROTEADOR AOS PARÂMETROS
+            if (serverName) params.append('routerName', serverName);
+            
+            // Constrói o URL final e redireciona
+            const finalUrl = baseUrl + '?' + params.toString();
+            window.location.href = finalUrl;
+        }
+
+        // Executa a função assim que a página carrega
+        window.onload = redirectToPortal;
+    </script>
+</body>
+</html>

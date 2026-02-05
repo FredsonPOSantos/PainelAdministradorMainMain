@@ -9,8 +9,12 @@ const path = require('path');
 const getProfile = async (req, res) => {
     try {
         const userId = req.user.userId;
+        // [CORRIGIDO] A query foi expandida para incluir todos os campos necessários pelo frontend,
+        // como 'must_change_password', para lidar com o fluxo de troca de senha obrigatória.
         const query = `
-            SELECT id, email, role, nome_completo as name, phone, sector, avatar_url, theme_preference 
+            SELECT 
+                id, email, role, nome_completo as name, phone, sector, avatar_url, theme_preference,
+                is_active, matricula, cpf, must_change_password, nome_completo
             FROM admin_users 
             WHERE id = $1
         `;
@@ -20,7 +24,12 @@ const getProfile = async (req, res) => {
             return res.status(404).json({ success: false, message: 'Utilizador não encontrado.' });
         }
 
-        res.json({ success: true, data: result.rows[0] });
+        const userProfile = result.rows[0];
+
+        // [CRÍTICO] Anexa o objeto de permissões completo, que é essencial para o frontend renderizar a UI.
+        userProfile.permissions = req.user.permissions;
+
+        res.json({ success: true, data: userProfile });
     } catch (error) {
         console.error('Erro ao buscar perfil:', error);
         res.status(500).json({ success: false, message: 'Erro interno do servidor.' });

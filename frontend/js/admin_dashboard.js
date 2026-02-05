@@ -965,6 +965,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     const profileOK = await fetchUserProfile();
     console.log(`Dashboard (V13.1.3): Perfil carregado? ${profileOK}`);
 
+    // [CORREÇÃO] O preloader deve ser escondido SEMPRE após a verificação do perfil,
+    // mesmo que a inicialização seja interrompida (ex: para forçar a troca de senha).
+    // Mover este bloco para antes da verificação `if (!profileOK)` resolve o "congelamento" da tela.
+    const preloader = document.getElementById('page-preloader');
+    if (preloader) {
+        // Pequeno delay para garantir que a transição visual seja suave
+        setTimeout(() => {
+            preloader.classList.add('loaded');
+        }, 800); // Mantém o autocarro visível por pelo menos 0.8s para o efeito visual
+    }
+
     if (!profileOK) {
         // Se o perfil falhar (token inválido) ou precisar de troca de senha,
         // a inicialização é interrompida aqui.
@@ -1022,14 +1033,4 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     console.log("Dashboard (V13.1.3): Inicialização concluída com sucesso.");
 
-    // [NOVO] Remove o Preloader (Autocarro) após o carregamento completo
-    const preloader = document.getElementById('page-preloader');
-    if (preloader) {
-        // Pequeno delay para garantir que a transição visual seja suave
-        setTimeout(() => {
-            preloader.classList.add('loaded');
-            // [MODIFICADO] O elemento NÃO é removido do DOM para poder ser reutilizado em outras páginas (ex: Analytics)
-            // setTimeout(() => { preloader.remove(); }, 800);
-        }, 800); // Mantém o autocarro visível por pelo menos 0.8s para o efeito visual
-    }
 }); // Fim do DOMContentLoaded

@@ -972,9 +972,11 @@ const getDhcpLeases = async (req, res) => {
 
         const client = new RouterOSClient({ host: ip_address, user: username, password: password, port: api_port || 8797, keepalive: false, timeout: 60 });
 
-        // [CORREÇÃO] Adiciona tratamento de erro para evitar crash do servidor
+        // [CORRIGIDO] Adiciona tratamento de erro e limpeza de listener para evitar memory leak
         const leases = await new Promise(async (resolve, reject) => {
-            client.on('error', reject);
+            const errorHandler = (err) => reject(err);
+            client.on('error', errorHandler);
+
             try {
                 await client.connect();
                 const result = await client.write('/ip/dhcp-server/lease/print');
@@ -982,6 +984,8 @@ const getDhcpLeases = async (req, res) => {
             } catch (err) {
                 reject(err);
             } finally {
+                // Garante que o listener seja removido e a conexão fechada
+                client.removeListener('error', errorHandler);
                 client.close();
             }
         });
@@ -1026,7 +1030,7 @@ const getWifiClients = async (req, res) => {
 
         if (!RouterOSClient) throw new Error("A biblioteca de conexão com o MikroTik (node-routeros) não pôde ser carregada.");
 
-        const client = new RouterOSClient({ host: ip_address, user: username, password: password, port: api_port || 8797, keepalive: false, timeout: 60 });
+        const client = new RouterOSClient({ host: ip_address, user: username, password: password, port: api_port || 8797, keepalive: false, timeout: 20 });
 
         // [CORREÇÃO] Adiciona tratamento de erro para evitar crash do servidor
         const clients = await new Promise(async (resolve, reject) => {
@@ -1034,20 +1038,30 @@ const getWifiClients = async (req, res) => {
             try {
                 await client.connect();
                 let result = [];
+                // [NOVO] Define a lista de propriedades desejadas para otimizar a query,
+                // evitando timeouts em roteadores com muitos dados.
+                const proplist = [
+                    '?.proplist=.id,mac-address,interface,uptime,last-ip,signal-strength,tx-rate,rx-rate,p-throughput,tx-ccq,signal-to-noise'
+                ];
                 // Lógica de deteção automática para diferentes drivers Wi-Fi (Legacy vs WifiWave2/Wifi)
                 try {
                     // 1. Tenta o comando legado (Wireless) - Padrão antigo
-                    result = await client.write('/interface/wireless/registration-table/print');
+                    result = await client.write('/interface/wireless/registration-table/print', proplist);
                 } catch (legacyError) {
                     // Se falhar com erro de comando inexistente, tenta os novos padrões
                     const msg = legacyError.message || '';
                     if (msg.includes('no such command') || msg.includes('directory')) {
+                        // [CORREÇÃO] Adiciona try/catch aninhado para tratar falhas nos comandos alternativos
                         try {
                             // 2. Tenta o novo pacote 'wifi' (RouterOS 7.13+)
-                            result = await client.write('/interface/wifi/registration-table/print');
+                            result = await client.write('/interface/wifi/registration-table/print', proplist);
                         } catch (wifiError) {
-                            // 3. Tenta o pacote 'wifiwave2' (RouterOS 7.x versões anteriores)
-                            result = await client.write('/interface/wifiwave2/registration-table/print');
+                            try {
+                                // 3. Tenta o pacote 'wifiwave2' (RouterOS 7.x versões anteriores)
+                                result = await client.write('/interface/wifiwave2/registration-table/print', proplist);
+                            } catch (wave2Error) {
+                                throw wave2Error; // Se todos falharem, relança o último erro
+                            }
                         }
                     } else {
                         throw legacyError; // Se for outro erro (ex: timeout), relança
@@ -1303,6 +1317,14 @@ const manageBackups = async (req, res) => {
             timeout: 120 
         });
         
+        // [NOVO] Adiciona um handler de erro para o cliente.
+        // Isso é crucial para capturar erros de protocolo ou conexão que não são
+        // capturados pelo try/catch em torno de `await` e evitar um crash de "unhandled error event".
+        client.on('error', (err) => {
+            // Apenas loga o erro. O try/catch principal ou o guardião global irão lidar com a resposta ao utilizador.
+            console.error(`[ROUTER-CMD] Erro no cliente (Backup): ${err.message}`);
+        });
+
         await client.connect();
 
         let responseData = null;
@@ -1347,6 +1369,9 @@ const manageBackups = async (req, res) => {
                 }
             }
             await client.write('/file/remove', { '.id': idToDelete });
+            // [CORRIGIDO] A biblioteca 'node-routeros' espera um formato de array de strings para este comando,
+            // similar a outras funções como 'ping'. O erro "missing =.id=" indica que o formato de objeto não é reconhecido.
+            await client.write('/file/remove', [`=.id=${idToDelete}`]);
             responseMessage = 'Backup excluído.';
         }
 

@@ -21,8 +21,9 @@ const getUserProfile = async (req, res) => {
     }
 
     const userProfile = profileQuery.rows[0];
-    // [CORRIGIDO] Busca as permissões mais recentes do banco de dados para a função do utilizador
-    userProfile.permissions = await getPermissionsForRole(userProfile.role); // Esta chamada agora funcionará
+    // [CORREÇÃO] Em vez de recalcular as permissões com uma função incompleta,
+    // usamos o objeto de permissões completo que já foi calculado pelo middleware de autenticação (req.user).
+    userProfile.permissions = req.user.permissions;
 
     res.json({
       success: true,
@@ -124,11 +125,16 @@ const createAdminUser = async (req, res) => {
 const updateUser = async (req, res) => {
   const { id } = req.params; 
   const requestingUserRole = req.user.role;
-  const { role, is_active, setor, matricula, cpf, nome_completo } = req.body;
+  const { email, role, is_active, setor, matricula, cpf, nome_completo } = req.body;
 
   if (id === '1' && (is_active === false || (role && role !== 'master'))) {
     return res.status(403).json({ message: "O utilizador master principal não pode ser desativado ou ter sua função alterada." });
   }
+  // [NOVO] Adiciona proteção para não alterar o e-mail do utilizador master
+  if (id === '1' && email) {
+    return res.status(403).json({ message: "O e-mail do utilizador master principal não pode ser alterado." });
+  }
+
   if (id === '1' && requestingUserRole === 'gestao') {
      return res.status(403).json({ message: "Acesso negado. Apenas o 'master' pode editar o 'master'."});
   }
@@ -136,6 +142,12 @@ const updateUser = async (req, res) => {
   const fields = [];
   const values = [];
   let queryIndex = 1;
+
+  // [NOVO] Adiciona o campo de e-mail à lógica de atualização
+  if (email !== undefined) {
+      fields.push(`email = $${queryIndex++}`);
+      values.push(email);
+  }
 
   if (nome_completo !== undefined) {
       fields.push(`nome_completo = $${queryIndex++}`);
@@ -224,6 +236,11 @@ const updateUser = async (req, res) => {
       target_id: id,
       details: { error: error.message }
     });
+
+    // [NOVO] Tratamento de erro para e-mail duplicado
+    if (error.code === '23505' && error.constraint === 'admin_users_email_key') {
+        return res.status(409).json({ message: "O e-mail fornecido já está em uso por outro utilizador." });
+    }
 
     console.error('Erro ao atualizar utilizador:', error);
     res.status(500).json({ message: "Erro interno do servidor." });
@@ -417,7 +434,8 @@ const deleteUser = async (req, res) => {
         await client.query('UPDATE tickets SET created_by_user_id = NULL WHERE created_by_user_id = $1', [id]);
         await client.query('UPDATE tickets SET assigned_to_user_id = NULL WHERE assigned_to_user_id = $1', [id]);
         await client.query('UPDATE ticket_messages SET user_id = NULL WHERE user_id = $1', [id]);
-        await client.query('UPDATE notifications SET user_id = NULL WHERE user_id = $1', [id]);
+        // [CORRIGIDO] Em vez de tentar anular, apaga as notificações do utilizador, pois a coluna user_id não permite nulos.
+        await client.query('DELETE FROM notifications WHERE user_id = $1', [id]);
         await client.query('UPDATE raffles SET created_by_user_id = NULL WHERE created_by_user_id = $1', [id]);
         await client.query('UPDATE data_exclusion_requests SET completed_by_user_id = NULL WHERE completed_by_user_id = $1', [id]);
         await client.query('UPDATE audit_logs SET user_id = NULL WHERE user_id = $1', [id]);

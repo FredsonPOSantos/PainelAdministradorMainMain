@@ -23,6 +23,24 @@ const rateLimit = require('express-rate-limit'); // [NOVO] Rate Limiting
 const cors = require('cors');
 const { pool, testInitialConnection, pgConnectionStatus, startPgReconnect } = require('./connection'); // [MODIFICADO]
 const methodOverride = require('method-override'); // [NOVO] Importa o method-override
+// [NOVO] Guardião Global para evitar crashes por erros de protocolo do MikroTik
+process.on('uncaughtException', (err) => {
+    const msg = err.message || String(err);
+    if (msg.includes('Tried to process unknown reply') || msg.includes('UNKNOWNREPLY') || msg.includes('!empty') || msg.includes('!trap')) {
+        console.warn(`[SERVER] ⚠️ Erro de protocolo MikroTik ignorado para manter o servidor online: ${msg}`);
+        return;
+    }
+    console.error('🔥 Erro Crítico Não Tratado:', err);
+    process.exit(1); // Sai para o PM2 reiniciar em erros reais
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+    const msg = reason instanceof Error ? reason.message : String(reason);
+    if (msg.includes('Tried to process unknown reply') || msg.includes('!empty')) {
+         return;
+    }
+    console.error('🔥 Promessa Rejeitada Não Tratada:', reason);
+});
 
 // [NOVO] Registra o momento em que o servidor inicia para calcular o uptime.
 const serverStartTime = new Date();
@@ -190,6 +208,8 @@ app.use(async (err, req, res, next) => {
 });
 
 // --- [NOVO] Verificação Periódica de Status dos Roteadores ---
+let isRouterCheckRunning = false; // [NOVO] Flag para evitar sobreposição de verificações
+
 const startPeriodicRouterCheck = () => {
     // [MODIFICADO] Só agenda se o PG estiver conectado
     if (!pgConnectionStatus.connected) {
@@ -200,19 +220,29 @@ const startPeriodicRouterCheck = () => {
     // console.log('✅ [SRV-ADM] Agendando verificação periódica de status de roteadores (a cada 60 segundos)...');
     
     const checkRouters = async () => {
+        // [NOVO] Se a verificação anterior ainda estiver a rodar, pula esta vez
+        if (isRouterCheckRunning) {
+            console.log('⏳ [ROUTER-CHECK] Verificação anterior ainda em execução. Pulando ciclo para evitar sobrecarga.');
+            return;
+        }
+        isRouterCheckRunning = true;
+
         // [MODIFICADO] Verifica a conexão antes de cada ciclo
         if (!pgConnectionStatus.connected) {
             console.warn('🟡 [ROUTER-CHECK] Ciclo de verificação pulado. PostgreSQL está offline.');
+            isRouterCheckRunning = false;
             return;
         }
         // console.log('🔄 [ROUTER-CHECK] Iniciando ciclo de verificação de status...');
         let client;
+        // [CORREÇÃO] Define a função de erro fora para poder removê-la depois
+        const dbErrorHandler = (err) => {
+            console.error('❌ [ROUTER-CHECK] Erro silencioso no cliente DB ativo:', err.message);
+        };
+
         try {
             client = await pool.connect();
-            // [CORREÇÃO] Protege contra quedas de conexão enquanto o cliente está em uso (ex: durante o ping)
-            client.on('error', (err) => {
-                console.error('❌ [ROUTER-CHECK] Erro silencioso no cliente DB ativo:', err.message);
-            });
+            client.on('error', dbErrorHandler);
 
             await client.query(
                 "UPDATE routers SET status = 'offline' WHERE ip_address IS NULL AND status != 'offline'"
@@ -265,7 +295,11 @@ const startPeriodicRouterCheck = () => {
                 startPgReconnect();
             }
         } finally {
-            if (client) client.release();
+            if (client) {
+                client.removeListener('error', dbErrorHandler); // [CORREÇÃO] Remove o listener para evitar memory leak
+                client.release();
+            }
+            isRouterCheckRunning = false; // [NOVO] Libera a flag para a próxima execução
         }
     }
     setInterval(checkRouters, 60000); // Executa a cada 60 segundos
