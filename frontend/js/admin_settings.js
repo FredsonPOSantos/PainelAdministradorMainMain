@@ -1197,6 +1197,9 @@ window.initSettingsPage = () => {
             }
 
             policyModal.classList.remove('hidden');
+            // [NOVO] Adiciona a classe 'large' para um modal mais espaçoso, ideal para textos
+            const modalContent = policyModal.querySelector('.modal-content');
+            if (modalContent) modalContent.classList.add('large');
         };
 
         const enterEditMode = (currentContent) => {
