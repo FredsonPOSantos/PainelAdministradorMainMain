@@ -1,6 +1,5 @@
 document.addEventListener('DOMContentLoaded', () => {
     const resetPasswordForm = document.getElementById('resetPasswordForm');
-    const API_BASE_URL = `http://${window.location.hostname}:3000`;
 
     // --- Carregar e Aplicar Configurações Visuais ---
     const applyVisualSettings = (settings) => {
@@ -32,7 +31,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const fetchSettings = async () => {
         try {
-            const response = await fetch(`${API_BASE_URL}/api/settings/general`);
+            const response = await fetch(`http://${window.location.hostname}:3000/api/settings/general`);
             if (response.ok) {
                 const settings = await response.json();
                 applyVisualSettings(settings);
@@ -71,22 +70,13 @@ document.addEventListener('DOMContentLoaded', () => {
             submitButton.textContent = 'A alterar...';
 
             try {
-                const response = await fetch(`${API_BASE_URL}/api/auth/reset-password`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ token: tokenValue, newPassword: password })
-                });
-
-                const data = await response.json();
-
-                if (response.ok) {
-                    showNotification('Senha alterada com sucesso! Redirecionando...', 'success');
-                    setTimeout(() => {
-                        window.location.href = 'admin_login.html';
-                    }, 2000);
-                } else {
-                    throw new Error(data.message || 'Erro ao redefinir senha.');
-                }
+                // [REFEITO] Usa a função centralizada 'apiRequest'
+                await apiRequest('/api/auth/reset-password', 'POST', { token: tokenValue, newPassword: password });
+                
+                showNotification('Senha alterada com sucesso! Redirecionando...', 'success');
+                setTimeout(() => {
+                    window.location.href = 'admin_login.html';
+                }, 2000);
             } catch (error) {
                 showNotification(error.message, 'error');
                 submitButton.disabled = false;

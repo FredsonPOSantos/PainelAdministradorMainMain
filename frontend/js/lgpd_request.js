@@ -5,7 +5,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const requestView = document.getElementById('requestView');
     const resultView = document.getElementById('resultView');
     const resultMessage = document.getElementById('resultMessage');
-    const API_BASE_URL = `http://${window.location.hostname}:3000`;
 
     // --- Carregar e Aplicar Configurações Visuais ---
     const applyVisualSettings = (settings) => {
@@ -37,7 +36,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const fetchSettings = async () => {
         try {
-            const response = await fetch(`${API_BASE_URL}/api/settings/general`);
+            const response = await fetch(`http://${window.location.hostname}:3000/api/settings/general`);
             if (response.ok) {
                 const settings = await response.json();
                 applyVisualSettings(settings);
@@ -67,22 +66,13 @@ document.addEventListener('DOMContentLoaded', () => {
             submitButton.textContent = 'A enviar...';
 
             try {
-                const response = await fetch(`${API_BASE_URL}/api/lgpd/request-exclusion`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ fullName, email })
-                });
-
-                const data = await response.json();
-
-                if (!response.ok) {
-                    throw new Error(data.message || 'Ocorreu um erro ao enviar o seu pedido.');
-                }
+                // [REFEITO] Usa a função centralizada 'apiRequest'
+                const data = await apiRequest('/api/lgpd/request-exclusion', 'POST', { fullName, email });
 
                 // Sucesso
                 if (requestView) requestView.style.display = 'none';
                 if (resultView) resultView.style.display = 'block';
-                if (resultMessage) resultMessage.textContent = data.message;
+                if (resultMessage) resultMessage.textContent = data.message || 'Pedido enviado com sucesso.';
 
             } catch (error) {
                 showNotification(`Erro: ${error.message}`, 'error');

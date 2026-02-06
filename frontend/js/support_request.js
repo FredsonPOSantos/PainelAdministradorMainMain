@@ -4,7 +4,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const formView = document.getElementById('formView');
     const successView = document.getElementById('successView');
     const ticketNumberDisplay = document.getElementById('ticketNumberDisplay');
-    const API_BASE_URL = `http://${window.location.hostname}:3000`;
 
     // --- Carregar e Aplicar Configurações Visuais ---
     const applyVisualSettings = (settings) => {
@@ -36,7 +35,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const fetchSettings = async () => {
         try {
-            const response = await fetch(`${API_BASE_URL}/api/settings/general`);
+            const response = await fetch(`http://${window.location.hostname}:3000/api/settings/general`);
             if (response.ok) {
                 const settings = await response.json();
                 applyVisualSettings(settings);
@@ -70,22 +69,13 @@ document.addEventListener('DOMContentLoaded', () => {
             };
 
             try {
-                const response = await fetch(`${API_BASE_URL}/api/public/tickets`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(formData)
-                });
-
-                const data = await response.json();
-
-                if (response.ok) {
-                    // Sucesso
-                    ticketNumberDisplay.textContent = `#${data.data.ticketNumber}`;
-                    formView.style.display = 'none';
-                    successView.style.display = 'block';
-                } else {
-                    throw new Error(data.message || 'Erro ao criar ticket.');
-                }
+                // [REFEITO] Usa a função centralizada 'apiRequest'
+                const data = await apiRequest('/api/public/tickets', 'POST', formData);
+                
+                // Sucesso
+                ticketNumberDisplay.textContent = `#${data.data.ticketNumber}`;
+                formView.style.display = 'none';
+                successView.style.display = 'block';
             } catch (error) {
                 showNotification(error.message, 'error');
                 submitButton.disabled = false;
