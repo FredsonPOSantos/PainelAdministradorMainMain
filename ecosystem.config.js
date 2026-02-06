@@ -10,8 +10,8 @@ module.exports = {
 
         // --- [CRÍTICO PARA MIGRAÇÃO] ---
         // URL que o backend usa para gerar links (ex: recuperação de senha).
-        // Deve apontar para o IP do servidor onde o frontend está, na porta 8184.
-        FRONTEND_BASE_URL: "http://10.0.0.47:8184",
+        // [CORRIGIDO] Deve apontar para o IP do servidor onde o frontend está, na porta 8081.
+        FRONTEND_BASE_URL: "http://10.0.0.47:8081",
 
         // --- Base de Dados (Servidor 10.0.0.45) ---
         DB_HOST: "10.0.0.45",
@@ -44,8 +44,8 @@ module.exports = {
       name: "admin-frontend",
       // [CORREÇÃO] Aponta diretamente para o script do http-server local para evitar problemas com npx no Windows
       script: "./node_modules/http-server/bin/http-server",
-      // Argumentos: pasta frontend, porta 8184, sem cache (-c-1), habilitar CORS, silencioso (-s)
-      args: "./frontend -p 8184 -c-1 --cors", 
+      // [CORRIGIDO] Argumentos: pasta frontend, porta 8081, sem cache (-c-1), habilitar CORS.
+      args: "./frontend -p 8081 -c-1 --cors", 
       env: {
         NODE_ENV: "production"
       }

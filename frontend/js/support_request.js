@@ -4,7 +4,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const formView = document.getElementById('formView');
     const successView = document.getElementById('successView');
     const ticketNumberDisplay = document.getElementById('ticketNumberDisplay');
-
+    const API_BASE_URL = `http://${window.location.hostname}:3000`;
     // --- Carregar e Aplicar Configurações Visuais ---
     const applyVisualSettings = (settings) => {
         if (!settings) return;
@@ -35,9 +35,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const fetchSettings = async () => {
         try {
-            // [REFEITO] Usa a função centralizada 'apiRequest' para consistência.
-            const settings = await apiRequest('/api/settings/general', 'GET');
-            applyVisualSettings(settings);
+            const response = await fetch(`${API_BASE_URL}/api/settings/general`);
+            if (response.ok) {
+                const settings = await response.json();
+                applyVisualSettings(settings);
+            }
         } catch (error) {
             console.error('Erro ao carregar configurações:', error);
         }
@@ -67,13 +69,19 @@ document.addEventListener('DOMContentLoaded', () => {
             };
 
             try {
-                // [REFEITO] Usa a função centralizada 'apiRequest'
-                const data = await apiRequest('/api/public/tickets', 'POST', formData);
-                
-                // Sucesso
-                ticketNumberDisplay.textContent = `#${data.data.ticketNumber}`;
-                formView.style.display = 'none';
-                successView.style.display = 'block';
+                const response = await fetch(`${API_BASE_URL}/api/public/tickets`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(formData)
+                });
+                const data = await response.json();
+                if (response.ok) {
+                    ticketNumberDisplay.textContent = `#${data.data.ticketNumber}`;
+                    formView.style.display = 'none';
+                    successView.style.display = 'block';
+                } else {
+                    throw new Error(data.message || 'Erro ao criar ticket.');
+                }
             } catch (error) {
                 showNotification(error.message, 'error');
                 submitButton.disabled = false;

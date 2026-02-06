@@ -1,6 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
     const forgotPasswordForm = document.getElementById('forgotPasswordForm');
-    // --- Carregar e Aplicar Configurações Visuais (Reutilizado do Login) ---
+    const API_BASE_URL = `http://${window.location.hostname}:3000`;
+    // --- Carregar e Aplicar Configurações Visuais ---
     const applyVisualSettings = (settings) => {
         if (!settings) return;
 
@@ -30,9 +31,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const fetchSettings = async () => {
         try {
-            // [REFEITO] Usa a função centralizada 'apiRequest' para consistência.
-            const settings = await apiRequest('/api/settings/general', 'GET');
-            applyVisualSettings(settings);
+            const response = await fetch(`${API_BASE_URL}/api/settings/general`);
+            if (response.ok) {
+                const settings = await response.json();
+                applyVisualSettings(settings);
+            }
         } catch (error) {
             console.error('Erro ao carregar configurações:', error);
         }
@@ -51,10 +54,19 @@ document.addEventListener('DOMContentLoaded', () => {
             const email = document.getElementById('email').value;
 
             try {
-                // [REFEITO] Usa a função centralizada 'apiRequest'
-                const data = await apiRequest('/api/auth/forgot-password', 'POST', { email });
-                showNotification(data.message || 'Se o e-mail existir, você receberá instruções.', 'success');
-                forgotPasswordForm.reset();
+                const response = await fetch(`${API_BASE_URL}/api/auth/forgot-password`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email })
+                });
+                const data = await response.json();
+
+                if (response.ok) {
+                    showNotification(data.message || 'Se o e-mail existir, você receberá instruções.', 'success');
+                    forgotPasswordForm.reset();
+                } else {
+                    throw new Error(data.message || 'Erro ao solicitar recuperação.');
+                }
             } catch (error) {
                 showNotification(error.message, 'error');
             } finally {

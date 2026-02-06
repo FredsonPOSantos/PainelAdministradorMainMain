@@ -5,7 +5,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const requestView = document.getElementById('requestView');
     const resultView = document.getElementById('resultView');
     const resultMessage = document.getElementById('resultMessage');
-
+    const API_BASE_URL = `http://${window.location.hostname}:3000`;
     // --- Carregar e Aplicar Configurações Visuais ---
     const applyVisualSettings = (settings) => {
         if (!settings) return;
@@ -36,9 +36,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const fetchSettings = async () => {
         try {
-            // [REFEITO] Usa a função centralizada 'apiRequest' para consistência.
-            const settings = await apiRequest('/api/settings/general', 'GET');
-            applyVisualSettings(settings);
+            const response = await fetch(`${API_BASE_URL}/api/settings/general`);
+            if (response.ok) {
+                const settings = await response.json();
+                applyVisualSettings(settings);
+            }
         } catch (error) {
             console.error('Erro ao carregar configurações:', error);
         }
@@ -64,14 +66,20 @@ document.addEventListener('DOMContentLoaded', () => {
             submitButton.textContent = 'A enviar...';
 
             try {
-                // [REFEITO] Usa a função centralizada 'apiRequest'
-                const data = await apiRequest('/api/lgpd/request-exclusion', 'POST', { fullName, email });
+                const response = await fetch(`${API_BASE_URL}/api/lgpd/request-exclusion`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ fullName, email })
+                });
+                const data = await response.json();
+                if (!response.ok) {
+                    throw new Error(data.message || 'Ocorreu um erro ao enviar o seu pedido.');
+                }
 
                 // Sucesso
                 if (requestView) requestView.style.display = 'none';
                 if (resultView) resultView.style.display = 'block';
-                if (resultMessage) resultMessage.textContent = data.message || 'Pedido enviado com sucesso.';
-
+                if (resultMessage) resultMessage.textContent = data.message;
             } catch (error) {
                 showNotification(`Erro: ${error.message}`, 'error');
                 submitButton.disabled = false;

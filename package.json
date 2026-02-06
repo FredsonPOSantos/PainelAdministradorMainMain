@@ -16,6 +16,7 @@
   "bcrypt": "^6.0.0",
   "chalk": "^4.1.2",
   "cors": "^2.8.5",
+  "deep-email-validator": "^0.1.21",
   "dotenv": "^17.2.2",
   "ejs": "^3.1.9",
   "express": "^5.1.0",
