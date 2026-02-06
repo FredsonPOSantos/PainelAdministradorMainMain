@@ -1,21 +1,29 @@
 // Ficheiro: backend/server.js
 const path = require('path');
 const fs = require('fs');
-
-// [CORREÇÃO ROBUSTA V2] Tenta carregar o .env de múltiplos locais
-const possibleEnvPaths = [
-    path.resolve(__dirname, '../.env'), // Raiz do projeto
-    path.resolve(__dirname, '.env'),    // Pasta backend/
-    path.resolve(process.cwd(), '.env') // Diretório atual
-];
-
-for (const envPath of possibleEnvPaths) {
-    if (fs.existsSync(envPath)) {
-        require('dotenv').config({ path: envPath });
-        // console.log(`[SERVER] .env carregado de: ${envPath}`); // Reduz ruído
-        break;
+// [CORREÇÃO DEFINITIVA] Tenta carregar o .env de forma segura, sem causar crash se o módulo 'dotenv' não for encontrado.
+// Em produção, as variáveis vêm do ecosystem.config.js, tornando o .env opcional.
+try {
+    const possibleEnvPaths = [
+        path.resolve(__dirname, '../.env'), // Raiz do projeto
+        path.resolve(__dirname, '.env'),    // Pasta backend/
+        path.resolve(process.cwd(), '.env') // Diretório atual
+    ];
+    for (const envPath of possibleEnvPaths) {
+        if (fs.existsSync(envPath)) {
+            require('dotenv').config({ path: envPath });
+            console.log(`[SERVER] Ficheiro .env carregado de: ${envPath}`);
+            break;
+        }
+    }
+} catch (e) {
+    if (e.code === 'MODULE_NOT_FOUND') {
+        console.warn("[SERVER] Módulo 'dotenv' não encontrado. A assumir que as variáveis de ambiente são injetadas pelo PM2.");
+    } else {
+        console.error("[SERVER] Erro ao carregar ficheiro .env:", e);
     }
 }
+
 const express = require('express'); // [CORREÇÃO] A importação do express já existe.
 const http = require('http'); // [NOVO] Necessário para Socket.io
 const { Server } = require("socket.io"); // [NOVO] Socket.io

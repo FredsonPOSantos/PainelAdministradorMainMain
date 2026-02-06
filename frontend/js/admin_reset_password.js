@@ -31,11 +31,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const fetchSettings = async () => {
         try {
-            const response = await fetch(`http://${window.location.hostname}:3000/api/settings/general`);
-            if (response.ok) {
-                const settings = await response.json();
-                applyVisualSettings(settings);
-            }
+            // [REFEITO] Usa a função centralizada 'apiRequest' para consistência.
+            const settings = await apiRequest('/api/settings/general', 'GET');
+            applyVisualSettings(settings);
         } catch (error) {
             console.error('Erro ao carregar configurações:', error);
         }

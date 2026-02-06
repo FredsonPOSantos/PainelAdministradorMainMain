@@ -597,7 +597,15 @@ document.addEventListener('DOMContentLoaded', async () => {
                 scripts.forEach(oldScript => {
                     const newScript = document.createElement("script");
                     Array.from(oldScript.attributes).forEach(attr => {
-                        newScript.setAttribute(attr.name, attr.value);
+                        // [CORREÇÃO MIGRAÇÃO] Força a URL do Socket.IO a usar o hostname correto,
+                        // evitando problemas com IPs hardcoded (127.0.0.1) nos ficheiros HTML.
+                        if (attr.name.toLowerCase() === 'src' && attr.value.includes('/socket.io/socket.io.js')) {
+                            const correctSocketUrl = `http://${window.location.hostname}:3000/socket.io/socket.io.js`;
+                            console.log(`[Socket.IO Loader] Corrigindo URL do Socket.IO para: ${correctSocketUrl}`);
+                            newScript.setAttribute('src', correctSocketUrl);
+                        } else {
+                            newScript.setAttribute(attr.name, attr.value);
+                        }
                     });
                     newScript.textContent = oldScript.textContent;
 
