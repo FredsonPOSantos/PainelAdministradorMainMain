@@ -25,8 +25,9 @@ const transporter = nodemailer.createTransport({
  * @param {string} token - O token de reset de senha.
  */
 const sendPasswordResetEmail = async (to, token) => {
-    // Assume que o frontend está a correr na porta 8184
-    const frontendBaseUrl = `http://127.0.0.1:8184`; 
+    // [CORRIGIDO] Usa a variável de ambiente para a URL do frontend, tornando-a flexível.
+    // O fallback para localhost é útil apenas para desenvolvimento local.
+    const frontendBaseUrl = process.env.FRONTEND_BASE_URL || `http://127.0.0.1:8184`;
     const resetUrl = `${frontendBaseUrl}/admin_reset_password.html?token=${token}`;
 
     const mailOptions = {

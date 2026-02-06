@@ -1034,7 +1034,10 @@ const getWifiClients = async (req, res) => {
 
         // [CORREÇÃO] Adiciona tratamento de erro para evitar crash do servidor
         const clients = await new Promise(async (resolve, reject) => {
-            client.on('error', reject);
+            // [CORRIGIDO] Define o handler de erro fora para poder removê-lo depois
+            const errorHandler = (err) => reject(err);
+            client.on('error', errorHandler);
+
             try {
                 await client.connect();
                 let result = [];
@@ -1071,6 +1074,8 @@ const getWifiClients = async (req, res) => {
             } catch (err) {
                 reject(err);
             } finally {
+                // [CRÍTICO] Garante que o ouvinte de erro seja sempre removido para evitar memory leaks.
+                client.removeListener('error', errorHandler);
                 client.close();
             }
         });
