@@ -1,6 +1,6 @@
 // Ficheiro: routes/auth.js
 // Descrição: Define as rotas públicas de login e recuperação de senha.
-// [ATUALIZADO - FASE 2.2 - PARTE 2]
+// [ATUALIZADO - CORREÇÃO PARA HOTSPOT/FREERADIUS]
 
 const express = require('express');
 const router = express.Router();
@@ -8,9 +8,10 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const { pool } = require('../connection');
 const crypto = require('crypto');
-const { logAction } = require('../services/auditLogService'); // [NOVO] Importa o serviço de log
+const { logAction } = require('../services/auditLogService');
 const authMiddleware = require('../middlewares/authMiddleware');
-const { sendPasswordResetEmail } = require('../services/emailService'); // [NOVO] Importa o serviço de e-mail
+const { sendPasswordResetEmail } = require('../services/emailService');
+const emailValidator = require('deep-email-validator'); // [NOVO] Adicionado para o registo do hotspot
 
 const reauthenticate = async (req, res) => {
     const { email, password } = req.body;
@@ -47,12 +48,11 @@ const reauthenticate = async (req, res) => {
     }
 };
 
-// --- ROTA DE LOGIN (Existente) ---
+// --- ROTA DE LOGIN (ADMIN - Inalterada) ---
 router.post('/login', async (req, res) => {
   const { email, password } = req.body;
 
   if (!email || !password) {
-    // [NOVO] Log de tentativa de login falhada (dados em falta)
     await logAction({
         req,
         action: 'LOGIN_FAILURE',
@@ -70,7 +70,6 @@ router.post('/login', async (req, res) => {
     );
 
     if (userQuery.rows.length === 0) {
-      // [NOVO] Log de utilizador não encontrado
       await logAction({
           req,
           action: 'LOGIN_FAILURE',
@@ -86,9 +85,7 @@ router.post('/login', async (req, res) => {
 
     const user = userQuery.rows[0];
 
-    // Verifica se o utilizador está ativo
     if (!user.is_active) {
-        // [NOVO] Log de conta inativa
         await logAction({
             req,
             action: 'LOGIN_FAILURE',
@@ -103,7 +100,6 @@ router.post('/login', async (req, res) => {
     const isPasswordValid = await bcrypt.compare(password, user.password_hash);
 
     if (!isPasswordValid) {
-      // [NOVO] Log de senha incorreta
       await logAction({
           req,
           action: 'LOGIN_FAILURE',
@@ -115,7 +111,6 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ message: "Credenciais inválidas." });
     }
 
-    // [NOVO] Log de login bem-sucedido
     await logAction({
         req,
         action: 'LOGIN_SUCCESS',
@@ -125,7 +120,6 @@ router.post('/login', async (req, res) => {
         user_email: user.email
     });
 
-    // Adiciona a flag 'must_change_password' ao payload
     const payload = {
       userId: user.id,
       email: user.email,
@@ -151,7 +145,7 @@ router.post('/login', async (req, res) => {
 });
 
 
-// --- ROTA DE SOLICITAÇÃO (Existente) ---
+// --- ROTA DE SOLICITAÇÃO (ADMIN - Inalterada) ---
 router.post('/forgot-password', async (req, res) => {
     const { email } = req.body;
     if (!email) {
@@ -159,7 +153,6 @@ router.post('/forgot-password', async (req, res) => {
     }
 
     try {
-        // 1. Encontrar o utilizador
         const userQuery = await pool.query('SELECT * FROM admin_users WHERE email = $1', [email]);
 
         if (userQuery.rows.length === 0) {
@@ -167,20 +160,14 @@ router.post('/forgot-password', async (req, res) => {
         }
 
         const user = userQuery.rows[0];
-        
-        // 2. Gerar um token seguro
         const token = crypto.randomBytes(32).toString('hex');
-        
-        // 3. Definir um tempo de expiração (1 hora)
         const expires = new Date(Date.now() + 3600000); 
         
-        // 4. Salvar o token no utilizador
         await pool.query(
             'UPDATE admin_users SET reset_token = $1, reset_token_expires = $2 WHERE id = $3',
             [token, expires, user.id]
         );
 
-        // 5. Enviar o e-mail de recuperação
         await sendPasswordResetEmail(user.email, token);
 
         res.status(200).json({
@@ -194,8 +181,7 @@ router.post('/forgot-password', async (req, res) => {
 });
 
 
-// --- [NOVA ROTA - FASE 2.2] Definição da Nova Senha ---
-// Esta é a rota que está a dar 404. Certifique-se de que ela existe no seu ficheiro.
+// --- ROTA DE DEFINIÇÃO DE SENHA (ADMIN - Inalterada) ---
 router.post('/reset-password', async (req, res) => {
     const { token, newPassword } = req.body;
 
@@ -208,7 +194,6 @@ router.post('/reset-password', async (req, res) => {
     }
 
     try {
-        // 1. Encontrar o utilizador pelo token E verificar se não expirou
         const userQuery = await pool.query(
             'SELECT * FROM admin_users WHERE reset_token = $1 AND reset_token_expires > NOW()',
             [token]
@@ -219,12 +204,9 @@ router.post('/reset-password', async (req, res) => {
         }
 
         const user = userQuery.rows[0];
-
-        // 2. Gerar o hash da nova senha
         const salt = await bcrypt.genSalt(10);
         const passwordHash = await bcrypt.hash(newPassword, salt);
 
-        // 3. Atualizar a senha e limpar os campos de reset
         await pool.query(
             `UPDATE admin_users 
              SET password_hash = $1, 
@@ -243,57 +225,92 @@ router.post('/reset-password', async (req, res) => {
     }
 });
 
-// [NOVO] Rota para registo de utilizadores do hotspot
+// --- [CORRIGIDO] Rota para registo de utilizadores do hotspot ---
 router.post('/register', async (req, res) => {
-    const { nomeCompleto, email, telefone, senha, mac, routerName, accepts_marketing, terms_accepted } = req.body;
-
-    // Validação de entrada
-    if (!nomeCompleto || !email || !senha || !mac || !routerName) {
-        return res.status(400).json({ message: 'Todos os campos obrigatórios devem ser preenchidos.' });
-    }
-    if (terms_accepted !== true) {
-        return res.status(400).json({ message: 'É necessário aceitar os Termos e Condições.' });
-    }
+    const { nomeCompleto, email, senha, telefone, mac, routerName, terms_accepted, accepts_marketing } = req.body;
 
     try {
-        // Verifica se o e-mail já está em uso
-        const userExists = await pool.query('SELECT id FROM userdetails WHERE username = $1', [email]);
-        if (userExists.rows.length > 0) {
-            return res.status(409).json({ message: 'Este e-mail já está cadastrado.' });
+        // Validação dos dados de entrada
+        if (!nomeCompleto || !email || !senha || !telefone || !mac || !routerName) {
+            return res.status(400).json({ message: 'Por favor, preencha todos os campos.' });
         }
 
-        // Criptografa a senha
+        if (senha.length < 6) {
+            return res.status(400).json({ message: 'A senha deve ter no mínimo 6 caracteres.' });
+        }
+
+        if (terms_accepted !== true) {
+            return res.status(400).json({ message: 'É obrigatório aceitar os Termos e Condições para se registar.' });
+        }
+
+        // Validação de E-mail Avançada
+        const { valid, reason, validators } = await emailValidator.validate(email);
+        if (!valid) {
+            let errorMessage = 'O endereço de e-mail fornecido não é válido.';
+            if (reason === 'disposable') { errorMessage = 'E-mails temporários não são permitidos.'; }
+            else if (reason === 'typo' && validators.typo?.did_you_mean) { errorMessage = `Você quis dizer ${validators.typo.did_you_mean}?`; }
+            else if (reason === 'mx') { errorMessage = 'O domínio do e-mail não existe ou não pode receber mensagens.'; }
+            
+            return res.status(400).json({ message: errorMessage });
+        }
+
+        // Verifica se o utilizador (e-mail) já existe na tabela radcheck
+        const userExists = await pool.query('SELECT username FROM radcheck WHERE username = $1', [email]);
+        if (userExists.rows.length > 0) {
+            return res.status(409).json({ message: 'Este e-mail já está registado.' });
+        }
+
         const salt = await bcrypt.genSalt(10);
-        const passwordHash = await bcrypt.hash(senha, salt);
+        const hashedPassword = await bcrypt.hash(senha, salt);
 
-        // Insere o novo utilizador na base de dados
-        const query = `
-            INSERT INTO userdetails (username, nome_completo, telefone, password, mac_address, router_name, accepts_marketing, terms_accepted_at)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
-            RETURNING id;
-        `;
-        const values = [email, nomeCompleto, telefone, passwordHash, mac, routerName, !!accepts_marketing];
-        
-        const newUser = await pool.query(query, values);
+        // [MELHORIA] Usa uma transação para garantir que ambas as inserções ocorram ou nenhuma ocorra.
+        const client = await pool.connect();
+        try {
+            await client.query('BEGIN');
 
-        // Log de auditoria (não precisa de 'req' pois é uma rota pública)
-        await logAction({
-            action: 'HOTSPOT_USER_REGISTER',
-            status: 'SUCCESS',
-            description: `Novo utilizador do hotspot registado: "${email}" no roteador "${routerName}".`,
-            target_type: 'hotspot_user',
-            target_id: newUser.rows[0].id
-        });
+            // 1. Insere os dados de autenticação na tabela 'radcheck'
+            const radCheckQuery = `
+                INSERT INTO radcheck (username, attribute, op, value) 
+                VALUES ($1, 'Crypt-Password', ':=', $2)
+            `;
+            await client.query(radCheckQuery, [email, hashedPassword]);
 
-        res.status(201).json({ message: 'Cadastro realizado com sucesso!' });
+            // 2. Insere os dados adicionais na tabela 'userdetails'
+            const userDetailsQuery = `
+                INSERT INTO userdetails (username, nome_completo, telefone, mac_address, router_name, terms_accepted_at, accepts_marketing) 
+                VALUES ($1, $2, $3, $4, $5, NOW(), $6)
+                RETURNING id;
+            `;
+            const newUser = await client.query(userDetailsQuery, [email, nomeCompleto, telefone, mac, routerName, !!accepts_marketing]);
+            
+            await client.query('COMMIT');
+
+            // Log de auditoria (após o commit bem-sucedido)
+            await logAction({
+                action: 'HOTSPOT_USER_REGISTER',
+                status: 'SUCCESS',
+                description: `Novo utilizador do hotspot registado: "${email}" no roteador "${routerName}".`,
+                target_type: 'hotspot_user',
+                target_id: newUser.rows[0].id
+            });
+
+            res.status(201).json({
+                message: 'Utilizador registado com sucesso!',
+            });
+
+        } catch (e) {
+            await client.query('ROLLBACK');
+            throw e; // Re-lança o erro para ser capturado pelo catch externo
+        } finally {
+            client.release();
+        }
 
     } catch (error) {
         console.error('Erro no registo de utilizador do hotspot:', error);
-        res.status(500).json({ message: 'Erro interno do servidor.' });
+        res.status(500).json({ message: 'Erro interno do servidor ao processar o registo.' });
     }
 });
 
 router.post('/re-authenticate', authMiddleware, reauthenticate);
-
 
 module.exports = router;
