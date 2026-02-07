@@ -98,20 +98,29 @@ const createTicket = async (req, res) => {
 
         // [NOVO] Após criar o ticket, tenta gerar uma resposta automática com a IA
         // Esta parte é "fire-and-forget" para não atrasar a resposta ao utilizador.
-        (async () => {
+        (async (ioInstance, createdTicketId) => {
             try {
                 const aiResponse = await aiService.generateInitialResponse(title, message);
                 if (aiResponse) {
-                    // [ATUALIZADO] Insere a resposta da IA como uma nova mensagem com user_id NULO (Assistente Virtual)
-                    await pool.query(
-                        'INSERT INTO ticket_messages (ticket_id, user_id, message) VALUES ($1, $2, $3)',
-                        [ticketId, null, aiResponse]
+                    // [CORREÇÃO] Insere a resposta da IA e obtém os dados da nova mensagem para emitir via socket.
+                    const newMessageResult = await pool.query(
+                        'INSERT INTO ticket_messages (ticket_id, user_id, message) VALUES ($1, $2, $3) RETURNING id, message, created_at, user_id',
+                        [createdTicketId, null, aiResponse]
                     );
+                    const newMessage = newMessageResult.rows[0];
+
+                    // Prepara o objeto para o frontend
+                    newMessage.user_email = 'Assistente Rota';
+                    newMessage.avatar_url = null;
+
+                    // [CRÍTICO] Emite o evento para a sala do ticket, notificando a UI em tempo real.
+                    ioInstance.to(`ticket-${createdTicketId}`).emit('newMessage', newMessage);
+                    console.log(`[AI-SOCKET-INITIAL] Primeira resposta da IA emitida para a sala ticket-${createdTicketId}`);
                 }
             } catch (aiError) {
                 console.error(`[AI-RESPONSE-ERROR] Falha ao adicionar resposta da IA para o ticket ${ticketId}:`, aiError);
             }
-        })();
+        })(req.app.get('io'), ticketId); // Passa a instância do Socket.IO e o ID do ticket
 
         res.status(201).json({ success: true, message: 'Ticket criado com sucesso!', data: { ticketId, ticketNumber } });
 
@@ -365,6 +374,7 @@ const addMessageToTicket = async (req, res) => {
     const { id } = req.params;
     const { message } = req.body;
     const { userId, email } = req.user;
+    const io = req.app.get('io'); // [NOVO] Obtém a instância do Socket.IO
 
     if (!message) {
         return res.status(400).json({ success: false, message: 'A mensagem é obrigatória.' });
@@ -465,7 +475,7 @@ const addMessageToTicket = async (req, res) => {
 
         // [NOVO] Lógica de IA Autônoma: Se quem respondeu foi o criador do ticket (usuário), aciona a IA
         // Fazemos isso fora da transação principal para não bloquear a resposta ao usuário
-        (async () => {
+        (async (ioInstance, ticketId) => {
             try {
                 const ticketCheck = await pool.query('SELECT created_by_user_id, status, title FROM tickets WHERE id = $1', [id]);
                 const currentTicket = ticketCheck.rows[0];
@@ -484,7 +494,20 @@ const addMessageToTicket = async (req, res) => {
                     const aiResponse = await aiService.generateChatResponse(currentTicket.title, historyResult.rows);
                     
                     if (aiResponse) {
-                        await pool.query('INSERT INTO ticket_messages (ticket_id, user_id, message) VALUES ($1, $2, $3)', [id, null, aiResponse]);
+                        // [MODIFICADO] Usa RETURNING para obter os dados da nova mensagem
+                        const newMessageResult = await pool.query(
+                            'INSERT INTO ticket_messages (ticket_id, user_id, message) VALUES ($1, $2, $3) RETURNING id, message, created_at, user_id', 
+                            [ticketId, null, aiResponse]
+                        );
+                        const newMessage = newMessageResult.rows[0];
+
+                        // [NOVO] Prepara o objeto da mensagem para o frontend
+                        newMessage.user_email = 'Assistente Rota'; // Nome da IA
+                        newMessage.avatar_url = null; // Ou um URL para o avatar do bot
+
+                        // [CRÍTICO] Emite o evento para a sala específica do ticket
+                        ioInstance.to(`ticket-${ticketId}`).emit('newMessage', newMessage);
+                        console.log(`[AI-SOCKET] Nova mensagem da IA emitida para a sala ticket-${ticketId}`);
                     }
                 } else {
                     console.log(`[AI-TRIGGER] A IA não foi acionada para o ticket ${id}. Motivo: Ticket já atribuído ou fechado.`);
@@ -492,7 +515,7 @@ const addMessageToTicket = async (req, res) => {
             } catch (aiError) {
                 console.error(`[AI-CHAT-ERROR] Falha na resposta da IA para ticket ${id}:`, aiError);
             }
-        })();
+        })(io, id); // Passa a instância do 'io' e o 'id' do ticket para o bloco assíncrono
 
         logAction({
             req,
