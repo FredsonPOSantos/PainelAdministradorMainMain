@@ -1,26 +1,15 @@
 // Ficheiro: backend/server.js
 const path = require('path');
 const fs = require('fs');
-// [CORREÇÃO DEFINITIVA] Tenta carregar o .env de forma segura, sem causar crash se o módulo 'dotenv' não for encontrado.
-// Em produção, as variáveis vêm do ecosystem.config.js, tornando o .env opcional.
-try {
-    const possibleEnvPaths = [
-        path.resolve(__dirname, '../.env'), // Raiz do projeto
-        path.resolve(__dirname, '.env'),    // Pasta backend/
-        path.resolve(process.cwd(), '.env') // Diretório atual
-    ];
-    for (const envPath of possibleEnvPaths) {
-        if (fs.existsSync(envPath)) {
-            require('dotenv').config({ path: envPath });
-            console.log(`[SERVER] Ficheiro .env carregado de: ${envPath}`);
-            break;
-        }
-    }
-} catch (e) {
-    if (e.code === 'MODULE_NOT_FOUND') {
-        console.warn("[SERVER] Módulo 'dotenv' não encontrado. A assumir que as variáveis de ambiente são injetadas pelo PM2.");
-    } else {
-        console.error("[SERVER] Erro ao carregar ficheiro .env:", e);
+
+// [CORREÇÃO DEFINITIVA] Carrega o ficheiro .env APENAS em ambiente de desenvolvimento.
+// Em produção, as variáveis de ambiente devem vir EXCLUSIVAMENTE do ecosystem.config.js
+// para evitar conflitos como o que está a acontecer.
+if (process.env.NODE_ENV !== 'production') {
+    console.log('[SERVER] Ambiente de desenvolvimento detectado. A carregar .env...');
+    const envPath = path.resolve(__dirname, '../.env');
+    if (fs.existsSync(envPath)) {
+        require('dotenv').config({ path: envPath });
     }
 }
 
