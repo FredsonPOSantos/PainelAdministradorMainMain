@@ -470,8 +470,11 @@ const addMessageToTicket = async (req, res) => {
                 const ticketCheck = await pool.query('SELECT created_by_user_id, status, title FROM tickets WHERE id = $1', [id]);
                 const currentTicket = ticketCheck.rows[0];
 
-                // Se o autor da mensagem é o dono do ticket e o ticket não está fechado
-                if (currentTicket && currentTicket.created_by_user_id === userId && currentTicket.status !== 'closed') {
+                // [CORREÇÃO] A IA deve responder a um ticket se NENHUM HUMANO estiver atribuído a ele,
+                // agindo como o primeiro nível de suporte, independentemente de qual admin adiciona a mensagem do cliente.
+                if (currentTicket && !currentTicket.assigned_to_user_id && currentTicket.status !== 'closed') {
+                    console.log(`[AI-TRIGGER] A IA foi acionada para o ticket ${id} pois não há um responsável atribuído.`);
+
                     // Busca histórico completo para contexto
                     const historyResult = await pool.query(
                         'SELECT user_id, message FROM ticket_messages WHERE ticket_id = $1 ORDER BY created_at ASC',
@@ -483,6 +486,8 @@ const addMessageToTicket = async (req, res) => {
                     if (aiResponse) {
                         await pool.query('INSERT INTO ticket_messages (ticket_id, user_id, message) VALUES ($1, $2, $3)', [id, null, aiResponse]);
                     }
+                } else {
+                    console.log(`[AI-TRIGGER] A IA não foi acionada para o ticket ${id}. Motivo: Ticket já atribuído ou fechado.`);
                 }
             } catch (aiError) {
                 console.error(`[AI-CHAT-ERROR] Falha na resposta da IA para ticket ${id}:`, aiError);
