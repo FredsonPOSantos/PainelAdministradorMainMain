@@ -16,11 +16,48 @@ if (window.initSupportPage) {
         const statusFilter = document.getElementById('statusFilter');
         const paginationContainer = document.getElementById('pagination-container');
         let pollingInterval = null; // [NOVO] Controle do intervalo de atualização automática
+        let socket = null; // [NOVO] Instância do Socket.IO
         let searchTimeout;
         let currentPage = 1;
         let currentTicketId = null; // [NOVO] Para controlar se estamos a atualizar ou a mudar de ticket
 
         let allUsers = []; // Cache para a lista de utilizadores
+
+        // [NOVO] Conexão Socket.io
+        const connectSocket = () => {
+            if (socket && socket.connected) return;
+            socket = io(`http://${window.location.hostname}:3000`, {
+                transports: ['websocket'],
+                reconnectionAttempts: 5
+            });
+
+            socket.on('connect', () => {
+                console.log('Conectado ao servidor de tickets via Socket.io. ID:', socket.id);
+            });
+
+            socket.on('connect_error', (err) => {
+                console.error("Falha na conexão com o Socket.io:", err.message);
+            });
+
+            // [CRÍTICO] Listener para novas mensagens
+            socket.on('newMessage', (newMessage) => {
+                // Só atualiza se a mensagem pertencer ao ticket que está a ser visualizado
+                if (newMessage.ticket_id == currentTicketId) {
+                    console.log('[Socket.IO] Nova mensagem recebida:', newMessage);
+                    const messageList = document.getElementById('message-list');
+                    if (messageList) {
+                        // Remove o indicador "A IA está a escrever..."
+                        const typingIndicator = document.getElementById('typing-indicator');
+                        if (typingIndicator) typingIndicator.remove();
+
+                        // Cria e anexa o elemento da nova mensagem
+                        const messageElement = createMessageElement(newMessage);
+                        messageList.appendChild(messageElement);
+                        messageList.scrollTop = messageList.scrollHeight; // Rola para o fim
+                    }
+                }
+            });
+        };
 
         // [NOVO] Mapeamento de status para exibição
         const statusMap = {
@@ -31,10 +68,10 @@ if (window.initSupportPage) {
 
         // [NOVO] Função de limpeza para ser chamada ao sair da página
         window.cleanupSupportPage = () => {
-            if (pollingInterval) {
-                clearInterval(pollingInterval);
-                pollingInterval = null;
-                console.log("Polling de suporte parado.");
+            if (socket) {
+                console.log('A desconectar socket de suporte...');
+                socket.disconnect();
+                socket = null;
             }
         };
 
@@ -153,8 +190,15 @@ if (window.initSupportPage) {
 
         // Carrega os detalhes de um ticket específico
         const loadTicketDetails = async (ticketId) => {
-            if (pollingInterval) clearInterval(pollingInterval); // [NOVO] Para verificações anteriores ao mudar de ticket
-
+            // [REFEITO] Lógica de salas do Socket.IO
+            if (socket) {
+                // Se estivermos a mudar de ticket, sai da sala antiga
+                if (currentTicketId && currentTicketId !== ticketId) {
+                    socket.emit('leaveTicketRoom', currentTicketId);
+                }
+                // Entra na sala do novo ticket
+                socket.emit('joinTicketRoom', ticketId);
+            }
             if (!ticketDetailPanel) return;
             
             // [MELHORIA UX] Só mostra "A carregar..." se mudarmos de ticket.
@@ -180,6 +224,45 @@ if (window.initSupportPage) {
                 ticketDetailPanel.innerHTML = '<div class="ticket-placeholder"><p style="color: red;">Erro ao carregar detalhes do ticket.</p></div>';
                 console.error(error);
             }
+        };
+
+        // [NOVO] Função auxiliar para criar um elemento de mensagem
+        const createMessageElement = (msg) => {
+            const messageItem = document.createElement('div');
+            const isCurrentUser = msg.user_email === window.currentUserProfile.email;
+            const aiClass = !msg.user_email ? 'ai-message' : '';
+
+            let avatarHtml = '';
+            if (msg.avatar_url) {
+                avatarHtml = `<img src="http://${window.location.hostname}:3000${msg.avatar_url}" class="message-avatar" alt="Avatar">`;
+            } else if (!msg.user_email) {
+                avatarHtml = `<div class="message-avatar ai-avatar"><i class="fas fa-robot"></i></div>`;
+            } else {
+                avatarHtml = `<div class="message-avatar default-avatar"><i class="fas fa-user"></i></div>`;
+            }
+
+            if (window.isSupportPortal) {
+                messageItem.className = `message ${isCurrentUser ? 'sent' : 'received'}`;
+                messageItem.innerHTML = `
+                    ${!isCurrentUser ? avatarHtml : ''}
+                    <div class="message-bubble-container">
+                        <div class="message-content">${msg.message}</div>
+                        <div class="message-time">
+                            ${msg.user_email || 'Assistente Virtual'} • ${new Date(msg.created_at).toLocaleString('pt-BR')}
+                        </div>
+                    </div>
+                `;
+            } else {
+                messageItem.className = `message-item ${isCurrentUser ? 'sent' : `received ${aiClass}`}`;
+                messageItem.innerHTML = `
+                    <div class="message-content">${msg.message}</div>
+                    <div class="message-meta">
+                        <span>${msg.user_email || 'Assistente Virtual'}</span> em 
+                        <span>${new Date(msg.created_at).toLocaleString('pt-BR')}</span>
+                    </div>
+                `;
+            }
+            return messageItem;
         };
 
         // Renderiza o painel de detalhes do ticket
@@ -359,61 +442,6 @@ if (window.initSupportPage) {
             addDetailEventListeners(ticket);
         };
 
-        // [NOVO] Função para verificar novas mensagens automaticamente (Polling)
-        const startMessagePolling = (ticketId, initialCount) => {
-            if (pollingInterval) clearInterval(pollingInterval);
-            
-            let attempts = 0;
-            const maxAttempts = 60; // Aumentado para 120 segundos (60 * 2s)
-            
-            // Usa a contagem passada (mais fiável) ou conta do DOM se não fornecida
-            const currentCount = initialCount !== undefined ? initialCount : document.querySelectorAll('.message-item').length;
-            
-            console.log(`[Polling] A aguardar resposta no ticket ${ticketId}. Mensagens atuais: ${currentCount}`);
-
-            // [NOVO] Adiciona indicador visual de "A aguardar..."
-            const messageList = document.getElementById('message-list');
-            let typingIndicator = document.getElementById('typing-indicator');
-            if (messageList && !typingIndicator) {
-                typingIndicator = document.createElement('div');
-                typingIndicator.id = 'typing-indicator';
-                typingIndicator.className = 'message-item received';
-                typingIndicator.innerHTML = `
-                    <div class="message-content" style="color: #a0aec0; font-style: italic;">
-                        <i class="fas fa-circle-notch fa-spin"></i> O assistente está a analisar...
-                    </div>`;
-                messageList.appendChild(typingIndicator);
-                messageList.scrollTop = messageList.scrollHeight;
-            }
-
-            pollingInterval = setInterval(async () => {
-                attempts++;
-                if (attempts > maxAttempts) {
-                    clearInterval(pollingInterval); // Para de verificar após o tempo limite
-                    if (typingIndicator) typingIndicator.remove();
-                    return;
-                }
-
-                try {
-                    // Verifica os dados do ticket silenciosamente
-                    const response = await apiRequest(`/api/tickets/${ticketId}`);
-                    if (response.success && response.data) {
-                        const ticket = response.data;
-                        // Se o número de mensagens aumentou (IA respondeu)
-                        if (ticket.messages.length > currentCount) {
-                            console.log(`[Polling] Nova mensagem detectada! Atualizando...`);
-                            clearInterval(pollingInterval); // Para o polling
-                            renderTicketDetails(ticket); // Atualiza a tela
-                        }
-                    }
-                } catch (e) {
-                    console.error("Erro na verificação automática:", e);
-                    clearInterval(pollingInterval);
-                    if (typingIndicator) typingIndicator.remove();
-                }
-            }, 2000); // Verifica a cada 2 segundos
-        };
-
         // Adiciona os listeners para os botões e formulários no painel de detalhes
         const addDetailEventListeners = (ticket) => {
             const ticketId = ticket.id;
@@ -422,13 +450,14 @@ if (window.initSupportPage) {
                 const messageText = document.getElementById('newMessageText').value;
                 if (!messageText) return;
 
+                // [REFEITO] Envia a mensagem e o frontend não precisa de fazer mais nada,
+                // pois a resposta da IA (se houver) virá pelo evento 'newMessage' do socket.
+                // Opcional: Adicionar a mensagem do próprio utilizador à UI para feedback instantâneo.
                 await apiRequest(`/api/tickets/${ticketId}/messages`, 'POST', { message: messageText });
-                const updatedTicket = await loadTicketDetails(ticketId); // Recarrega e obtém os dados atualizados
                 
-                // [CORREÇÃO] Inicia o polling passando a contagem ATUAL de mensagens
-                if (updatedTicket) {
-                    startMessagePolling(ticketId, updatedTicket.messages.length);
-                }
+                // Limpa o editor Trix
+                const editor = document.querySelector("trix-editor[input='newMessageText']");
+                if (editor) editor.editor.loadHTML('');
             });
 
             document.getElementById('assignTicketBtn')?.addEventListener('click', async () => {
@@ -564,6 +593,9 @@ if (window.initSupportPage) {
         // Função inicial que carrega os dados necessários
         const initialize = async () => {
             // Carrega a lista de utilizadores para o dropdown de atribuição
+            
+            connectSocket(); // [NOVO] Inicia a conexão com o Socket.IO
+
             if (['master', 'gestao'].includes(window.currentUserProfile.role)) {
                 try {
                     // [CORREÇÃO] Usa a rota de lista simplificada que retorna { success: true, data: [...] }
