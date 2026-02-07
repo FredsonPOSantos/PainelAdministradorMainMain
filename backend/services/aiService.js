@@ -1,7 +1,15 @@
 // Ficheiro: backend/services/aiService.js
 // Descrição: Serviço para interagir com a API de IA (Google Gemini).
 
-require('dotenv').config();
+// [CORREÇÃO] Carrega o .env apenas em ambiente de desenvolvimento.
+// Em produção, a chave da API deve vir do ecosystem.config.js para evitar conflitos.
+if (process.env.NODE_ENV !== 'production') {
+    const path = require('path');
+    const envPath = path.resolve(__dirname, '../../.env'); // Aponta para a raiz do projeto
+    if (require('fs').existsSync(envPath)) {
+        require('dotenv').config({ path: envPath });
+    }
+}
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const fetch = require('node-fetch'); // [NOVO] Necessário para listar modelos via API REST
 const systemKnowledge = require('../config/ai_knowledge_base'); // [NOVO] Importa a base de conhecimento externa
@@ -112,7 +120,9 @@ const generateChatResponse = async (ticketTitle, historyMessages) => {
         console.log('✅ [AI-SERVICE] Resposta gerada com sucesso.');
         return text;
     } catch (error) {
-        console.error('❌ [AI-SERVICE] Erro no chat:', error.message);
+        // [MELHORIA] Loga o objeto de erro completo para obter mais detalhes sobre
+        // falhas de rede, como timeouts ou erros de DNS, que podem ser causados por um firewall.
+        console.error('❌ [AI-SERVICE] Erro no chat:', error);
         return null; // Retorna null em caso de erro para não quebrar o fluxo
     }
 };
