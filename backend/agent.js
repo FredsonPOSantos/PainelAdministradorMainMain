@@ -1,7 +1,15 @@
 // Carrega as variáveis de ambiente do ficheiro .env
 const dotenv = require('dotenv');
 const path = require('path');
-dotenv.config({ path: path.resolve(__dirname, '.env') });
+
+// [CORREÇÃO] Carrega o .env da raiz do projeto e apenas em ambiente de desenvolvimento.
+// Em produção, as variáveis devem vir do ecosystem.config.js.
+if (process.env.NODE_ENV !== 'production') {
+    const envPath = path.resolve(__dirname, '../.env');
+    if (require('fs').existsSync(envPath)) {
+        dotenv.config({ path: envPath });
+    }
+}
 
 const { Pool } = require('pg');
 const { InfluxDB, Point } = require('@influxdata/influxdb-client');

@@ -54,8 +54,27 @@ module.exports = {
       name: "monitoring-agent",
       script: "./backend/agent.js",
       env: {
-        NODE_ENV: "production"
-        // As variáveis de ambiente são carregadas pelo dotenv dentro do script
+        NODE_ENV: "production",
+        // [CORRIGIDO] Centraliza as variáveis de ambiente aqui, em vez de depender de um ficheiro .env no servidor.
+        // Isso garante consistência e evita conflitos.
+
+        // --- Base de Dados (Servidor 10.0.0.45) ---
+        DB_HOST: "10.0.0.45",
+        DB_PORT: 5432,
+        DB_USER: "postgres",
+        DB_PASSWORD: "Rota1010",
+        DB_DATABASE: "radius",
+
+        // --- InfluxDB (Servidor 10.0.0.45) ---
+        INFLUXDB_URL: "http://10.0.0.45:8086",
+        INFLUXDB_TOKEN: "T6M0gntRz3BX-q_huEoxfe11-raaAG-DKd-Byz1uMioSHw8OPsoPdpH5eY5o7RtgwY_vrhMo56lOVsWm1fVQXA==",
+        INFLUXDB_ORG: "RotaHotspot",
+        INFLUXDB_BUCKET: "monitor",
+
+        // --- Credenciais MikroTik ---
+        MIKROTIK_USER: "fredson",
+        MIKROTIK_PASSWORD: "son810729",
+        MIKROTIK_API_PORT: 8797
       }
     }
   ]
