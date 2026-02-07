@@ -5,26 +5,9 @@ let pgReconnectInterval = null;
 const path = require('path');
 const fs = require('fs');
 
-// [CORREÇÃO ROBUSTA V2] Tenta carregar o .env de múltiplos locais
-const possibleEnvPaths = [
-    path.resolve(__dirname, '../.env'), // Raiz do projeto (se rodar de backend/)
-    path.resolve(__dirname, '.env'),    // Pasta backend/
-    path.resolve(process.cwd(), '.env') // Diretório atual de execução
-];
+// [REMOVIDO] A responsabilidade de carregar o .env foi movida para o ponto de entrada da aplicação (server.js),
+// que já o faz condicionalmente (apenas em desenvolvimento). Isso evita conflitos em produção.
 
-let envLoaded = false;
-for (const envPath of possibleEnvPaths) {
-    if (fs.existsSync(envPath)) {
-        require('dotenv').config({ path: envPath });
-        // console.log(`[CONNECTION] .env carregado de: ${envPath}`);
-        envLoaded = true;
-        break;
-    }
-}
-
-if (!envLoaded) {
-    console.error("[CONNECTION] ❌ ERRO CRÍTICO: Arquivo .env não encontrado em nenhum dos locais esperados!");
-}
 const { Pool } = require('pg');
 const bcrypt = require('bcrypt'); // [NOVO] Necessário para criar a senha do admin padrão
 

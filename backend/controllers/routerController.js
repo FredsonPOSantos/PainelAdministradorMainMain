@@ -14,7 +14,7 @@ try {
     console.error("FATAL: A biblioteca 'node-routeros' não foi encontrada. Execute 'npm install node-routeros' e reinicie o servidor.");
     RouterOSClient = null; 
 }
-require('dotenv').config();
+// [REMOVIDO] A responsabilidade de carregar o .env foi movida para o ponto de entrada da aplicação (server.js).
 
 // --- Funções de Roteadores Individuais ---
 
